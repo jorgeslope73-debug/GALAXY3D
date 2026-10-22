@@ -1,0 +1,318 @@
+'use strict';
+(() => {
+  const STORAGE_KEY='galaxyCombatLanguage';
+  const SUPPORTED=['es','en','it','fr','de','zh'];
+  const dictionaries={"es":{"orientationTitle":"GIRA EL MÓVIL","orientationCopy":"Galaxy Combat se juega en horizontal.","languageLabel":"IDIOMA / LANGUAGE","orientationInstallCopy":"PARA JUGAR MEJOR, AÑADE EL JUEGO A TU PANTALLA DE INICIO.","addHomeScreen":"NECESARIO AÑADIR A PANTALLA DE INICIO","pwaInstalled":"GALAXY COMBAT INSTALADO. YA PUEDES ABRIRLO DESDE TU PANTALLA DE INICIO COMO UNA APP.","pwaIosInstall":"EN IPHONE/IPAD: PULSA COMPARTIR Y DESPUES \"AÑADIR A PANTALLA DE INICIO\". SE ABRIRA COMO UNA APP A PANTALLA COMPLETA.","pwaBrowserInstall":"ABRE EL MENU DEL NAVEGADOR Y ELIGE \"INSTALAR APP\" O \"AÑADIR A PANTALLA DE INICIO\". DESPUES SE ABRIRA COMO UNA APP.","yourName":"TU NOMBRE","defaultPlayer":"JUGADOR","playerNameAria":"Nombre del jugador","connectingWait":"Conectando con el servidor... espera un momento.","connectingShort":"Conectando con el servidor...","modesAria":"Modos de juego","modeCpu":"CONTRA LA MAQUINA","cpuDifficultyAria":"Dificultad CPU","easy":"FACIL","medium":"MEDIO","hard":"DIFICIL","play":"JUGAR","modeOnline":"ONLINE · 2-4 JUGADORES","createGame":"CREAR PARTIDA","modeJoin":"UNIRSE A UNA SALA","join":"UNIRSE","roomTypeTitle":"TIPO DE PARTIDA","roomTypeCopy":"PUBLICA aparece en la lista. PRIVADA solo se puede abrir con su codigo.","publicRoom":"PUBLICA","privateRoom":"PRIVADA","cancel":"CANCELAR","publicGames":"PARTIDAS PUBLICAS","searchingGames":"Buscando partidas...","orEnterCode":"PARTIDA PRIVADA","codePlaceholder":"ESCRIBE CODIGO","roomCodeAria":"Codigo de sala","close":"CERRAR","voiceChatAria":"Chat de voz","activateVoice":"ACTIVAR MICRO","voiceActive":"MICRO ACTIVO","voiceEnabled":"VOZ ACTIVADA","voiceDisabled":"VOZ DESACTIVADA","rotateControl":"GIRAR","orArrows":"o flechas","accelerate":"ACELERAR","fire":"DISPARAR","mobileGuide":"Mitad izquierda: girar · mitad derecha: toque rapido dispara · mantener acelera.","mobileTouchGuide":"TOQUE: DISPARO · MANTEN: ACELERAR","room":"SALA","roomChat":"CHAT DE SALA","noMessages":"Sin mensajes","messagePlaceholder":"ESCRIBE MENSAJE...","messageAria":"Mensaje para la sala","send":"ENVIAR","start":"EMPEZAR","fillCpuHard":"JUGADORES CPU DE RELLENO","removeCpuFill":"QUITAR CPU","leaveRoom":"SALIR DE SALA","lobbyHelp":"Los demas abren esta misma direccion y escriben el codigo.","victory":"VICTORIA","sessionRanking":"RANKING DE LA SESION","gameWon":"PARTIDA GANADA","gamesWon":"PARTIDAS GANADAS","rematch":"REPETIR PARTIDA","mainMenu":"MENU PRINCIPAL","escExit":"ESC: salir","holdToTalk":"Mantener para hablar","exit":"SALIR","exitAria":"Salir de la partida y volver al inicio","sensorUnsupported":"Este navegador no ofrece sensor de orientacion.","motionPermissionDenied":"Permiso de movimiento denegado","motionError":"No se pudo activar el giro: {detail}","permissionUnavailable":"permiso no disponible","connectingServer":"Conectando con el servidor{dots} espera un momento.","serverStarting":"El servidor se esta iniciando{dots} Puede tardar hasta un minuto ({secs}s).","serverConfigMissing":"Falta configurar el servidor de partida en config.js","serverReady":"Servidor conectado · listo para jugar","reconnecting":"RECONECTANDO...","reconnectingGame":"Reconectando con la partida...","resumeFailed":"No se pudo recuperar la partida.","noPublicRooms":"NO HAY PARTIDAS PUBLICAS DISPONIBLES","inProgress":"EN PARTIDA","roomPrefix":"SALA","winnerName":"GANA {name}","winnerIndex":"GANA J{index}","restarting":"REINICIANDO...","penalty":"PENALIZACION -1","brutal":"BRUTAL","goodShot":"BUENA","pickupAmmo1":"+1 BALA","pickupAmmo6":"+6 BALAS","pickupCadence":"CADENCIA MEJORADA","pickupAim":"MISIL GUIADO","pickupFlare":"BENGALA","pickupShockwave":"ONDA DE CHOQUE","pickupSpeed":"VELOCIDAD","pickupShield":"ESCUDO","pickupGhost":"FANTASMA","incomingMissile":"MISIL ENTRANTE","ufoIdentifiedNotice":"OBJETO VOLANTE NO IDENTIFICADO","leader":"LIDER \"{name}\"","ghost":"FANTASMA","fireControl":"DISPARO","thrustControl":"ACELERAR","meteorShower":"LLUVIA DE METEORITOS","microphoneUnavailable":"MICROFONO NO DISPONIBLE","requestingMicrophone":"SOLICITANDO MICROFONO...","microphoneDenied":"PERMISO DE MICROFONO DENEGADO","tapVoiceToHear":"TOCA ACTIVAR MICRO PARA OIR A LOS DEMAS","talk":"HABLAR","talkingPlayer":"J{index} HABLANDO","voiceHintTalking":"V · HABLANDO","voiceHintTalk":"V · HABLAR","error":"Error","roomUnavailable":"Sala no disponible.","roomFull":"Sala llena.","reconnectExpired":"Ha pasado el tiempo de reconexión.","matchNotRecoverable":"La partida ya no se puede recuperar.","hostClosed":"El anfitrión cerró la sala.","hostDisconnected":"El anfitrión perdió la conexión.","soloHostClosed":"La partida se cierra porque solo queda el anfitrión.","previousRoomReplaced":"La sala anterior fue reemplazada por una nueva sesion.","activeRoomExists":"YA ESTÁS EN UNA SALA ACTIVA.","testRoomLimitReached":"LIMITE DE SALAS DE PRUEBA ALCANZADO."},"en":{"orientationTitle":"ROTATE YOUR PHONE","orientationCopy":"Galaxy Combat is designed for landscape mode.","languageLabel":"LANGUAGE","orientationInstallCopy":"FOR THE BEST EXPERIENCE, ADD THE GAME TO YOUR HOME SCREEN.","addHomeScreen":"REQUIRED: ADD TO HOME SCREEN","pwaInstalled":"GALAXY COMBAT INSTALLED. YOU CAN NOW OPEN IT FROM YOUR HOME SCREEN LIKE AN APP.","pwaIosInstall":"ON IPHONE/IPAD: TAP SHARE, THEN \"ADD TO HOME SCREEN\". IT WILL OPEN FULL SCREEN LIKE AN APP.","pwaBrowserInstall":"OPEN YOUR BROWSER MENU AND CHOOSE \"INSTALL APP\" OR \"ADD TO HOME SCREEN\". THEN IT WILL OPEN LIKE AN APP.","yourName":"YOUR NAME","defaultPlayer":"PLAYER","playerNameAria":"Player name","connectingWait":"Connecting to the server... please wait.","connectingShort":"Connecting to the server...","modesAria":"Game modes","modeCpu":"VS CPU","cpuDifficultyAria":"CPU difficulty","easy":"EASY","medium":"MEDIUM","hard":"HARD","play":"PLAY","modeOnline":"ONLINE · 2-4 PLAYERS","createGame":"CREATE GAME","modeJoin":"JOIN A ROOM","join":"JOIN","roomTypeTitle":"GAME TYPE","roomTypeCopy":"PUBLIC appears in the list. PRIVATE can only be opened with its code.","publicRoom":"PUBLIC","privateRoom":"PRIVATE","cancel":"CANCEL","publicGames":"PUBLIC GAMES","searchingGames":"Searching for games...","orEnterCode":"PRIVATE GAME","codePlaceholder":"CODE","roomCodeAria":"Room code","close":"CLOSE","voiceChatAria":"Voice chat","activateVoice":"ENABLE MIC","voiceActive":"MIC ON","voiceEnabled":"VOICE ENABLED","voiceDisabled":"VOICE OFF","rotateControl":"TURN","orArrows":"or arrows","accelerate":"THRUST","fire":"FIRE","mobileGuide":"Left half: turn · right half: quick tap fires · hold to thrust.","mobileTouchGuide":"TAP: FIRE · HOLD: THRUST","room":"ROOM","roomChat":"ROOM CHAT","noMessages":"No messages","messagePlaceholder":"TYPE A MESSAGE...","messageAria":"Message to the room","send":"SEND","start":"START","fillCpuHard":"FILL WITH CPU","removeCpuFill":"REMOVE CPU","leaveRoom":"LEAVE ROOM","lobbyHelp":"The others open this same address and enter the code.","victory":"VICTORY","sessionRanking":"SESSION RANKING","gameWon":"GAME WON","gamesWon":"GAMES WON","rematch":"PLAY AGAIN","mainMenu":"MAIN MENU","escExit":"ESC: exit","holdToTalk":"Hold to talk","exit":"EXIT","exitAria":"Leave the match and return to the main menu","sensorUnsupported":"This browser does not provide an orientation sensor.","motionPermissionDenied":"Motion permission denied","motionError":"Could not enable tilt controls: {detail}","permissionUnavailable":"permission unavailable","connectingServer":"Connecting to the server{dots} please wait.","serverStarting":"The server is starting{dots} It may take up to a minute ({secs}s).","serverConfigMissing":"The game server is not configured in config.js","serverReady":"Server connected · ready to play","reconnecting":"RECONNECTING...","reconnectingGame":"Reconnecting to the match...","resumeFailed":"The match could not be recovered.","noPublicRooms":"NO PUBLIC GAMES AVAILABLE","inProgress":"IN PROGRESS","roomPrefix":"ROOM","winnerName":"{name} WINS","winnerIndex":"J{index} WINS","restarting":"RESTARTING...","penalty":"PENALTY -1","brutal":"BRUTAL","goodShot":"NICE","pickupAmmo1":"+1 BULLET","pickupAmmo6":"+6 BULLETS","pickupCadence":"FIRE RATE UP","pickupAim":"HOMING MISSILE","pickupFlare":"FLARE","pickupShockwave":"SHOCKWAVE","pickupSpeed":"SPEED","pickupShield":"SHIELD","pickupGhost":"GHOST","incomingMissile":"MISSILE INCOMING","ufoIdentifiedNotice":"UNIDENTIFIED FLYING OBJECT","leader":"LEADER \"{name}\"","ghost":"GHOST","fireControl":"FIRE","thrustControl":"THRUST","meteorShower":"METEOR SHOWER","microphoneUnavailable":"MICROPHONE UNAVAILABLE","requestingMicrophone":"REQUESTING MICROPHONE...","microphoneDenied":"MICROPHONE PERMISSION DENIED","tapVoiceToHear":"TAP ENABLE MIC TO HEAR THE OTHERS","talk":"TALK","talkingPlayer":"J{index} TALKING","voiceHintTalking":"V · TALKING","voiceHintTalk":"V · TALK","error":"Error","roomUnavailable":"Room unavailable.","roomFull":"Room full.","reconnectExpired":"The reconnection window has expired.","matchNotRecoverable":"The match can no longer be recovered.","hostClosed":"The host closed the room.","hostDisconnected":"The host lost connection.","soloHostClosed":"The match closes because only the host remains.","previousRoomReplaced":"The previous room was replaced by a new session.","activeRoomExists":"YOU ARE ALREADY IN AN ACTIVE ROOM.","testRoomLimitReached":"TEST ROOM LIMIT REACHED."},"it":{"orientationTitle":"RUOTA IL TELEFONO","orientationCopy":"Galaxy Combat si gioca in orizzontale.","languageLabel":"LINGUA / LANGUAGE","orientationInstallCopy":"PER GIOCARE MEGLIO, AGGIUNGI IL GIOCO ALLA SCHERMATA HOME.","addHomeScreen":"NECESSARIO: AGGIUNGI ALLA HOME","pwaInstalled":"GALAXY COMBAT INSTALLATO. ORA PUOI APRIRLO DALLA SCHERMATA HOME COME UN'APP.","pwaIosInstall":"SU IPHONE/IPAD: TOCCA CONDIVIDI E POI \"AGGIUNGI A HOME\". SI APRIRA A SCHERMO INTERO COME UN'APP.","pwaBrowserInstall":"APRI IL MENU DEL BROWSER E SCEGLI \"INSTALLA APP\" O \"AGGIUNGI A HOME\". POI SI APRIRA COME UN'APP.","yourName":"IL TUO NOME","defaultPlayer":"GIOCATORE","playerNameAria":"Nome del giocatore","connectingWait":"Connessione al server... attendi un momento.","connectingShort":"Connessione al server...","modesAria":"Modalita di gioco","modeCpu":"CONTRO LA CPU","cpuDifficultyAria":"Difficolta CPU","easy":"FACILE","medium":"MEDIO","hard":"DIFFICILE","play":"GIOCA","modeOnline":"ONLINE · 2-4 GIOCATORI","createGame":"CREA PARTITA","modeJoin":"ENTRA IN UNA STANZA","join":"ENTRA","roomTypeTitle":"TIPO DI PARTITA","roomTypeCopy":"PUBBLICA appare nella lista. PRIVATA si apre solo con il suo codice.","publicRoom":"PUBBLICA","privateRoom":"PRIVATA","cancel":"ANNULLA","publicGames":"PARTITE PUBBLICHE","searchingGames":"Ricerca partite...","orEnterCode":"PARTITA PRIVATA","codePlaceholder":"CODICE","roomCodeAria":"Codice stanza","close":"CHIUDI","voiceChatAria":"Chat vocale","activateVoice":"ATTIVA MICRO","voiceActive":"MICRO ATTIVO","voiceEnabled":"VOCE ATTIVATA","voiceDisabled":"VOCE DISATTIVATA","rotateControl":"GIRA","orArrows":"o frecce","accelerate":"ACCELERA","fire":"SPARA","mobileGuide":"Meta sinistra: gira · meta destra: tocco rapido spara · tieni premuto accelera.","mobileTouchGuide":"TOCCO: SPARA · TIENI: ACCELERA","room":"STANZA","roomChat":"CHAT DELLA STANZA","noMessages":"Nessun messaggio","messagePlaceholder":"SCRIVI UN MESSAGGIO...","messageAria":"Messaggio per la stanza","send":"INVIA","start":"INIZIA","fillCpuHard":"RIEMPI CON CPU","removeCpuFill":"RIMUOVI CPU","leaveRoom":"ESCI DALLA STANZA","lobbyHelp":"Gli altri aprono questo stesso indirizzo e inseriscono il codice.","victory":"VITTORIA","sessionRanking":"CLASSIFICA SESSIONE","gameWon":"PARTITA VINTA","gamesWon":"PARTITE VINTE","rematch":"RIGIOCA","mainMenu":"MENU PRINCIPALE","escExit":"ESC: esci","holdToTalk":"Tieni premuto per parlare","exit":"ESCI","exitAria":"Esci dalla partita e torna al menu principale","sensorUnsupported":"Questo browser non dispone di un sensore di orientamento.","motionPermissionDenied":"Permesso di movimento negato","motionError":"Impossibile attivare i controlli a inclinazione: {detail}","permissionUnavailable":"permesso non disponibile","connectingServer":"Connessione al server{dots} attendi un momento.","serverStarting":"Il server si sta avviando{dots} Puo richiedere fino a un minuto ({secs}s).","serverConfigMissing":"Il server di gioco non e configurato in config.js","serverReady":"Server connesso · pronto per giocare","reconnecting":"RICONNESSIONE...","reconnectingGame":"Riconnessione alla partita...","resumeFailed":"Impossibile recuperare la partita.","noPublicRooms":"NESSUNA PARTITA PUBBLICA DISPONIBILE","inProgress":"IN CORSO","roomPrefix":"STANZA","winnerName":"VINCE {name}","winnerIndex":"VINCE J{index}","restarting":"RIAVVIO...","penalty":"PENALITA -1","brutal":"BRUTAL","goodShot":"BELLA","pickupAmmo1":"+1 PROIETTILE","pickupAmmo6":"+6 PROIETTILI","pickupCadence":"CADENZA MIGLIORATA","pickupAim":"MISSILE GUIDATO","pickupFlare":"BENGALA","pickupShockwave":"ONDA D URTO","pickupSpeed":"VELOCITA","pickupShield":"SCUDO","pickupGhost":"FANTASMA","incomingMissile":"MISSILE IN ARRIVO","ufoIdentifiedNotice":"OGGETTO VOLANTE NON IDENTIFICATO","leader":"LEADER \"{name}\"","ghost":"FANTASMA","fireControl":"SPARA","thrustControl":"ACCELERA","meteorShower":"PIOGGIA DI METEORITI","microphoneUnavailable":"MICROFONO NON DISPONIBILE","requestingMicrophone":"RICHIESTA MICROFONO...","microphoneDenied":"PERMESSO MICROFONO NEGATO","tapVoiceToHear":"TOCCA ATTIVA MICRO PER SENTIRE GLI ALTRI","talk":"PARLA","talkingPlayer":"J{index} STA PARLANDO","voiceHintTalking":"V · PARLANDO","voiceHintTalk":"V · PARLA","error":"Errore","roomUnavailable":"Stanza non disponibile.","roomFull":"Stanza piena.","reconnectExpired":"Il tempo per la riconnessione e scaduto.","matchNotRecoverable":"La partita non puo piu essere recuperata.","hostClosed":"L'host ha chiuso la stanza.","hostDisconnected":"L'host ha perso la connessione.","soloHostClosed":"La partita si chiude perché resta solo l'host.","previousRoomReplaced":"La stanza precedente e stata sostituita da una nuova sessione.","activeRoomExists":"SEI GIÀ IN UNA STANZA ATTIVA.","testRoomLimitReached":"LIMITE DI STANZE DI PROVA RAGGIUNTO."},"fr":{"orientationTitle":"TOURNE LE TELEPHONE","orientationCopy":"Galaxy Combat se joue en mode paysage.","languageLabel":"LANGUE / LANGUAGE","orientationInstallCopy":"POUR MIEUX JOUER, AJOUTE LE JEU A TON ECRAN D'ACCUEIL.","addHomeScreen":"NECESSAIRE : AJOUTER A L'ECRAN D'ACCUEIL","pwaInstalled":"GALAXY COMBAT EST INSTALLE. TU PEUX MAINTENANT L'OUVRIR DEPUIS TON ECRAN D'ACCUEIL COMME UNE APP.","pwaIosInstall":"SUR IPHONE/IPAD : APPUIE SUR PARTAGER PUIS \"AJOUTER A L'ECRAN D'ACCUEIL\". LE JEU S'OUVRIRA EN PLEIN ECRAN.","pwaBrowserInstall":"OUVRE LE MENU DU NAVIGATEUR ET CHOISIS \"INSTALLER L'APP\" OU \"AJOUTER A L'ECRAN D'ACCUEIL\".","yourName":"TON NOM","defaultPlayer":"JOUEUR","playerNameAria":"Nom du joueur","connectingWait":"Connexion au serveur... patiente un instant.","connectingShort":"Connexion au serveur...","modesAria":"Modes de jeu","modeCpu":"CONTRE LE CPU","cpuDifficultyAria":"Difficulte CPU","easy":"FACILE","medium":"MOYEN","hard":"DIFFICILE","play":"JOUER","modeOnline":"EN LIGNE · 2-4 JOUEURS","createGame":"CREER UNE PARTIE","modeJoin":"REJOINDRE UNE SALLE","join":"REJOINDRE","roomTypeTitle":"TYPE DE PARTIE","roomTypeCopy":"PUBLIQUE apparait dans la liste. PRIVEE ne peut etre ouverte qu'avec son code.","publicRoom":"PUBLIQUE","privateRoom":"PRIVEE","cancel":"ANNULER","publicGames":"PARTIES PUBLIQUES","searchingGames":"Recherche de parties...","orEnterCode":"PARTIE PRIVEE","codePlaceholder":"CODE","roomCodeAria":"Code de la salle","close":"FERMER","voiceChatAria":"Chat vocal","activateVoice":"ACTIVER MICRO","voiceActive":"MICRO ACTIF","voiceEnabled":"VOIX ACTIVEE","voiceDisabled":"VOIX DESACTIVEE","rotateControl":"TOURNER","orArrows":"ou fleches","accelerate":"ACCELERER","fire":"TIRER","mobileGuide":"Moitié gauche : tourner · moitié droite : touche rapide tire · maintenir accelere.","mobileTouchGuide":"TOUCHE : TIRER · MAINTENIR : ACCELERER","room":"SALLE","roomChat":"CHAT DE LA SALLE","noMessages":"Aucun message","messagePlaceholder":"ECRIS UN MESSAGE...","messageAria":"Message pour la salle","send":"ENVOYER","start":"DEMARRER","fillCpuHard":"COMPLETER AVEC CPU","removeCpuFill":"RETIRER CPU","leaveRoom":"QUITTER LA SALLE","lobbyHelp":"Les autres ouvrent cette meme adresse et saisissent le code.","victory":"VICTOIRE","sessionRanking":"CLASSEMENT DE LA SESSION","gameWon":"PARTIE GAGNEE","gamesWon":"PARTIES GAGNEES","rematch":"REJOUER","mainMenu":"MENU PRINCIPAL","escExit":"ESC : quitter","holdToTalk":"Maintenir pour parler","exit":"QUITTER","exitAria":"Quitter la partie et revenir au menu principal","sensorUnsupported":"Ce navigateur ne fournit pas de capteur d'orientation.","motionPermissionDenied":"Autorisation de mouvement refusee","motionError":"Impossible d'activer les controles par inclinaison : {detail}","permissionUnavailable":"autorisation indisponible","connectingServer":"Connexion au serveur{dots} patiente un instant.","serverStarting":"Le serveur demarre{dots} Cela peut prendre jusqu'a une minute ({secs}s).","serverConfigMissing":"Le serveur de jeu n'est pas configure dans config.js","serverReady":"Serveur connecte · pret a jouer","reconnecting":"RECONNEXION...","reconnectingGame":"Reconnexion a la partie...","resumeFailed":"La partie n'a pas pu etre recuperee.","noPublicRooms":"AUCUNE PARTIE PUBLIQUE DISPONIBLE","inProgress":"EN COURS","roomPrefix":"SALLE","winnerName":"{name} GAGNE","winnerIndex":"J{index} GAGNE","restarting":"REDEMARRAGE...","penalty":"PENALITE -1","brutal":"BRUTAL","goodShot":"BIEN","pickupAmmo1":"+1 BALLE","pickupAmmo6":"+6 BALLES","pickupCadence":"CADENCE AMELIOREE","pickupAim":"MISSILE GUIDE","pickupFlare":"LEURRE","pickupShockwave":"ONDE DE CHOC","pickupSpeed":"VITESSE","pickupShield":"BOUCLIER","pickupGhost":"FANTOME","incomingMissile":"MISSILE EN APPROCHE","ufoIdentifiedNotice":"OBJET VOLANT NON IDENTIFIE","leader":"EN TETE \"{name}\"","ghost":"FANTOME","fireControl":"TIRER","thrustControl":"ACCELERER","meteorShower":"PLUIE DE METEORITES","microphoneUnavailable":"MICRO INDISPONIBLE","requestingMicrophone":"DEMANDE DU MICRO...","microphoneDenied":"AUTORISATION MICRO REFUSEE","tapVoiceToHear":"TOUCHE ACTIVER MICRO POUR ENTENDRE LES AUTRES","talk":"PARLER","talkingPlayer":"J{index} PARLE","voiceHintTalking":"V · PARLE","voiceHintTalk":"V · PARLER","error":"Erreur","roomUnavailable":"Salle indisponible.","roomFull":"Salle pleine.","reconnectExpired":"Le delai de reconnexion a expire.","matchNotRecoverable":"La partie ne peut plus etre recuperee.","hostClosed":"L'hote a ferme la salle.","hostDisconnected":"L'hote a perdu la connexion.","soloHostClosed":"La partie se ferme car il ne reste que l'hote.","previousRoomReplaced":"La salle precedente a ete remplacee par une nouvelle session.","activeRoomExists":"TU ES DÉJÀ DANS UNE SALLE ACTIVE.","testRoomLimitReached":"LIMITE DE SALLES DE TEST ATTEINTE."},"de":{"orientationTitle":"DREHE DEIN HANDY","orientationCopy":"Galaxy Combat wird im Querformat gespielt.","languageLabel":"SPRACHE / LANGUAGE","orientationInstallCopy":"FUER DAS BESTE SPIELERLEBNIS FUEGE DAS SPIEL ZUM STARTBILDSCHIRM HINZU.","addHomeScreen":"ERFORDERLICH: ZUM STARTBILDSCHIRM","pwaInstalled":"GALAXY COMBAT IST INSTALLIERT. DU KANNST ES JETZT WIE EINE APP VOM STARTBILDSCHIRM OEFFNEN.","pwaIosInstall":"AUF IPHONE/IPAD: TIPPE AUF TEILEN UND DANN AUF \"ZUM STARTBILDSCHIRM\". ES OEFFNET SICH WIE EINE APP IM VOLLBILD.","pwaBrowserInstall":"OEFFNE DAS BROWSER-MENUE UND WAEHLE \"APP INSTALLIEREN\" ODER \"ZUM STARTBILDSCHIRM\".","yourName":"DEIN NAME","defaultPlayer":"SPIELER","playerNameAria":"Spielername","connectingWait":"Verbindung zum Server... bitte kurz warten.","connectingShort":"Verbindung zum Server...","modesAria":"Spielmodi","modeCpu":"GEGEN CPU","cpuDifficultyAria":"CPU-Schwierigkeit","easy":"EINFACH","medium":"MITTEL","hard":"SCHWER","play":"SPIELEN","modeOnline":"ONLINE · 2-4 SPIELER","createGame":"SPIEL ERSTELLEN","modeJoin":"RAUM BEITRETEN","join":"BEITRETEN","roomTypeTitle":"SPIELTYP","roomTypeCopy":"OEFFENTLICH erscheint in der Liste. PRIVAT kann nur mit dem Code geoeffnet werden.","publicRoom":"OEFFENTLICH","privateRoom":"PRIVAT","cancel":"ABBRECHEN","publicGames":"OEFFENTLICHE SPIELE","searchingGames":"Suche nach Spielen...","orEnterCode":"PRIVATES SPIEL","codePlaceholder":"CODE","roomCodeAria":"Raumcode","close":"SCHLIESSEN","voiceChatAria":"Sprachchat","activateVoice":"MIKRO AKTIVIEREN","voiceActive":"MIKRO AN","voiceEnabled":"SPRACHE AKTIVIERT","voiceDisabled":"SPRACHE AUS","rotateControl":"DREHEN","orArrows":"oder Pfeiltasten","accelerate":"BESCHLEUNIGEN","fire":"FEUERN","mobileGuide":"Linke Hälfte: drehen · rechte Hälfte: kurz tippen feuert · halten beschleunigt.","mobileTouchGuide":"TIPPEN: FEUERN · HALTEN: BESCHLEUNIGEN","room":"RAUM","roomChat":"RAUMCHAT","noMessages":"Keine Nachrichten","messagePlaceholder":"NACHRICHT SCHREIBEN...","messageAria":"Nachricht an den Raum","send":"SENDEN","start":"STARTEN","fillCpuHard":"MIT CPU AUFFUELLEN","removeCpuFill":"CPU ENTFERNEN","leaveRoom":"RAUM VERLASSEN","lobbyHelp":"Die anderen oeffnen dieselbe Adresse und geben den Code ein.","victory":"SIEG","sessionRanking":"SITZUNGS-RANGLISTE","gameWon":"GEWONNENE PARTIE","gamesWon":"GEWONNENE PARTIEN","rematch":"NOCHMAL SPIELEN","mainMenu":"HAUPTMENUE","escExit":"ESC: verlassen","holdToTalk":"Gedrueckt halten zum Sprechen","exit":"VERLASSEN","exitAria":"Spiel verlassen und zum Hauptmenue zurueckkehren","sensorUnsupported":"Dieser Browser bietet keinen Orientierungssensor.","motionPermissionDenied":"Bewegungsberechtigung verweigert","motionError":"Neigungssteuerung konnte nicht aktiviert werden: {detail}","permissionUnavailable":"Berechtigung nicht verfuegbar","connectingServer":"Verbindung zum Server{dots} bitte kurz warten.","serverStarting":"Der Server startet{dots} Das kann bis zu einer Minute dauern ({secs}s).","serverConfigMissing":"Der Spielserver ist in config.js nicht konfiguriert","serverReady":"Server verbunden · spielbereit","reconnecting":"VERBINDUNG WIRD WIEDERHERGESTELLT...","reconnectingGame":"Verbindung zum Spiel wird wiederhergestellt...","resumeFailed":"Das Spiel konnte nicht wiederhergestellt werden.","noPublicRooms":"KEINE OEFFENTLICHEN SPIELE VERFUEGBAR","inProgress":"LAEUFT","roomPrefix":"RAUM","winnerName":"{name} GEWINNT","winnerIndex":"J{index} GEWINNT","restarting":"NEUSTART...","penalty":"STRAFE -1","brutal":"BRUTAL","goodShot":"GUT","pickupAmmo1":"+1 KUGEL","pickupAmmo6":"+6 KUGELN","pickupCadence":"FEUERRATE ERHOEHT","pickupAim":"LENKRAKETE","pickupFlare":"LEUCHTKOERPER","pickupShockwave":"SCHOCKWELLE","pickupSpeed":"GESCHWINDIGKEIT","pickupShield":"SCHILD","pickupGhost":"GEIST","incomingMissile":"RAKETE IM ANFLUG","ufoIdentifiedNotice":"UNIDENTIFIZIERTES FLUGOBJEKT","leader":"FUEHREND \"{name}\"","ghost":"GEIST","fireControl":"FEUER","thrustControl":"SCHUB","meteorShower":"METEORITENSCHAUER","microphoneUnavailable":"MIKROFON NICHT VERFUEGBAR","requestingMicrophone":"MIKROFON WIRD ANGEFORDERT...","microphoneDenied":"MIKROFONBERECHTIGUNG VERWEIGERT","tapVoiceToHear":"TIPPE AUF MIKRO AKTIVIEREN, UM DIE ANDEREN ZU HOEREN","talk":"SPRECHEN","talkingPlayer":"J{index} SPRICHT","voiceHintTalking":"V · SPRICHT","voiceHintTalk":"V · SPRECHEN","error":"Fehler","roomUnavailable":"Raum nicht verfuegbar.","roomFull":"Raum ist voll.","reconnectExpired":"Das Zeitfenster fuer die Wiederverbindung ist abgelaufen.","matchNotRecoverable":"Das Spiel kann nicht mehr wiederhergestellt werden.","hostClosed":"Der Host hat den Raum geschlossen.","hostDisconnected":"Der Host hat die Verbindung verloren.","soloHostClosed":"Das Spiel wird geschlossen, weil nur noch der Host übrig ist.","previousRoomReplaced":"Der vorherige Raum wurde durch eine neue Sitzung ersetzt.","activeRoomExists":"DU BIST BEREITS IN EINEM AKTIVEN RAUM.","testRoomLimitReached":"LIMIT FUER TESTRAEUME ERREICHT."},"zh":{"orientationTitle":"请旋转手机","orientationCopy":"Galaxy Combat 适合横屏游玩。","languageLabel":"语言","orientationInstallCopy":"为了获得更好的游戏体验，请将游戏添加到主屏幕。","addHomeScreen":"需要添加到主屏幕","pwaInstalled":"GALAXY COMBAT 已安装。现在可以像应用一样从主屏幕打开。","pwaIosInstall":"在 IPHONE/IPAD 上：点按“分享”，然后选择“添加到主屏幕”。游戏将像应用一样全屏打开。","pwaBrowserInstall":"打开浏览器菜单，选择“安装应用”或“添加到主屏幕”。之后可像应用一样打开。","yourName":"你的名字","defaultPlayer":"玩家","playerNameAria":"玩家名称","connectingWait":"正在连接服务器……请稍候。","connectingShort":"正在连接服务器……","modesAria":"游戏模式","modeCpu":"对战电脑","cpuDifficultyAria":"电脑难度","easy":"简单","medium":"中等","hard":"困难","play":"开始游戏","modeOnline":"在线 · 2-4 名玩家","createGame":"创建房间","modeJoin":"加入房间","join":"加入","roomTypeTitle":"房间类型","roomTypeCopy":"公开房间会显示在列表中。私人房间只能使用房间代码进入。","publicRoom":"公开","privateRoom":"私人","cancel":"取消","publicGames":"公开房间","searchingGames":"正在搜索房间……","orEnterCode":"私人房间","codePlaceholder":"输入代码","roomCodeAria":"房间代码","close":"关闭","voiceChatAria":"语音聊天","activateVoice":"开启麦克风","voiceActive":"麦克风已开启","voiceEnabled":"语音已开启","voiceDisabled":"语音已关闭","rotateControl":"转向","orArrows":"或方向键","accelerate":"加速","fire":"射击","mobileGuide":"左半屏：转向 · 右半屏：轻点射击 · 按住加速。","mobileTouchGuide":"轻点：射击 · 按住：加速","room":"房间","roomChat":"房间聊天","noMessages":"暂无消息","messagePlaceholder":"输入消息……","messageAria":"发送到房间的消息","send":"发送","start":"开始","fillCpuHard":"用电脑玩家补满","removeCpuFill":"移除电脑玩家","leaveRoom":"离开房间","lobbyHelp":"其他玩家打开相同地址并输入房间代码。","victory":"胜利","sessionRanking":"本局排名","gameWon":"获胜局数","gamesWon":"获胜局数","rematch":"再来一局","mainMenu":"主菜单","escExit":"ESC：退出","holdToTalk":"按住说话","exit":"退出","exitAria":"离开比赛并返回主菜单","sensorUnsupported":"此浏览器不支持方向传感器。","motionPermissionDenied":"动作传感器权限被拒绝","motionError":"无法启用倾斜控制：{detail}","permissionUnavailable":"权限不可用","connectingServer":"正在连接服务器{dots} 请稍候。","serverStarting":"服务器正在启动{dots} 最长可能需要一分钟（{secs}秒）。","serverConfigMissing":"config.js 中未配置游戏服务器","serverReady":"服务器已连接 · 可以开始游戏","reconnecting":"正在重新连接……","reconnectingGame":"正在重新连接比赛……","resumeFailed":"无法恢复比赛。","noPublicRooms":"暂无可用的公开房间","inProgress":"进行中","roomPrefix":"房间","winnerName":"{name} 获胜","winnerIndex":"玩家{index} 获胜","restarting":"正在重新开始……","penalty":"惩罚 -1","brutal":"精彩绝杀","goodShot":"好球","pickupAmmo1":"+1 发子弹","pickupAmmo6":"+6 发子弹","pickupCadence":"射速提升","pickupAim":"制导导弹","pickupFlare":"干扰弹","pickupShockwave":"冲击波","pickupSpeed":"速度","pickupShield":"护盾","pickupGhost":"隐身","incomingMissile":"导弹来袭","ufoIdentifiedNotice":"发现不明飞行物","leader":"领先者“{name}”","ghost":"隐身","fireControl":"射击","thrustControl":"加速","meteorShower":"流星雨","microphoneUnavailable":"麦克风不可用","requestingMicrophone":"正在请求麦克风权限……","microphoneDenied":"麦克风权限被拒绝","tapVoiceToHear":"点按“开启麦克风”以听到其他玩家","talk":"说话","talkingPlayer":"玩家{index} 正在说话","voiceHintTalking":"V · 正在说话","voiceHintTalk":"V · 说话","error":"错误","roomUnavailable":"房间不可用。","roomFull":"房间已满。","reconnectExpired":"重新连接时间已过。","matchNotRecoverable":"比赛无法继续恢复。","hostClosed":"房主已关闭房间。","hostDisconnected":"房主连接中断。","soloHostClosed":"由于只剩房主，比赛已关闭。","previousRoomReplaced":"之前的房间已被新会话替换。","activeRoomExists":"你已经在一个活动房间中。","testRoomLimitReached":"测试房间数量已达到上限。"}};
+  Object.assign(dictionaries.es,{abandonMatchConfirm:'ESTAS A PUNTO DE ABANDONAR LA PARTIDA. ¿CONFIRMAS?',shareGame:'COMPARTIR JUEGO',shareGameCopied:'LINK COPIADO. MANDALO A UN AMIGO: SOLO PEGA CON CTRL+V EN WHATSAPP, MAIL O DONDE QUIERAS.',shareGameCopyFailed:'NO SE PUDO COPIAR. COPIA LA DIRECCION DEL NAVEGADOR Y MANDALA A TU AMIGO.',gameAudioOn:'AUDIO ACTIVO',gameAudioOff:'AUDIO DESACTIVADO',keyThrustCombo:'W / ARRIBA',keyFireCombo:'CTRL / ESPACIO',voiceKeyTip:'PULSANDO V EN EL JUEGO PODRAS HABLAR',shareRoomShort:'COMPARTIR',fillCpuHard:'JUGADORES CPU DE RELLENO',removeCpuFill:'QUITAR CPU DE RELLENO'});
+  Object.assign(dictionaries.en,{abandonMatchConfirm:'YOU ARE ABOUT TO LEAVE THE MATCH. CONFIRM?',shareGame:'SHARE GAME',shareGameCopied:'LINK COPIED. SEND IT TO A FRIEND: JUST PASTE IT WITH CTRL+V IN WHATSAPP, EMAIL OR WHEREVER YOU WANT.',shareGameCopyFailed:'COULD NOT COPY THE LINK. COPY THE BROWSER ADDRESS AND SEND IT TO YOUR FRIEND.',gameAudioOn:'AUDIO ON',gameAudioOff:'AUDIO OFF',keyThrustCombo:'W / UP',keyFireCombo:'CTRL / SPACE',voiceKeyTip:'PRESS V IN GAME TO TALK',shareRoomShort:'SHARE',fillCpuHard:'FILL CPU PLAYERS',removeCpuFill:'REMOVE CPU PLAYERS'});
+  Object.assign(dictionaries.it,{abandonMatchConfirm:'STAI PER ABBANDONARE LA PARTITA. CONFERMI?',shareGame:'CONDIVIDI GIOCO',shareGameCopied:'LINK COPIATO. INVIALO A UN AMICO: INCOLLALO CON CTRL+V SU WHATSAPP, EMAIL O DOVE VUOI.',shareGameCopyFailed:'IMPOSSIBILE COPIARE IL LINK. COPIA L\'INDIRIZZO DEL BROWSER E INVIALO AL TUO AMICO.',gameAudioOn:'AUDIO ATTIVO',gameAudioOff:'AUDIO DISATTIVATO',keyThrustCombo:'W / SU',keyFireCombo:'CTRL / SPAZIO',voiceKeyTip:'PREMI V DURANTE IL GIOCO PER PARLARE',shareRoomShort:'CONDIVIDI',fillCpuHard:'GIOCATORI CPU DI RIEMPIMENTO',removeCpuFill:'RIMUOVI CPU'});
+  Object.assign(dictionaries.fr,{abandonMatchConfirm:'VOUS ETES SUR LE POINT DE QUITTER LA PARTIE. CONFIRMER ?',shareGame:'PARTAGER LE JEU',shareGameCopied:'LIEN COPIE. ENVOIE-LE A UN AMI : COLLE-LE AVEC CTRL+V DANS WHATSAPP, UN E-MAIL OU OU TU VEUX.',shareGameCopyFailed:'IMPOSSIBLE DE COPIER LE LIEN. COPIE L\'ADRESSE DU NAVIGATEUR ET ENVOIE-LA A TON AMI.',gameAudioOn:'AUDIO ACTIVE',gameAudioOff:'AUDIO DESACTIVE',keyThrustCombo:'W / HAUT',keyFireCombo:'CTRL / ESPACE',voiceKeyTip:'APPUYEZ SUR V PENDANT LE JEU POUR PARLER',shareRoomShort:'PARTAGER',fillCpuHard:'JOUEURS CPU DE REMPLISSAGE',removeCpuFill:'RETIRER LES CPU'});
+  Object.assign(dictionaries.de,{abandonMatchConfirm:'DU BIST DABEI, DAS SPIEL ZU VERLASSEN. BESTAETIGEN?',shareGame:'SPIEL TEILEN',shareGameCopied:'LINK KOPIERT. SENDE IHN AN EINEN FREUND: FUEGE IHN MIT STRG+V IN WHATSAPP, E-MAIL ODER WO DU MOECHTEST EIN.',shareGameCopyFailed:'DER LINK KONNTE NICHT KOPIERT WERDEN. KOPIERE DIE BROWSERADRESSE UND SENDE SIE AN DEINEN FREUND.',gameAudioOn:'AUDIO AN',gameAudioOff:'AUDIO AUS',keyThrustCombo:'W / OBEN',keyFireCombo:'STRG / LEERTASTE',voiceKeyTip:'DRUECKE IM SPIEL V, UM ZU SPRECHEN',shareRoomShort:'TEILEN',fillCpuHard:'CPU-SPIELER AUFFUELLEN',removeCpuFill:'CPU ENTFERNEN'});
+  Object.assign(dictionaries.es,{playingStatus:'JUGANDO',waitingStatus:'ESPERANDO',joinCpuSlot:'Unirte como jugador J{index}'});
+  Object.assign(dictionaries.en,{playingStatus:'PLAYING',waitingStatus:'WAITING',joinCpuSlot:'Join as player J{index}'});
+  Object.assign(dictionaries.it,{playingStatus:'IN GIOCO',waitingStatus:'IN ATTESA',joinCpuSlot:'Entra come giocatore J{index}'});
+  Object.assign(dictionaries.fr,{playingStatus:'EN JEU',waitingStatus:'EN ATTENTE',joinCpuSlot:'Rejoindre comme joueur J{index}'});
+  Object.assign(dictionaries.de,{playingStatus:'SPIELT',waitingStatus:'WARTET',joinCpuSlot:'Als Spieler J{index} beitreten'});
+  Object.assign(dictionaries.es,{playerLeftNotice:'ABANDONA',playerCpuReplaceNotice:'CPU J{index} ENTRA'});
+  Object.assign(dictionaries.en,{playerLeftNotice:'LEAVES',playerCpuReplaceNotice:'CPU J{index} JOINS'});
+  Object.assign(dictionaries.it,{playerLeftNotice:'ABBANDONA',playerCpuReplaceNotice:'ENTRA CPU J{index}'});
+  Object.assign(dictionaries.fr,{playerLeftNotice:'QUITTE',playerCpuReplaceNotice:'CPU J{index} ENTRE'});
+  Object.assign(dictionaries.de,{playerLeftNotice:'VERLAESST',playerCpuReplaceNotice:'CPU J{index} UEBERNIMMT'});
+  Object.assign(dictionaries.es,{playerJoinedNotice:'ENTRA EN PARTIDA'});
+  Object.assign(dictionaries.en,{playerJoinedNotice:'JOINS THE MATCH'});
+  Object.assign(dictionaries.it,{playerJoinedNotice:'ENTRA IN PARTITA'});
+  Object.assign(dictionaries.fr,{playerJoinedNotice:'ENTRE DANS LA PARTIE'});
+  Object.assign(dictionaries.de,{playerJoinedNotice:'TRITT DEM SPIEL BEI'});
+  Object.assign(dictionaries.es,{readyNotice:'PREPARADOS',goNotice:'VAMOS!!!',shareRoomFirst:'PRIMERO CREA UNA PARTIDA ONLINE.',shareRoomCopied:'PARTIDA COPIADA. MANDA EL LINK A TU AMIGO: AL ABRIRLO ENTRARA DIRECTAMENTE EN LA SALA {code}.',shareRoomCopyFailed:'NO SE PUDO COPIAR EL LINK DE LA PARTIDA.',joiningRoom:'ENTRANDO EN LA SALA {code}...',joystickActive:'Joystick activo.',joystickConnect:'Joystick activo: conecta un mando.',joystickEnable:'Activar control con mando estandar'});
+  Object.assign(dictionaries.en,{readyNotice:'READY',goNotice:'GO!!!',shareRoomFirst:'CREATE AN ONLINE MATCH FIRST.',shareRoomCopied:'MATCH LINK COPIED. SEND IT TO YOUR FRIEND: OPENING IT WILL JOIN ROOM {code} DIRECTLY.',shareRoomCopyFailed:'COULD NOT COPY THE MATCH LINK.',joiningRoom:'JOINING ROOM {code}...',joystickActive:'Controller active.',joystickConnect:'Controller active: connect a gamepad.',joystickEnable:'Enable standard gamepad controls'});
+  Object.assign(dictionaries.it,{readyNotice:'PRONTI',goNotice:'VIA!!!',shareRoomFirst:'CREA PRIMA UNA PARTITA ONLINE.',shareRoomCopied:'LINK DELLA PARTITA COPIATO. INVIALO AL TUO AMICO: APRENDOLO ENTRERA DIRETTAMENTE NELLA STANZA {code}.',shareRoomCopyFailed:'IMPOSSIBILE COPIARE IL LINK DELLA PARTITA.',joiningRoom:'INGRESSO NELLA STANZA {code}...',joystickActive:'Controller attivo.',joystickConnect:'Controller attivo: collega un gamepad.',joystickEnable:'Attiva i controlli con gamepad standard'});
+  Object.assign(dictionaries.fr,{readyNotice:'PRETS',goNotice:'PARTEZ!!!',shareRoomFirst:'CREE D ABORD UNE PARTIE EN LIGNE.',shareRoomCopied:'LIEN DE LA PARTIE COPIE. ENVOIE-LE A TON AMI : EN L OUVRANT, IL REJOINDRA DIRECTEMENT LA SALLE {code}.',shareRoomCopyFailed:'IMPOSSIBLE DE COPIER LE LIEN DE LA PARTIE.',joiningRoom:'ENTREE DANS LA SALLE {code}...',joystickActive:'Manette active.',joystickConnect:'Manette active : connecte une manette.',joystickEnable:'Activer les commandes avec une manette standard'});
+  Object.assign(dictionaries.de,{readyNotice:'BEREIT',goNotice:'LOS!!!',shareRoomFirst:'ERST EIN ONLINE-SPIEL ERSTELLEN.',shareRoomCopied:'SPIELLINK KOPIERT. SCHICKE IHN DEINEM FREUND: BEIM OEFFNEN TRITT ER DIREKT RAUM {code} BEI.',shareRoomCopyFailed:'SPIELLINK KONNTE NICHT KOPIERT WERDEN.',joiningRoom:'RAUM {code} WIRD BETRETEN...',joystickActive:'Controller aktiv.',joystickConnect:'Controller aktiv: Gamepad anschliessen.',joystickEnable:'Standard-Gamepad-Steuerung aktivieren'});
+  Object.assign(dictionaries.es,{
+    campaignLevelComplete:'NIVEL {level} · {name} SUPERADO',
+    campaignLevelTitle:'NIVEL {level} · {name}',
+    campaignWorld1:'FRONTERA ESTELAR',
+    campaignWorld2:'NEBULOSA ROJA',
+    campaignWorld3:'TORMENTA COSMICA',
+    campaignWorld4:'ABISMO ESTELAR',
+    campaignWorld5:'HORIZONTE FINAL',
+    campaignLevelLost:'NIVEL {level} · GANA {name}',
+    continueCampaign:'CONTINUAR',
+    retryLevel:'REPETIR NIVEL',
+    campaignGameOver:'JUEGO TERMINADO',
+    restartCampaign:'VOLVER A EMPEZAR',
+    campaignChampion:'CAMPEON INTERESTELAR',
+    interstellarTravel:'VIAJE INTERESTELAR',
+    destinationLevel:'DESTINO · {name}',
+    giantWarning:'METEORITO GIGANTE'
+,
+    doubleMove:'DOBLE',
+    savedMove:'SALVADO',
+    evasionMove:'EVASION',
+    flareHitMove:'IMPACTO CON BENGALA',
+    pointBlankMove:'A QUEMARROPA',
+    hunterMove:'CAZADOR',
+    shieldBreakMove:'ROMPEESCUDOS',
+    interceptMove:'INTERCEPTADO',
+    shockCancelMove:'ONDA ANULADA',
+    shockPerfectMove:'ONDA PERFECTA',
+    nearWinWarning:'OJO EL JUGADOR A UNA BAJA',
+    shockwaveFirstHelp:'SI DEJAS PULSADO DISPARO SE ACTIVA',
+    flareFirstHelp:'PULSA DOS DISPAROS SEGUIDOS PARA ACTIVAR',
+    specialPcHelp:'DEJA PULSADO DISPARO PARA ACTIVAR',
+    specialMobileHelp:'PULSA DOS VECES DISPARO SEGUIDO PARA ACTIVAR'
+  });
+  Object.assign(dictionaries.en,{
+    campaignLevelComplete:'LEVEL {level} · {name} COMPLETE',
+    campaignLevelTitle:'LEVEL {level} · {name}',
+    campaignWorld1:'STELLAR FRONTIER',
+    campaignWorld2:'RED NEBULA',
+    campaignWorld3:'COSMIC STORM',
+    campaignWorld4:'STELLAR ABYSS',
+    campaignWorld5:'FINAL HORIZON',
+    campaignLevelLost:'LEVEL {level} · {name} WINS',
+    continueCampaign:'CONTINUE',
+    retryLevel:'RETRY LEVEL',
+    campaignGameOver:'GAME OVER',
+    restartCampaign:'START OVER',
+    campaignChampion:'INTERSTELLAR CHAMPION',
+    interstellarTravel:'INTERSTELLAR TRAVEL',
+    destinationLevel:'DESTINATION · {name}',
+    giantWarning:'GIANT METEOR'
+,
+    doubleMove:'DOUBLE',
+    savedMove:'SAVED',
+    evasionMove:'EVASION',
+    flareHitMove:'FLARE HIT',
+    pointBlankMove:'POINT BLANK',
+    hunterMove:'HUNTER',
+    shieldBreakMove:'SHIELD BREAKER',
+    interceptMove:'INTERCEPTED',
+    shockCancelMove:'SHOCKWAVE CANCELLED',
+    shockPerfectMove:'PERFECT SHOCKWAVE',
+    nearWinWarning:'WATCH OUT - ONE KILL FROM WINNING',
+    shockwaveFirstHelp:'HOLD FIRE TO ACTIVATE',
+    flareFirstHelp:'PRESS FIRE TWICE TO ACTIVATE',
+    specialPcHelp:'HOLD FIRE TO ACTIVATE',
+    specialMobileHelp:'PRESS FIRE TWICE QUICKLY TO ACTIVATE'
+  });
+  Object.assign(dictionaries.it,{
+    campaignLevelComplete:'LIVELLO {level} · {name} SUPERATO',
+    campaignLevelTitle:'LIVELLO {level} · {name}',
+    campaignWorld1:'FRONTIERA STELLARE',
+    campaignWorld2:'NEBULOSA ROSSA',
+    campaignWorld3:'TEMPESTA COSMICA',
+    campaignWorld4:'ABISSO STELLARE',
+    campaignWorld5:'ORIZZONTE FINALE',
+    campaignLevelLost:'LIVELLO {level} · VINCE {name}',
+    continueCampaign:'CONTINUA',
+    retryLevel:'RIPETI LIVELLO',
+    campaignGameOver:'PARTITA TERMINATA',
+    restartCampaign:'RICOMINCIA',
+    campaignChampion:'CAMPIONE INTERSTELLARE',
+    interstellarTravel:'VIAGGIO INTERSTELLARE',
+    destinationLevel:'DESTINAZIONE · {name}',
+    giantWarning:'METEORITE GIGANTE'
+,
+    doubleMove:'DOPPIA',
+    savedMove:'SALVATO',
+    evasionMove:'EVASIONE',
+    flareHitMove:'COLPO DI RAZZO',
+    pointBlankMove:'A BRUCIAPELO',
+    hunterMove:'CACCIATORE',
+    shieldBreakMove:'ROMPISCUDO',
+    interceptMove:'INTERCETTATO',
+    shockCancelMove:'ONDA ANNULLATA',
+    shockPerfectMove:'ONDA PERFETTA',
+    nearWinWarning:'ATTENZIONE - UNA KILL ALLA VITTORIA',
+    shockwaveFirstHelp:'TIENI PREMUTO FUOCO PER ATTIVARE',
+    flareFirstHelp:'PREMI FUOCO DUE VOLTE PER ATTIVARE',
+    specialPcHelp:'TIENI PREMUTO FUOCO PER ATTIVARE',
+    specialMobileHelp:'PREMI FUOCO DUE VOLTE DI SEGUITO PER ATTIVARE'
+  });
+  Object.assign(dictionaries.fr,{
+    campaignLevelComplete:'NIVEAU {level} · {name} TERMINE',
+    campaignLevelTitle:'NIVEAU {level} · {name}',
+    campaignWorld1:'FRONTIERE STELLAIRE',
+    campaignWorld2:'NEBULEUSE ROUGE',
+    campaignWorld3:'TEMPETE COSMIQUE',
+    campaignWorld4:'ABYSSE STELLAIRE',
+    campaignWorld5:'HORIZON FINAL',
+    campaignLevelLost:'NIVEAU {level} · {name} GAGNE',
+    continueCampaign:'CONTINUER',
+    retryLevel:'REJOUER LE NIVEAU',
+    campaignGameOver:'PARTIE TERMINEE',
+    restartCampaign:'RECOMMENCER',
+    campaignChampion:'CHAMPION INTERSTELLAIRE',
+    interstellarTravel:'VOYAGE INTERSTELLAIRE',
+    destinationLevel:'DESTINATION · {name}',
+    giantWarning:'METEORITE GEANT'
+,
+    doubleMove:'DOUBLE',
+    savedMove:'SAUVE',
+    evasionMove:'ESQUIVE',
+    flareHitMove:'IMPACT LEURRE',
+    pointBlankMove:'A BOUT PORTANT',
+    hunterMove:'CHASSEUR',
+    shieldBreakMove:'BRISE-BOUCLIER',
+    interceptMove:'INTERCEPTE',
+    shockCancelMove:'ONDE ANNULEE',
+    shockPerfectMove:'ONDE PARFAITE',
+    nearWinWarning:'ATTENTION - UNE ELIMINATION DE LA VICTOIRE',
+    shockwaveFirstHelp:'MAINTENEZ TIR POUR ACTIVER',
+    flareFirstHelp:'APPUYEZ DEUX FOIS SUR TIR POUR ACTIVER',
+    specialPcHelp:'MAINTENEZ TIR POUR ACTIVER',
+    specialMobileHelp:'APPUYEZ DEUX FOIS DE SUITE SUR TIR POUR ACTIVER'
+  });
+  Object.assign(dictionaries.de,{
+    campaignLevelComplete:'LEVEL {level} · {name} GESCHAFFT',
+    campaignLevelTitle:'LEVEL {level} · {name}',
+    campaignWorld1:'STERNENFRONT',
+    campaignWorld2:'ROTER NEBEL',
+    campaignWorld3:'KOSMISCHER STURM',
+    campaignWorld4:'STERNENABGRUND',
+    campaignWorld5:'LETZTER HORIZONT',
+    campaignLevelLost:'LEVEL {level} · {name} GEWINNT',
+    continueCampaign:'WEITER',
+    retryLevel:'LEVEL WIEDERHOLEN',
+    campaignGameOver:'SPIEL VORBEI',
+    restartCampaign:'NEU ANFANGEN',
+    campaignChampion:'INTERSTELLARER CHAMPION',
+    interstellarTravel:'INTERSTELLARE REISE',
+    destinationLevel:'ZIEL · {name}',
+    giantWarning:'RIESENMETEOR'
+,
+    doubleMove:'DOPPELT',
+    savedMove:'GERETTET',
+    evasionMove:'AUSGEWICHEN',
+    flareHitMove:'LEUCHTKOERPER-TREFFER',
+    pointBlankMove:'AUS NAECHSTER NAEHE',
+    hunterMove:'JAEGER',
+    shieldBreakMove:'SCHILDBRECHER',
+    interceptMove:'ABGEFANGEN',
+    shockCancelMove:'SCHOCKWELLE AUFGEHOBEN',
+    shockPerfectMove:'PERFEKTE SCHOCKWELLE',
+    nearWinWarning:'ACHTUNG - NOCH EIN ABSCHUSS BIS ZUM SIEG',
+    shockwaveFirstHelp:'FEUER GEDRUECKT HALTEN ZUM AKTIVIEREN',
+    flareFirstHelp:'ZWEIMAL FEUER DRUECKEN ZUM AKTIVIEREN',
+    specialPcHelp:'FEUER GEDRUECKT HALTEN ZUM AKTIVIEREN',
+    specialMobileHelp:'ZWEIMAL DIREKT HINTEREINANDER FEUER DRUECKEN'
+  });
+
+  Object.assign(dictionaries.es,{huntTarget:'A POR {name}',cpuAmmoLabel:'BALAS PARA CPU'});
+  Object.assign(dictionaries.en,{huntTarget:'GET {name}',cpuAmmoLabel:'CPU AMMO'});
+  Object.assign(dictionaries.it,{huntTarget:'A CACCIA DI {name}',cpuAmmoLabel:'MUNIZIONI CPU'});
+  Object.assign(dictionaries.fr,{huntTarget:'A LA POURSUITE DE {name}',cpuAmmoLabel:'MUNITIONS CPU'});
+  Object.assign(dictionaries.de,{huntTarget:'JAGD AUF {name}',cpuAmmoLabel:'CPU-MUNITION'});
+
+  Object.assign(dictionaries.zh,{
+    abandonMatchConfirm:'你即将离开比赛。确认吗？',
+    shareGame:'分享游戏',
+    shareGameCopied:'链接已复制。把它发送给朋友即可直接打开 Galaxy Combat。',
+    shareGameCopyFailed:'无法复制链接。请复制浏览器地址并发送给朋友。',
+    gameAudioOn:'音频开启',
+    gameAudioOff:'音频关闭',
+    keyThrustCombo:'W / 上方向键',
+    keyFireCombo:'CTRL / 空格',
+    voiceKeyTip:'游戏中按住 V 可以说话',
+    shareRoomShort:'分享',
+    fillCpuHard:'用电脑玩家补满',
+    removeCpuFill:'移除电脑玩家',
+    playerJoinedNotice:'加入比赛',
+    readyNotice:'准备',
+    goNotice:'开始！！！',
+    shareRoomFirst:'请先创建一个在线房间。',
+    shareRoomCopied:'房间链接已复制。把链接发送给朋友，打开后会直接进入房间 {code}。',
+    shareRoomCopyFailed:'无法复制房间链接。',
+    joiningRoom:'正在进入房间 {code}……',
+    joystickActive:'手柄已启用。',
+    joystickConnect:'手柄已启用：请连接手柄。',
+    joystickEnable:'启用标准手柄控制',
+    campaignLevelComplete:'第 {level} 关 · {name} 已完成',
+    campaignLevelTitle:'第 {level} 关 · {name}',
+    campaignWorld1:'星际边境',
+    campaignWorld2:'红色星云',
+    campaignWorld3:'宇宙风暴',
+    campaignWorld4:'星际深渊',
+    campaignWorld5:'最终地平线',
+    campaignLevelLost:'第 {level} 关 · {name} 获胜',
+    continueCampaign:'继续',
+    retryLevel:'重试本关',
+    campaignGameOver:'游戏结束',
+    restartCampaign:'重新开始',
+    campaignChampion:'星际冠军',
+    interstellarTravel:'星际航行',
+    destinationLevel:'目的地 · {name}',
+    giantWarning:'巨型陨石',
+    doubleMove:'双杀',
+    savedMove:'获救',
+    evasionMove:'闪避',
+    flareHitMove:'干扰弹命中',
+    pointBlankMove:'近距离命中',
+    hunterMove:'猎手',
+    shieldBreakMove:'破盾',
+    interceptMove:'拦截',
+    shockCancelMove:'冲击波抵消',
+    shockPerfectMove:'完美冲击波',
+    nearWinWarning:'注意：再击毁一艘即可获胜',
+    shockwaveFirstHelp:'按住射击键激活',
+    flareFirstHelp:'快速按两次射击键激活',
+    specialPcHelp:'按住射击键激活',
+    specialMobileHelp:'快速连续按两次射击键激活',
+    huntTarget:'追击 {name}',
+    cpuAmmoLabel:'电脑弹药'
+  });
+   const serverMap={"YA TIENES UNA SALA ACTIVA.":"activeRoomExists","YA ESTAS EN UNA SALA ACTIVA.":"activeRoomExists","LIMITE DE SALAS DE PRUEBA ALCANZADO.":"testRoomLimitReached","Sala no disponible.":"roomUnavailable","Sala llena.":"roomFull","La partida ya no se puede recuperar.":"matchNotRecoverable","Ha pasado el tiempo de reconexión.":"reconnectExpired","El anfitrión cerró la sala.":"hostClosed","El anfitrión perdió la conexión.":"hostDisconnected","La partida se cierra porque solo queda el anfitrion.":"soloHostClosed","La sala anterior fue reemplazada por una nueva sesion.":"previousRoomReplaced"};
+  const normalizeLanguage=value=>SUPPORTED.includes(value)?value:'es';
+  let language='es';
+  try{language=normalizeLanguage(localStorage.getItem(STORAGE_KEY)||'es');}catch(_){}
+  function format(text,vars){
+    if(!vars)return text;
+    return String(text).replace(/\{([a-zA-Z0-9_]+)\}/g,(m,k)=>Object.prototype.hasOwnProperty.call(vars,k)?String(vars[k]):m);
+  }
+  function t(key,vars){
+    const dict=dictionaries[language]||dictionaries.es;
+    const fallback=dictionaries.es[key]||key;
+    return format(dict[key]||fallback,vars);
+  }
+  function translateServerText(text){
+    const raw=String(text==null?'':text);
+    const key=serverMap[raw];
+    return key?t(key):raw;
+  }
+  function apply(root=document){
+    if(!root)return;
+    root.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});
+    root.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.setAttribute('placeholder',t(el.dataset.i18nPlaceholder));});
+    root.querySelectorAll('[data-i18n-aria]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.i18nAria));});
+    const nameEl=document.getElementById('name');
+    if(nameEl){
+      const oldDefault=nameEl.dataset.defaultPlayer||dictionaries.es.defaultPlayer;
+      const nextDefault=t('defaultPlayer');
+      if(!nameEl.value||nameEl.value===oldDefault)nameEl.value=nextDefault;
+      nameEl.dataset.defaultPlayer=nextDefault;
+    }
+    document.documentElement.lang=language;
+    document.querySelectorAll('[data-language-current-flag]').forEach(el=>{
+      const base=el.classList.contains('orientation-language-flag')?'orientation-language-flag':'language-flag';
+      el.className=`${base} flag-${language}`;
+      el.setAttribute('data-language-current-flag','');
+    });
+    document.querySelectorAll('[data-language-current-code]').forEach(el=>{el.textContent=language.toUpperCase();});
+  }
+  function setLanguage(next,{notify=true}={}){
+    language=normalizeLanguage(next);
+    try{localStorage.setItem(STORAGE_KEY,language);}catch(_){}
+    apply(document);
+    if(notify)window.dispatchEvent(new CustomEvent('galaxy-languagechange',{detail:{language}}));
+  }
+  window.GalaxyI18n={t,apply,setLanguage,getLanguage:()=>language,translateServerText};
+  document.querySelectorAll('[data-language]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      setLanguage(button.dataset.language);
+      const dropdown=button.closest('details');
+      if(dropdown)dropdown.open=false;
+    });
+  });
+  apply(document);
+})();

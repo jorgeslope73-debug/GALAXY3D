@@ -1,0 +1,543 @@
+'use strict';
+(() => {
+  const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
+
+  // Un unico integrador para autoridad y prediccion. Un comando = un tick.
+  const MOVEMENT_DT=1/60;
+  const MOVEMENT_DRAG=Math.pow(.35,MOVEMENT_DT);
+  function stepShipMovement(p,c,dt=MOVEMENT_DT,width=1920,height=1080){
+    p.rot=(p.rot+c.turn*240*dt+360)%360;
+    const radians=p.rot*Math.PI/180,dx=-Math.sin(radians),dy=-Math.cos(radians);
+    if(c.thrust){p.vx+=dx*(240*p.speed)*dt;p.vy+=dy*(240*p.speed)*dt;}
+    const drag=dt===MOVEMENT_DT?MOVEMENT_DRAG:Math.pow(.35,dt);
+    p.vx*=drag;p.vy*=drag;
+    const vmax=330*p.speed,speed=Math.hypot(p.vx,p.vy);
+    if(speed>vmax){p.vx=p.vx/speed*vmax;p.vy=p.vy/speed*vmax;}
+    p.x=(p.x+p.vx*dt+width)%width;p.y=(p.y+p.vy*dt+height)%height;
+  }
+  function createMotionStream(epoch){
+    return {epoch,ack:0,active:false,requested:false,queue:new Map(),missing:0,last:{turn:0,thrust:false,fire:false,directFire:false}};
+  }
+  function acceptMotionFrames(stream,packet){
+    if(!packet||packet.v!==1||packet.epoch!==stream.epoch||!Array.isArray(packet.frames)||packet.frames.length>60)return false;
+    // Validate the complete batch before changing any state. No client positions or dt.
+    let previous=0;
+    for(const f of packet.frames){
+      if(!Array.isArray(f)||f.length!==5||!Number.isSafeInteger(f[0])||f[0]<=previous||f[0]>stream.ack+120||
+        !Number.isFinite(f[1])||Math.abs(f[1])>1||![0,1].includes(f[2])||![0,1].includes(f[3])||![0,1].includes(f[4]))return false;
+      previous=f[0];
+    }
+    stream.requested=true;
+    if(!stream.active&&stream.queue.size===0&&packet.frames.length)stream.ack=packet.frames[0][0]-1;
+    for(const f of packet.frames)if(f[0]>stream.ack&&!stream.queue.has(f[0])){
+      stream.queue.set(f[0],{turn:f[1],thrust:!!f[2],fire:!!f[3],directFire:!!f[4]});
+    }
+    // Start with three consecutive commands. Starting at the first command
+    // lets the 60 Hz consumer overtake the 30 Hz sender between packets,
+    // retiring releases before they arrive. Local prediction remains immediate.
+    if(!stream.active&&[1,2,3].every(n=>stream.queue.has(stream.ack+n)))stream.active=true;
+    return true;
+  }
+  function consumeMotionFrame(stream){
+    if(!stream||!stream.active)return null;
+    const tick=++stream.ack,frame=stream.queue.get(tick);
+    stream.queue.delete(tick);
+    if(frame){stream.last=frame;stream.missing=0;}
+    else stream.missing++;
+    // Deadline passed: a late frame is retired, never applied a second time.
+    // A short gap holds the last input; a long gap releases controls.
+    return stream.missing<=6?stream.last:{turn:0,thrust:false,fire:false,directFire:false};
+  }
+
+  function limitRockSpeed(rock,maxSpeed){
+    const speed=Math.hypot(Number(rock.vx)||0,Number(rock.vy)||0);
+    if(speed>maxSpeed&&speed>0){
+      rock.vx*=maxSpeed/speed;
+      rock.vy*=maxSpeed/speed;
+    }
+  }
+
+  function resolveAsteroidPairCollision(a,b,defaultRadius=45,maxSpeed=190){
+    if(!a||!b||a.exiting||b.exiting)return false;
+    const ra=Number(a.r)||defaultRadius,rb=Number(b.r)||defaultRadius;
+    const dx=b.x-a.x,dy=b.y-a.y,minDist=ra+rb,d2=dx*dx+dy*dy;
+
+    // Los dos fragmentos de una misma rotura se dejan separar por el impulso
+    // inicial. Cuando ya han alcanzado distancia normal vuelven a comportarse
+    // como dos asteroides independientes.
+    if(a.fragmentGroup&&a.fragmentGroup===b.fragmentGroup){
+      if(!a.fragmentPairReleased||!b.fragmentPairReleased){
+        if(d2>=(minDist+2)*(minDist+2)){
+          a.fragmentPairReleased=true;
+          b.fragmentPairReleased=true;
+        }else return false;
+      }
+    }
+
+    if(d2>=minDist*minDist)return false;
+    const d=Math.sqrt(d2)||.0001,nx=dx/d,ny=dy/d;
+    const overlap=minDist-d;
+    const massA=Math.max(1,ra*ra),massB=Math.max(1,rb*rb);
+    const invA=1/massA,invB=1/massB,invSum=invA+invB;
+
+    const correction=(overlap+.6)/invSum;
+    a.x-=nx*correction*invA;a.y-=ny*correction*invA;
+    b.x+=nx*correction*invB;b.y+=ny*correction*invB;
+
+    const rvx=b.vx-a.vx,rvy=b.vy-a.vy;
+    const closing=rvx*nx+rvy*ny;
+    if(closing<0){
+      const restitution=.84;
+      const impulse=-(1+restitution)*closing/invSum;
+      a.vx-=impulse*invA*nx;a.vy-=impulse*invA*ny;
+      b.vx+=impulse*invB*nx;b.vy+=impulse*invB*ny;
+    }
+
+    limitRockSpeed(a,maxSpeed);
+    limitRockSpeed(b,maxSpeed);
+    return true;
+  }
+
+  function resolveGiantAsteroidCollision(g,a,giantRadius,defaultRadius=45,maxSpeed=190){
+    if(!g||!a||a.exiting)return false;
+    const ar=Number(a.r)||defaultRadius;
+    const dx=a.x-g.x,dy=a.y-g.y,minDist=giantRadius+ar,d2=dx*dx+dy*dy;
+    if(d2>=minDist*minDist)return false;
+    const d=Math.sqrt(d2)||.0001,nx=dx/d,ny=dy/d;
+    const overlap=minDist-d;
+
+    a.x+=nx*(overlap+1.2);a.y+=ny*(overlap+1.2);
+    const rvx=a.vx-g.vx,rvy=a.vy-g.vy,closing=rvx*nx+rvy*ny;
+    if(closing<0){
+      const bounce=-(1.58)*closing;
+      a.vx+=nx*bounce;a.vy+=ny*bounce;
+    }else{
+      a.vx+=nx*12;a.vy+=ny*12;
+    }
+
+    limitRockSpeed(a,maxSpeed);
+    return true;
+  }
+
+  function guidedTargetFor(p,players,dirFromRot,minAlign=TARGET_MIN_ALIGN){
+    if(!p||p.dead||!Array.isArray(players)||typeof dirFromRot!=='function')return -1;
+    const forward=dirFromRot(p.rot);
+    let bestIndex=-1,bestAlign=-2,bestDistance=Infinity;
+
+    for(const target of players){
+      if(!target||target.index===p.index||target.dead)continue;
+      const dx=target.x-p.x,dy=target.y-p.y,distance=Math.hypot(dx,dy);
+      if(distance<1)continue;
+      const align=(forward.x*dx+forward.y*dy)/distance;
+      if(align<minAlign)continue;
+      if(align>bestAlign+1e-6||(Math.abs(align-bestAlign)<=1e-6&&distance<bestDistance)){
+        bestAlign=align;
+        bestDistance=distance;
+        bestIndex=target.index;
+      }
+    }
+    return bestIndex;
+  }
+
+
+  function reloadTimeFor(p){
+    const cadence=Number(p&&p.cadence)||30;
+    return Math.max(.5,cadence/8)*.5;
+  }
+
+  function bulletSpeedFor(p){
+    const cadence=Number(p&&p.cadence)||30;
+    return cadence>=30?500:(cadence>=20?750:(cadence>=10?900:1000));
+  }
+
+  function guidedProjectileSpeedFor(p){
+    const cadence=Number(p&&p.cadence)||30;
+    return cadence>=30?400:(cadence>=20?460:(cadence>=10?520:580));
+  }
+
+  function refreshGuidedState(p,players,dirFromRot){
+    if(!p)return -1;
+    p.guided=Number(p.guidedAmmo)>0;
+    p.guidedTarget=p.guided?guidedTargetFor(p,players,dirFromRot):-1;
+    return p.guidedTarget;
+  }
+
+  function tryFireProjectile(p,d,fireNow,rocketNow,directFire,cpuBlocked,players,dirFromRot,uid,cpuFireDelaySeconds=0){
+    if(!p||!d)return null;
+
+    const rocketReady=!!rocketNow&&Number(p.guidedAmmo)>0;
+    const guided=rocketReady?true:(directFire?false:!!p.guided);
+    const hasAmmo=guided?Number(p.guidedAmmo)>0:Number(p.bullets)>0;
+
+    // Mantener exactamente la misma puerta de disparo en local y online:
+    // accion valida, municion de su reserva, recarga terminada y CPU armada.
+    if((!fireNow&&!rocketReady)||!hasAmmo||!(Number(p.reload)<=0)||cpuBlocked)return null;
+
+    const projectileSpeed=guided?guidedProjectileSpeedFor(p):bulletSpeedFor(p);
+    const makeId=typeof uid==='function'?uid:(()=>Math.floor(Math.random()*1e9));
+    const projectile={
+      id:makeId(),owner:p.index,
+      x:p.x+d.x*35,y:p.y+d.y*35,
+      vx:d.x*projectileSpeed,vy:d.y*projectileSpeed,
+      age:0,travel:0,guided,
+      target:guided?p.guidedTarget:-1,
+      flareTarget:-1,decoyed:false,
+      baseSpeed:projectileSpeed
+    };
+
+    // V22.06: balas y misiles consumen siempre su contador independiente.
+    if(guided){
+      p.guidedAmmo=Math.max(0,(Number(p.guidedAmmo)||0)-1);
+      refreshGuidedState(p,players,dirFromRot);
+    }else{
+      p.bullets=Math.max(0,(Number(p.bullets)||0)-1);
+    }
+
+    // Una sola cadencia comun para ambos tipos de proyectil.
+    p.reload=reloadTimeFor(p);
+    if(p.cpu)p.cpuFireDelay=Number(cpuFireDelaySeconds)||0;
+    return projectile;
+  }
+
+
+  function projectileAsteroidHit(projectile,asteroids,sweptCircles,projectileRadius=4){
+    if(!projectile||!Array.isArray(asteroids)||typeof sweptCircles!=='function')return null;
+    for(let i=asteroids.length-1;i>=0;i--){
+      const asteroid=asteroids[i];
+      if(!asteroid)continue;
+      const asteroidRadius=Number(asteroid.r)||45;
+      if(!sweptCircles(projectile,projectileRadius,asteroid,asteroidRadius,false))continue;
+      return {
+        asteroid,
+        index:i,
+        fracture:!!projectile.guided,
+        owner:Number(projectile.owner),
+        impactX:Number(projectile.x)||0,
+        impactY:Number(projectile.y)||0
+      };
+    }
+    return null;
+  }
+
+
+  function projectileGiantHit(projectile,giant,sweptCircles,projectileRadius=4,giantRadius=135){
+    if(!projectile||!giant||typeof sweptCircles!=='function')return null;
+    if(!sweptCircles(projectile,projectileRadius,giant,giantRadius,false))return null;
+    return {
+      giant,
+      guided:!!projectile.guided,
+      owner:Number(projectile.owner),
+      impactX:Number(projectile.x)||0,
+      impactY:Number(projectile.y)||0
+    };
+  }
+
+
+  function projectileMeteorHit(projectile,meteors,sweptCircles,projectileRadius=4,meteorRadius=14){
+    if(!projectile||!Array.isArray(meteors)||typeof sweptCircles!=='function')return null;
+    for(let i=meteors.length-1;i>=0;i--){
+      const meteor=meteors[i];
+      if(!meteor)continue;
+      if(!sweptCircles(projectile,projectileRadius,meteor,meteorRadius,false))continue;
+      return {
+        meteor,
+        index:i,
+        guided:!!projectile.guided,
+        owner:Number(projectile.owner),
+        impactX:Number(projectile.x)||0,
+        impactY:Number(projectile.y)||0
+      };
+    }
+    return null;
+  }
+
+
+  function projectilePickupHit(projectile,pickups,sweptCircles,projectileRadius=4,pickupRadius=22){
+    if(!projectile||!Array.isArray(pickups)||typeof sweptCircles!=='function')return null;
+
+    // V22.10: los misiles atraviesan cualquier pickup y no se consumen.
+    if(projectile.guided)return null;
+
+    for(let i=pickups.length-1;i>=0;i--){
+      const pickup=pickups[i];
+      if(!pickup)continue;
+      if(!sweptCircles(projectile,projectileRadius,pickup,pickupRadius,false))continue;
+      return {pickup,index:i};
+    }
+    return null;
+  }
+
+
+  function projectileFlareHit(projectile,flares,sweptCircles,projectileRadius=4,flareRadius=12){
+    if(!projectile||!Array.isArray(flares)||typeof sweptCircles!=='function')return null;
+    for(let i=flares.length-1;i>=0;i--){
+      const flare=flares[i];
+      if(!flare)continue;
+      if(!sweptCircles(projectile,projectileRadius,flare,flareRadius,false))continue;
+      const projectileOwner=Number(projectile.owner);
+      const flareOwner=Number(flare.owner);
+      return {
+        flare,
+        index:i,
+        guided:!!projectile.guided,
+        projectileOwner,
+        flareOwner,
+        intercept:flareOwner!==projectileOwner,
+        impactX:Number(projectile.x)||0,
+        impactY:Number(projectile.y)||0
+      };
+    }
+    return null;
+  }
+
+
+  function bounceBodyFromFlare(body,flare,bodyRadius=45,flareRadius=12,maxSpeed=190,minBounceSpeed=105){
+    if(!body||!flare)return false;
+    let nx=(Number(body.x)||0)-(Number(flare.x)||0);
+    let ny=(Number(body.y)||0)-(Number(flare.y)||0);
+    let distance=Math.hypot(nx,ny);
+    if(distance<.001){
+      nx=-(Number(flare.vx)||1);ny=-(Number(flare.vy)||0);
+      distance=Math.hypot(nx,ny)||1;
+    }
+    nx/=distance;ny/=distance;
+
+    const vx=Number(body.vx)||0,vy=Number(body.vy)||0;
+    const normalSpeed=vx*nx+vy*ny;
+    const tx=vx-normalSpeed*nx,ty=vy-normalSpeed*ny;
+    const flareSpeed=Math.hypot(Number(flare.vx)||0,Number(flare.vy)||0);
+    const rebound=Math.max(Math.abs(normalSpeed)*.9,Number(minBounceSpeed)||0,Math.min((Number(minBounceSpeed)||0)+flareSpeed*.12,(Number(maxSpeed)||190)*.82));
+
+    // La componente normal siempre queda alejandose del punto de impacto.
+    // Conservamos parte de la componente tangencial para que el rebote no
+    // parezca un cambio artificial a una direccion fija.
+    body.vx=tx*.88+nx*rebound;
+    body.vy=ty*.88+ny*rebound;
+
+    const speed=Math.hypot(body.vx,body.vy);
+    const limit=Math.max(1,Number(maxSpeed)||190);
+    if(speed>limit){body.vx=body.vx/speed*limit;body.vy=body.vy/speed*limit;}
+
+    const overlap=(Number(bodyRadius)||0)+(Number(flareRadius)||0)-distance;
+    if(overlap>0){
+      body.x=(Number(body.x)||0)+nx*(overlap+2);
+      body.y=(Number(body.y)||0)+ny*(overlap+2);
+    }
+    return true;
+  }
+
+
+  function resolveProjectileInterceptions(projectiles,destroyed,sweptCircles,bulletRadius=4,missileRadius=12,onHit){
+    if(!Array.isArray(projectiles)||projectiles.length<2||!destroyed||typeof destroyed.add!=='function'||typeof sweptCircles!=='function')return 0;
+    const hitCallback=typeof onHit==='function'?onHit:null;
+    let hits=0;
+
+    for(let i=0;i<projectiles.length;i++){
+      const a=projectiles[i];
+      if(!a||destroyed.has(a))continue;
+      for(let j=i+1;j<projectiles.length;j++){
+        const b=projectiles[j];
+        if(!b||destroyed.has(b))continue;
+
+        // Proyectiles del mismo jugador nunca se autointerceptan.
+        if(Number(a.owner)===Number(b.owner))continue;
+
+        const aMissile=!!a.guided,bMissile=!!b.guided;
+        // Dos balas normales se atraviesan.
+        if(!aMissile&&!bMissile)continue;
+
+        let missile=null,hit=false;
+        if(aMissile&&bMissile){
+          hit=sweptCircles(a,missileRadius,b,missileRadius,false);
+          missile=a;
+        }else{
+          missile=aMissile?a:b;
+          const bullet=aMissile?b:a;
+          hit=sweptCircles(missile,missileRadius,bullet,bulletRadius,false);
+        }
+        if(!hit)continue;
+
+        destroyed.add(a);
+        destroyed.add(b);
+        hits++;
+
+        if(hitCallback){
+          hitCallback(
+            (Number(a.x)+Number(b.x))*.5,
+            (Number(a.y)+Number(b.y))*.5,
+            Number(missile&&missile.owner)||0
+          );
+        }
+        break;
+      }
+    }
+    return hits;
+  }
+
+
+
+  function projectileShipHit(projectile,players,sweptCircles,projectileRadius=4,shipRadius=24,brutalDistance=850,pointBlankDistance=260){
+    if(!projectile||!Array.isArray(players)||typeof sweptCircles!=='function')return null;
+
+    const guided=!!projectile.guided;
+    const owner=Number(projectile.owner);
+    const travel=Number(projectile.travel)||0;
+    let attacker=null;
+    for(const candidate of players){
+      if(candidate&&Number(candidate.index)===owner){attacker=candidate;break;}
+    }
+
+    for(const target of players){
+      if(!target)continue;
+
+      // Bala normal: nunca hiere al tirador. Misil: sí puede regresar y dañarlo.
+      if((Number(target.index)===owner&&!guided)||target.dead||Number(target.protection)>0)continue;
+      if(!sweptCircles(projectile,projectileRadius,target,shipRadius,false))continue;
+
+      const shielded=Number(target.shield)>0;
+      const enemyHit=!!attacker&&attacker!==target;
+      const longShot=enemyHit&&travel>=brutalDistance;
+      const pointBlank=enemyHit&&!guided&&travel<=pointBlankDistance;
+
+      let reward='none';
+      if(!shielded){
+        if(longShot)reward=guided?'goodShot':'brutal';
+        else if(guided&&enemyHit)reward='hunter';
+      }
+
+      return {
+        target,
+        attacker,
+        guided,
+        shielded,
+        longShot,
+        pointBlank,
+        reward,
+        owner,
+        travel,
+        impactX:Number(projectile.x)||0,
+        impactY:Number(projectile.y)||0
+      };
+    }
+    return null;
+  }
+
+  function projectileUfoHit(projectile,ufo,sweptCircles,projectileRadius=4,ufoRadius=30,ufoHp=1){
+    if(!projectile||!ufo||typeof sweptCircles!=='function')return null;
+    if(!sweptCircles(projectile,projectileRadius,ufo,ufoRadius,false))return null;
+
+    const guided=!!projectile.guided;
+    const damage=guided?2:1;
+    const hp=Math.max(0,(Number(ufo.hp)||ufoHp)-damage);
+    ufo.hp=hp;
+
+    return {
+      ufo,
+      guided,
+      damage,
+      hp,
+      destroyed:hp<=0,
+      owner:Number(projectile.owner),
+      impactX:Number(projectile.x)||0,
+      impactY:Number(projectile.y)||0
+    };
+  }
+
+  function asteroidMissileFracture(asteroid,impactX,impactY,opts={}){
+    if(!asteroid)return null;
+    const defaultRadius=Number(opts.defaultRadius)||45;
+    const fragmentRadius=Number(opts.fragmentRadius)||28;
+    const rand=typeof opts.rand==='function'?opts.rand:((a,b)=>a+Math.random()*(b-a));
+    const uid=typeof opts.uid==='function'?opts.uid:(()=>Math.floor(Math.random()*1e9));
+
+    const radius=Number(asteroid.r)||defaultRadius;
+    const x=Number(asteroid.x)||0,y=Number(asteroid.y)||0;
+    const vx=Number(asteroid.vx)||0,vy=Number(asteroid.vy)||0;
+    const hitX=Number.isFinite(Number(impactX))?Number(impactX):x;
+    const hitY=Number.isFinite(Number(impactY))?Number(impactY):y;
+    const isSmall=radius<=30||asteroid.fragment===true;
+
+    if(isSmall){
+      return {destroyOnly:true,x,y,hitX,hitY,fragments:[]};
+    }
+
+    let nx=hitX-x,ny=hitY-y;
+    let len=Math.hypot(nx,ny);
+    if(len<.001){
+      nx=-(vx||1);ny=-(vy||0);
+      len=Math.hypot(nx,ny)||1;
+    }
+    nx/=len;ny/=len;
+
+    const splitX=-ny,splitY=nx;
+    const fragmentGroup='split-'+uid();
+    const fragments=[];
+
+    for(const sign of [-1,1]){
+      const sideSpeed=sign*rand(70,100);
+      const impactKick=rand(34,58);
+      const fx=x+splitX*sign*fragmentRadius-nx*5;
+      const fy=y+splitY*sign*fragmentRadius-ny*5;
+      fragments.push({
+        id:uid(),x:fx,y:fy,px:fx,py:fy,rot:rand(0,360),
+        type:Number(asteroid.type)||1,
+        vx:vx*.62+splitX*sideSpeed-nx*impactKick,
+        vy:vy*.62+splitY*sideSpeed-ny*impactKick,
+        r:fragmentRadius,fragment:true,fragmentGroup,
+        fragmentPairReleased:false,exiting:false,exitDelay:-1
+      });
+    }
+
+    return {destroyOnly:false,x,y,hitX,hitY,fragments};
+  }
+
+  function cpuSpawnEscapeControl(cpu,players,now,width,height){
+    if(!cpu||cpu.dead)return null;
+    let threat=null,nearest=null,best=Infinity,nearestDistance=Infinity;
+    for(const other of players){
+      if(other===cpu||other.index===cpu.index||other.dead)continue;
+      // La distancia debe respetar el mundo que envuelve sus bordes.
+      let dx=cpu.x-other.x,dy=cpu.y-other.y;
+      dx-=Math.round(dx/width)*width;dy-=Math.round(dy/height)*height;
+      const distance=Math.hypot(dx,dy);
+      const candidate={dx,dy,distance};
+      if(distance<nearestDistance){nearest=candidate;nearestDistance=distance;}
+      if((other.protection>0||other.spawnFx>0)&&distance<320&&distance<best){
+        threat=candidate;best=distance;
+      }
+    }
+    const opening=now<(Number(cpu.openingFleeUntil)||0);
+    if(!threat&&!opening)return null;
+    const away=threat||nearest;
+    let desired=cpu.rot;
+    if(away&&away.distance>.001)desired=(Math.atan2(-away.dx,-away.dy)*180/Math.PI+360)%360;
+    else if(away)desired=(cpu.index*137.508)%360;
+    const err=((desired-cpu.rot+540)%360)-180;
+    return{turn:Math.max(-1,Math.min(1,err/30)),thrust:Math.abs(err)<65,fire:false};
+  }
+
+  window.GalaxyPhysicsCore=Object.freeze({
+    MOVEMENT_DT,stepShipMovement,createMotionStream,acceptMotionFrames,consumeMotionFrame,
+    cpuSpawnEscapeControl,
+    TARGET_MIN_ALIGN,
+    resolveAsteroidPairCollision,
+    resolveGiantAsteroidCollision,
+    guidedTargetFor,
+    reloadTimeFor,
+    bulletSpeedFor,
+    guidedProjectileSpeedFor,
+    refreshGuidedState,
+    tryFireProjectile,
+    projectileAsteroidHit,
+    projectileGiantHit,
+    projectileMeteorHit,
+    projectilePickupHit,
+    projectileFlareHit,
+    bounceBodyFromFlare,
+    resolveProjectileInterceptions,
+    projectileShipHit,
+    projectileUfoHit,
+    asteroidMissileFracture
+  });
+})();
+

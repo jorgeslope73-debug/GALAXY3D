@@ -1,0 +1,17 @@
+GALAXY3D - Publicación en GitHub Pages
+
+1. Abre https://github.com/jorgeslope73-debug/GALAXY3D/settings/pages
+2. En Build and deployment, selecciona Deploy from a branch.
+3. En Branch, selecciona main.
+4. En la carpeta, selecciona /docs.
+5. Pulsa Save y espera a que termine pages build and deployment.
+6. Abre https://jorgeslope73-debug.github.io/GALAXY3D/
+
+Render
+------
+El cliente utiliza https://galaxy-combat-web.onrender.com desde docs/config.js.
+Conserva el servicio de Render, su repositorio conectado, sus variables y su base de datos actuales. No conectes este repositorio a un nuevo servicio o Blueprint para publicar la web.
+server/ y render.yaml se incluyen como referencia de la base original y no se despliegan desde GitHub Pages.
+Las cuentas, ranking y salas se comparten con el backend actual.
+
+La publicación inicial contiene el juego 2D original. La conversión visual a 2.5D/3D se realizará en una fase posterior.
