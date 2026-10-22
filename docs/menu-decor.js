@@ -214,6 +214,7 @@
   function render(){
     ctx.clearRect(0,0,W,H);
     ctx.globalCompositeOperation='source-over';
+    if(window.Galaxy3D?.menu(ctx,performance.now()))return;
 
     drawParticles();
 

@@ -1,0 +1,346 @@
+/* GALAXY3D: presentation only. The host's 2D simulation remains authoritative. */
+'use strict';
+(() => {
+  const W=1920,H=1080,TAU=Math.PI*2;
+  const mobile=document.documentElement.classList.contains('handheld-device')||matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const preferenceKey='galaxy3d-view-v1';
+  const requested=new URLSearchParams(location.search).get('view');
+  let enabled=true,world=null,failed=false,button=null;
+  try{enabled=(requested||localStorage.getItem(preferenceKey))!=='2d';}catch(_){enabled=requested!=='2d';}
+
+  const labels={es:['VISTA 3D','VISTA 2D','Cambiar entre vista 3D y 2D'],en:['3D VIEW','2D VIEW','Switch between 3D and 2D'],fr:['VUE 3D','VUE 2D','Changer entre la vue 3D et 2D'],it:['VISTA 3D','VISTA 2D','Cambia tra vista 3D e 2D'],de:['3D ANSICHT','2D ANSICHT','Zwischen 3D und 2D wechseln'],zh:['3D 视图','2D 视图','切换 3D 和 2D 视图']};
+  function updateUI(){
+    const active=enabled&&world&&!world.lost;
+    document.documentElement.dataset.galaxyView=active?'3d':'2d';
+    if(!button)return;
+    const language=window.GalaxyI18n?.getLanguage?.()||'es';
+    const text=labels[language]||labels.es;
+    button.textContent=active?text[0]:text[1];
+    button.title=failed?'Vista 2D disponible en este dispositivo':text[2];
+    button.setAttribute('aria-label',button.title);
+    button.setAttribute('aria-pressed',active?'true':'false');
+    button.disabled=!world||failed;
+    button.classList.toggle('active',!!active);
+  }
+  function fallback(error){
+    failed=true;
+    if(world)world.lost=true;
+    updateUI();
+    console.warn('[GALAXY3D] Se mantiene la vista 2D:',error?.message||error);
+  }
+  function setupUI(){
+    const audio=document.getElementById('enableAudio');
+    if(audio&&!document.getElementById('viewMode')){
+      button=document.createElement('button');
+      button.id='viewMode';button.type='button';
+      audio.insertAdjacentElement('afterend',button);
+      button.addEventListener('click',()=>{
+        enabled=!enabled;
+        try{localStorage.setItem(preferenceKey,enabled?'3d':'2d');}catch(_){}
+        updateUI();
+      });
+    }
+    updateUI();
+  }
+  window.addEventListener('galaxy-languagechange',updateUI);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupUI,{once:true});
+  else setupUI();
+
+  window.Galaxy3D={
+    get active(){return !!(enabled&&world&&!world.lost&&!failed);},
+    begin(ctx,now,snapshot,localIndex){
+      if(!this.active)return null;
+      try{world.begin(ctx,now,snapshot,localIndex);return world;}catch(error){fallback(error);return null;}
+    },
+    menu(ctx,now){
+      if(!this.active)return false;
+      try{world.menu(ctx,now);return true;}catch(error){fallback(error);return false;}
+    },
+    flush(ctx){
+      if(!this.active)return false;
+      try{world.flush(ctx);return true;}catch(error){fallback(error);return false;}
+    }
+  };
+
+  // Vendored and pinned: no CDN dependency while starting a match or playing offline.
+  import('./vendor/three.module.min.js').then(THREE=>{
+    world=createWorld(THREE);
+    updateUI();
+    window.dispatchEvent(new Event('galaxy3d-ready'));
+  }).catch(fallback);
+
+  function createWorld(T){
+    const surface=document.createElement('canvas');
+    const renderer=new T.WebGLRenderer({canvas:surface,alpha:true,antialias:!mobile,powerPreference:'high-performance'});
+    renderer.setClearColor(0x000000,0);
+    renderer.outputColorSpace=T.SRGBColorSpace;
+    renderer.toneMapping=T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.3;
+    const scene=new T.Scene();
+    const camera=new T.OrthographicCamera(-W/2,W/2,H/2,-H/2,1,4000);
+    camera.position.set(0,0,1800);
+    camera.lookAt(0,0,0);
+    scene.add(new T.HemisphereLight(0x8bcaff,0x171222,2.1));
+    const key=new T.DirectionalLight(0xfff2df,3.1);key.position.set(-450,600,1000);scene.add(key);
+    const rim=new T.DirectionalLight(0x687bff,2.5);rim.position.set(650,-280,450);scene.add(rim);
+    const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
+    const records=new Map(),spares=new Map();
+    const matrix=new T.Matrix4(),position=new T.Vector3(),scale=new T.Vector3(),quaternion=new T.Quaternion(),euler=new T.Euler();
+    const metal=(color,extra={})=>new T.MeshStandardMaterial({color,metalness:.48,roughness:.36,...extra});
+    const glow=color=>new T.MeshBasicMaterial({color,toneMapped:false});
+    const sphere=new T.SphereGeometry(1,mobile?12:20,mobile?8:12);
+    const cylinder=new T.CylinderGeometry(1,1,1,8);
+    const cone=new T.ConeGeometry(1,1,8);
+    const box=new T.BoxGeometry(1,1,1);
+    const ringGeometry=new T.TorusGeometry(1,.025,5,48);
+    const shardGeometry=new T.TetrahedronGeometry(1);
+    const boltMesh=new T.InstancedMesh(cylinder,glow(0x7affac),256);
+    boltMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);boltMesh.frustumCulled=false;boltMesh.count=0;
+    scene.add(boltMesh);
+    const shardMesh=new T.InstancedMesh(shardGeometry,glow(0xffa64c),mobile?128:256);
+    shardMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);shardMesh.frustumCulled=false;shardMesh.count=0;
+    scene.add(shardMesh);
+    const effects=new Map(),seenEffects=new Set();
+    const rockGeometries=Array.from({length:6},(_,variant)=>makeRockGeometry(variant));
+    let now=0,contextKey='',lastSequence=-1,bolts=0;
+
+    function makeRockGeometry(variant){
+      const geometry=new T.IcosahedronGeometry(1,mobile?1:2);
+      const vertices=geometry.attributes.position;
+      const vertexColors=[];
+      for(let i=0;i<vertices.count;i++){
+        const x=vertices.getX(i),y=vertices.getY(i),z=vertices.getZ(i);
+        const noise=Math.sin(x*13+variant*2)*Math.cos(y*11-variant)*Math.sin(z*9+variant);
+        const crater=Math.max(0,1-Math.hypot(x-.2,y-.35,z-.91)/.38);
+        const radius=.94+noise*.055-crater*.14;
+        vertices.setXYZ(i,x*radius,y*radius,z*radius);
+        const shade=.64+.3*(noise*.5+.5)-crater*.22;
+        vertexColors.push(shade,shade,shade);
+      }
+      geometry.setAttribute('color',new T.Float32BufferAttribute(vertexColors,3));
+      geometry.computeVertexNormals();geometry.computeBoundingSphere();
+      return geometry;
+    }
+    function add(group,geometry,material,x,y,z,sx=1,sy=sx,sz=sx){
+      const mesh=new T.Mesh(geometry,material);
+      mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;
+    }
+    function hullGeometry(points,depth){
+      const shape=new T.Shape();shape.moveTo(...points[0]);
+      for(let i=1;i<points.length;i++)shape.lineTo(...points[i]);
+      shape.closePath();
+      return new T.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:1.4,bevelSize:1.4,bevelSegments:1,steps:1});
+    }
+    const hull=hullGeometry([[0,31],[-8,11],[-9,-22],[0,-18],[9,-22],[8,11]],5);
+    const wings=hullGeometry([[-5,12],[-29,-20],[-10,-15],[0,-23],[10,-15],[29,-20],[5,12]],2);
+    const tailFin=hullGeometry([[0,-8],[-4,-24],[0,-19],[4,-24]],5);
+
+    function shipModel(index){
+      const root=new T.Group(),tilt=new T.Group();root.add(tilt);
+      const body=metal(0xb5c6d6),trim=metal(colors[index]),dark=metal(0x1b293b),light=glow(colors[index]);
+      add(tilt,wings,trim,0,0,-3);
+      add(tilt,hull,body,0,0,0);
+      add(tilt,tailFin,trim,0,0,7);
+      add(tilt,cylinder,dark,-8,-22,0,4.8,10,4.8);
+      add(tilt,cylinder,dark,8,-22,0,4.8,10,4.8);
+      const canopyMaterial=metal(0x51d9ff,{emissive:0x0c596b,emissiveIntensity:.7,metalness:.25,roughness:.16});
+      const canopy=add(tilt,sphere,canopyMaterial,0,9,7,5.8,10,4.5);
+      add(tilt,box,light,-23,-15,0,3,6,2);
+      add(tilt,box,light,23,-15,0,3,6,2);
+      add(tilt,box,dark,-7,19,0,2,14,2);
+      add(tilt,box,dark,7,19,0,2,14,2);
+      const flames=new T.Group();tilt.add(flames);
+      for(const x of [-8,8]){
+        const outer=add(flames,cone,glow(colors[index]),x,-39,-1,4.5,24,4.5);
+        outer.rotation.z=Math.PI;
+        const core=add(flames,cone,glow(0xe8faff),x,-34,0,2.5,16,2.5);
+        core.rotation.z=Math.PI;
+      }
+      const shieldMaterial=new T.MeshBasicMaterial({color:0x72eaff,transparent:true,opacity:.11,depthWrite:false,wireframe:true,toneMapped:false});
+      const shield=add(root,sphere,shieldMaterial,0,0,0,40,40,24);
+      const shieldRim=add(root,ringGeometry,new T.MeshBasicMaterial({color:0x88eaff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false}),0,0,1,40);
+      const shock=add(tilt,ringGeometry,glow(0xc5efff),0,22,10,8);
+      const flare=add(tilt,box,glow(0xffb55a),-14,-9,5,3,8,3);
+      const missile=add(tilt,cylinder,metal(0xf4f8ff),14,0,6,2,14,2);
+      const materials=[];
+      root.traverse(o=>{if(o.isMesh&&!materials.includes(o.material))materials.push(o.material);});
+      return {root,tilt,canopy,canopyMaterial,flames,shield,shieldRim,shieldMaterial,shock,flare,missile,materials};
+    }
+    function model(kind){
+      if(kind.startsWith('ship:'))return shipModel(Number(kind.split(':')[1])||0);
+      const root=new T.Group();
+      if(kind==='rock'){
+        const material=metal(0x8d83aa,{metalness:.13,roughness:.95,flatShading:true,vertexColors:true});
+        const rock=add(root,rockGeometries[0],material,0,0,0);
+        return {root,rock,material};
+      }
+      if(kind==='rocket'){
+        const trim=metal(0x69d9ff);
+        add(root,cylinder,metal(0xe4eaf2),0,0,0,3.2,20,3.2);
+        add(root,cone,metal(0xe9faff),0,14,0,3.2,9,3.2);
+        add(root,box,trim,0,-7,0,16,4,2);
+        add(root,box,trim,0,-7,0,2,4,12);
+        const flame=add(root,cone,glow(0xffa25a),0,-18,0,3,16,3);flame.rotation.z=Math.PI;
+        return {root,flame,trim};
+      }
+      if(kind==='ufo'){
+        add(root,sphere,metal(0xabb8ca),0,0,0,31,26,7);
+        add(root,sphere,metal(0x6cf0c2,{emissive:0x164a3a,emissiveIntensity:.75}),0,0,5,14,13,10);
+        for(let i=0;i<8;i++)add(root,sphere,glow(i%2?0x9b87ff:0x80f6ff),Math.cos(i*TAU/8)*25,Math.sin(i*TAU/8)*21,4,2.2);
+        return {root};
+      }
+      if(kind==='pickup'){
+        const material=glow(0x7be9ff);
+        const torus=add(root,ringGeometry,material,0,0,0,26);
+        return {root,torus,material};
+      }
+      return {root};
+    }
+    function take(kind,id){
+      const key=kind+'|'+id;
+      let record=records.get(key);
+      if(!record){
+        record=spares.get(kind)?.pop()||model(kind);
+        record.kind=kind;
+        if(!record.root.parent)scene.add(record.root);
+        records.set(key,record);
+      }
+      record.used=true;record.root.visible=true;
+      return record;
+    }
+    function place(root,x,y,z=0){root.position.set(x-W/2,H/2-y,z);}
+    function collectEffects(snapshot,localIndex){
+      if(!snapshot)return;
+      const nextContext=[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':');
+      if(nextContext!==contextKey||(Number.isFinite(snapshot.seq)&&snapshot.seq<lastSequence)){
+        contextKey=nextContext;effects.clear();seenEffects.clear();
+      }
+      lastSequence=Number.isFinite(snapshot.seq)?snapshot.seq:lastSequence;
+      for(const event of (snapshot.fx||[]).slice(-24)){
+        const key=contextKey+':'+event.id;
+        if(seenEffects.has(key))continue;
+        seenEffects.add(key);
+        if(event.hidden&&Number(event.i)!==Number(localIndex))continue;
+        if(!Number.isFinite(event.x)||!Number.isFinite(event.y))continue;
+        const age=Math.max(0,Number(event.age)||0),duration=event.kind==='explosion'?600:380;
+        if(age>=duration)continue;
+        effects.set(key,{x:event.x,y:event.y,born:now-age,duration,large:event.kind==='explosion',seed:Number(event.id)||1});
+      }
+      while(seenEffects.size>256)seenEffects.delete(seenEffects.values().next().value);
+      while(effects.size>24)effects.delete(effects.keys().next().value);
+    }
+    function updateEffects(){
+      let count=0;
+      for(const [key,event] of effects){
+        const t=(now-event.born)/event.duration;
+        if(t<0||t>=1){effects.delete(key);continue;}
+        const n=event.large?16:7;
+        for(let i=0;i<n&&count<shardMesh.instanceMatrix.count;i++){
+          const a=TAU*(i/n+event.seed*.037),travel=(event.large?68:26)*t;
+          position.set(event.x-W/2+Math.cos(a)*travel,H/2-event.y+Math.sin(a)*travel,(Math.sin(a*3)+1)*18*t);
+          euler.set(t*9+i,t*7,i);quaternion.setFromEuler(euler);
+          scale.setScalar((event.large?3.4:2.0)*(1-t));
+          matrix.compose(position,quaternion,scale);shardMesh.setMatrixAt(count++,matrix);
+        }
+      }
+      shardMesh.count=count;shardMesh.instanceMatrix.needsUpdate=true;
+    }
+    const api={
+      lost:false,
+      begin(ctx,time,snapshot,localIndex){
+        now=time;bolts=0;
+        const width=Math.min(ctx.canvas.width,mobile?1280:1920);
+        const height=Math.round(width*H/W);
+        if(surface.width!==width||surface.height!==height)renderer.setSize(width,height,false);
+        for(const record of records.values()){record.used=false;record.root.visible=false;}
+        collectEffects(snapshot,localIndex);
+      },
+      rock(id,x,y,size,type=1,angle=0){
+        const record=take('rock',id),variant=Math.abs(Number(type)||0)%6;
+        record.rock.geometry=rockGeometries[variant];
+        record.material.color.setHex([0x9086ad,0xb29ab8,0x779fa8,0xc2a58a,0x7c91b0,0x879a83][variant]);
+        record.root.scale.setScalar(size*.5);
+        place(record.root,x,y,-8);
+        const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
+        record.rock.rotation.set(now*.00013+phase,now*.00017+phase,angle*Math.PI/180+phase);
+      },
+      ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false){
+        const record=take('ship:'+index,index),root=record.root;
+        place(root,x,y,18);
+        root.scale.setScalar(size/72);
+        root.rotation.z=rotation*Math.PI/180;
+        const roll=reducedMotion?0:Math.sin(now*.002+index)*.10;
+        record.tilt.rotation.set(showcase?.38:.18,showcase?Math.sin(now*.0006)*.30:roll,0);
+        record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
+        record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
+        record.flames.visible=!!thrust;
+        record.flames.scale.y=.8+Math.sin(now*.041+index)*.14;
+        record.shield.visible=record.shieldRim.visible=!!shield;
+        record.shock.visible=!!shock;record.flare.visible=!!flare;record.missile.visible=!!missile;
+        for(const material of record.materials){
+          if(material===record.shieldMaterial||material===record.shieldRim.material)continue;
+          material.transparent=alpha<.999;
+          material.opacity=alpha;
+          material.depthWrite=alpha>.8;
+        }
+        record.shieldMaterial.opacity=.11*alpha*(Number(shield)||0);
+        record.shieldRim.material.opacity=.65*alpha*(Number(shield)||0);
+        record.canopyMaterial.emissiveIntensity=hit>0?2:.75;
+      },
+      ufo(id,x,y,angle){
+        const record=take('ufo',id);place(record.root,x,y,13);
+        record.root.rotation.set(.22,Math.sin(now*.001)*.12,angle*Math.PI/180);
+      },
+      rocket(id,x,y,rotation,owner){
+        const record=take('rocket',id);place(record.root,x,y,18);
+        record.root.rotation.z=rotation*Math.PI/180;
+        record.trim.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
+        record.flame.scale.y=14+Math.sin(now*.05)*3;
+      },
+      bolt(x,y,vx,vy){
+        if(bolts>=256)return;
+        position.set(x-W/2,H/2-y,16);
+        euler.set(0,0,Math.atan2(-vx,-vy));quaternion.setFromEuler(euler);
+        scale.set(1.8,15,1.8);matrix.compose(position,quaternion,scale);
+        boltMesh.setMatrixAt(bolts++,matrix);
+      },
+      pickup(id,x,y,type){
+        const record=take('pickup',id);place(record.root,x,y,-8);
+        record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
+        record.torus.rotation.set(.2,0,now*.0005);
+      },
+      flush(ctx){
+        boltMesh.count=bolts;boltMesh.instanceMatrix.needsUpdate=true;
+        updateEffects();
+        for(const [key,record] of records){
+          if(record.used)continue;
+          record.root.visible=false;records.delete(key);
+          if(!spares.has(record.kind))spares.set(record.kind,[]);
+          spares.get(record.kind).push(record);
+        }
+        renderer.render(scene,camera);
+        ctx.drawImage(surface,0,0,W,H);
+        // Diagnostics describe the rendered scene, without exposing game authority.
+        ctx.canvas.dataset.view='3d';
+        ctx.canvas.dataset.meshes=String(renderer.info.render.calls);
+        ctx.canvas.dataset.triangles=String(renderer.info.render.triangles);
+        ctx.canvas.dataset.geometries=String(renderer.info.memory.geometries);
+      },
+      menu(ctx,time){
+        const t=reducedMotion?0:time;
+        this.begin(ctx,time,null,-1);
+        this.rock('menu1',(mobile?240:410)+Math.sin(t*.00012)*35,mobile?260:340,mobile?72:125,1);
+        this.rock('menu2',(mobile?1690:1490)+Math.cos(t*.0001)*25,245,mobile?60:88,3);
+        if(!mobile)this.rock('menu3',1240,465+Math.sin(t*.0002)*18,46,4);
+        this.ship(0,mobile?430:960,398+Math.sin(t*.001)*6,-28+Math.sin(t*.00035)*12,mobile?125:194,1,true,true,false,false,false,false,0,true);
+        this.ship(1,mobile?1500:1430,435,32,mobile?80:98,1,true,false,false,false,false,false,0,true);
+        this.flush(ctx);
+      }
+    };
+    surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();});
+    surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();});
+    window.addEventListener('beforeunload',()=>renderer.dispose(),{once:true});
+    return api;
+  }
+})();

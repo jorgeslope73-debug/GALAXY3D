@@ -14,4 +14,4 @@ Conserva el servicio de Render, su repositorio conectado, sus variables y su bas
 server/ y render.yaml se incluyen como referencia de la base original y no se despliegan desde GitHub Pages.
 Las cuentas, ranking y salas se comparten con el backend actual.
 
-La publicación inicial contiene el juego 2D original. La conversión visual a 2.5D/3D se realizará en una fase posterior.
+La versión V23.00 incorpora gráficos 2.5D con Three.js. La vista 3D es predeterminada; el selector VISTA 3D / VISTA 2D permite cambiar de presentación. En dispositivos sin WebGL 2 se utiliza la alternativa 2D.

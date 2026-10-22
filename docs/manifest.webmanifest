@@ -1,7 +1,7 @@
 {
-  "name": "Galaxy Combat",
-  "short_name": "Galaxy Combat",
-  "description": "Galaxy Combat - combate espacial multijugador para PC, movil y tablet.",
+  "name": "Galaxy Combat 3D",
+  "short_name": "Galaxy3D",
+  "description": "Combate espacial 2.5D multijugador para PC, movil y tablet.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

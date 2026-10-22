@@ -1,7 +1,7 @@
 importScripts('./build-version.js');
 const VERSION=String(self.GALAXY_BUILD&&self.GALAXY_BUILD.version||'dev');
-const SHELL_CACHE = `galaxy-combat-shell-${VERSION}`;
-const ASSET_CACHE = `galaxy-combat-assets-${VERSION}`;
+const SHELL_CACHE = `galaxy3d-shell-${VERSION}`;
+const ASSET_CACHE = `galaxy3d-assets-${VERSION}`;
 const ACTIVE_CACHES = new Set([SHELL_CACHE, ASSET_CACHE]);
 
 const SHELL_FILES = [
@@ -9,6 +9,10 @@ const SHELL_FILES = [
   './index.html',
   './build-version.js',
   './style.css',
+  './view-3d.css',
+  './render-3d.js',
+  './vendor/three.module.min.js',
+  './vendor/three.core.min.js',
   './menu-portada.css',
   './menu-decor.js',
   './menu-loader.js',
@@ -79,7 +83,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.map(key => {
-        if (key.startsWith('galaxy-combat-') && !ACTIVE_CACHES.has(key)) return caches.delete(key);
+        if (key.startsWith('galaxy3d-') && !ACTIVE_CACHES.has(key)) return caches.delete(key);
         return Promise.resolve(false);
       })))
       .then(() => self.clients.claim())

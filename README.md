@@ -1,15 +1,20 @@
 # GALAXY3D
 
-Base de GALAXY COMBAT preparada para GitHub Pages y para una futura evolución visual a 2.5D/3D. En esta preparación se conserva el juego 2D del ZIP GALAXY_COMBAT-22_62.zip; su versión interna es V22.61.
+Versión V23.00: combate 2.5D con Three.js y la simulación original de GALAXY COMBAT.
 
-- Web prevista: https://jorgeslope73-debug.github.io/GALAXY3D/
-- Publicación: GitHub Pages, rama `main`, carpeta `/docs`.
-- Backend existente: https://galaxy-combat-web.onrender.com
-- Se conserva `docs/config.js` y el protocolo de red de la base.
-- `server/` y `render.yaml` se conservan como código de referencia. Esta publicación no crea, actualiza ni vincula servicios de Render.
-- La base de datos y sus credenciales permanecen en el backend actual; no se incluyen credenciales en este repositorio.
+- Jugar: https://jorgeslope73-debug.github.io/GALAXY3D/
+- Vista 3D por defecto: naves con fuselaje, alas, cabina y propulsores; asteroides con relieve y rotación; OVNIs, misiles, disparos y fragmentos de impacto.
+- Cámara superior ortográfica: conserva posiciones, radios de colisión, controles, reglas y puntuación.
+- El selector VISTA 3D / VISTA 2D permite comparar ambas presentaciones. Si WebGL 2 no está disponible se conserva el juego 2D.
+- Three.js r180 y su licencia MIT se incluyen en docs/vendor/. No se descarga una biblioteca desde un CDN al jugar.
+- Menús, HUD, voz y textos siguen compartidos con el cliente original.
+- Backend existente: https://galaxy-combat-web.onrender.com (docs/config.js sin cambios).
+- No se ha modificado ni desplegado server/, render.yaml, la configuración de Render ni el esquema de la base de datos.
+- Publicación: GitHub Pages, main y /docs. La entrada de la raíz también redirige a docs/ cuando Pages está configurado en /(root).
 
-Para la configuración inicial de Pages, consulta [PASOS_GITHUB_PAGES.txt](PASOS_GITHUB_PAGES.txt).
+Validación: partidas CPU en navegador, alternativa 2D y sin WebGL, visibilidad del camuflaje, caducidad de efectos, reutilización de geometrías y compatibilidad de protocolo. Pruebas de física, predicción, sesiones, red y simulación de 300 segundos conservadas. El rendimiento y el tacto en móviles físicos deben validarse en esos dispositivos.
+
+La documentación histórica de GALAXY COMBAT se conserva debajo; sus referencias antiguas de versión y despliegue no describen esta publicación.
 
 ---
 

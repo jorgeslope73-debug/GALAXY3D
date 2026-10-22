@@ -9,6 +9,8 @@ on:
       - 'docs/net-protocol.js'
       - 'docs/p2p-network.js'
       - 'docs/game.js'
+      - 'docs/render-3d.js'
+      - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
       - 'docs/build-version.js'
@@ -34,6 +36,8 @@ on:
       - 'docs/net-protocol.js'
       - 'docs/p2p-network.js'
       - 'docs/game.js'
+      - 'docs/render-3d.js'
+      - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
       - 'docs/build-version.js'
@@ -76,6 +80,8 @@ jobs:
         run: node --check docs/p2p-network.js && node --check docs/menu-loader.js && node --check docs/game.js && node --check docs/pwa.js && node --check docs/build-version.js && node --check docs/sw.js && node --check server/p2p-server.js && node --check tools/check-game-invariants.js && node --check tools/stress-game.js
       - name: Check host/local shared physics parity
         run: node tools/check-physics-parity.js
+      - name: Check 3D presentation syntax
+        run: node --check docs/render-3d.js && node --check docs/menu-decor.js
       - name: Check network resilience
         run: node tools/check-network-resilience.js
       - name: Check scoring and spawn behaviour

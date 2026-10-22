@@ -2,7 +2,7 @@
 (() => {
   // ÚNICA fuente runtime de versión de GALAXY COMBAT.
   // En futuras versiones solo debe cambiar esta línea.
-  const VERSION='V22.61';
+  const VERSION='V23.00';
   const root=typeof self!=='undefined'?self:globalThis;
   const versioned=src=>src+(src.includes('?')?'&':'?')+'v='+encodeURIComponent(VERSION);
 
@@ -11,11 +11,13 @@
     {rel:'apple-touch-icon',href:'assets/icons/apple-touch-icon.png'},
     {rel:'stylesheet',href:'style.css'},
     {rel:'stylesheet',href:'menu-portada.css'},
-    {rel:'stylesheet',href:'voz.css'}
+    {rel:'stylesheet',href:'voz.css'},
+    {rel:'stylesheet',href:'view-3d.css'}
   ];
 
   const RUNTIME_SCRIPTS=[
     'config.js',
+    'render-3d.js',
     'menu-loader.js',
     'menu-decor.js',
     'i18n.js',

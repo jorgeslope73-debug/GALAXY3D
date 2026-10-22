@@ -1,0 +1,35 @@
+/* The original layout and controls remain shared by both visual modes. */
+.galaxy3d-brand{display:none}
+html[data-galaxy-view="3d"] #menu.menu-cover{background:#030814!important}
+html[data-galaxy-view="3d"] #menu .menu-scene{background:radial-gradient(ellipse at 50% 29%,rgba(18,55,80,.2),rgba(2,6,17,.5) 72%),url('assets/sprites/fondo02_1280.jpg') center/cover}
+html[data-galaxy-view="3d"] #menu .menu-art{visibility:hidden}
+html[data-galaxy-view="3d"] #menu .galaxy3d-brand{display:flex;position:absolute;top:8%;left:50%;transform:translateX(-50%);align-items:center;flex-direction:column;z-index:1;pointer-events:none;white-space:nowrap;text-align:center;color:#e8faff;filter:drop-shadow(0 4px 12px #000)}
+.galaxy3d-brand .galaxy3d-eyebrow{font:700 clamp(10px,1.05vw,16px)/1.4 Arial,sans-serif;letter-spacing:.45em;color:#8bc6e5;margin-bottom:11px}
+.galaxy3d-brand .galaxy3d-wordmark{font-size:clamp(36px,5.4vw,96px);line-height:1.1;letter-spacing:.03em;text-shadow:0 0 24px rgba(84,207,255,.2)}
+.galaxy3d-brand b{display:inline-block;margin-left:.2em;padding:.12em .18em .03em;border:1px solid #7ddfff;border-radius:8px;color:#8ee9ff;background:rgba(11,62,85,.8);font-size:.66em;vertical-align:middle;box-shadow:0 0 24px rgba(88,205,255,.14)}
+.galaxy3d-brand .galaxy3d-subtitle{font:600 clamp(10px,1vw,15px)/1.6 Arial,sans-serif;letter-spacing:.2em;color:#94a8bc;margin-top:10px}
+html[data-galaxy-view="3d"] #menu .mode-card{border-color:rgba(90,190,224,.35);background:linear-gradient(150deg,rgba(13,32,50,.94),rgba(7,13,29,.95))}
+html[data-galaxy-view="3d"] #menu .mode-card button{background:linear-gradient(135deg,#1e5970,#173b59);border-color:#62c6e4}
+#menu #viewMode{width:auto!important;flex:0 0 auto;min-width:100px;max-width:max-content;height:30px;min-height:30px;margin:0;padding:0 10px;border-radius:4px;font:700 11px/1 Arial,sans-serif;letter-spacing:.04em;white-space:nowrap}
+html[data-galaxy-view="3d"] #menu #viewMode{color:#a1f0ff;border-color:#6bd5f5;background:rgba(10,52,73,.9)}
+@media(max-height:500px){
+  html[data-galaxy-view="3d"] #menu .galaxy3d-brand{top:18%!important}
+  .galaxy3d-brand .galaxy3d-wordmark{font-size:clamp(25px,4vw,48px)}
+  .galaxy3d-brand .galaxy3d-eyebrow,.galaxy3d-brand .galaxy3d-subtitle{display:none}
+}
+@media(pointer:coarse){
+  html[data-galaxy-view="3d"] #menu.menu-cover{background:radial-gradient(ellipse at 50% 12%,#153449,#030814 70%)!important}
+  html[data-galaxy-view="3d"] #menu .galaxy3d-brand{top:10%;}
+  .galaxy3d-brand .galaxy3d-eyebrow,.galaxy3d-brand .galaxy3d-subtitle{display:none}
+  .galaxy3d-brand .galaxy3d-wordmark{font-size:clamp(28px,5.5vw,60px)}
+  #menu #viewMode{min-width:84px;font-size:11px}
+}
+@media(pointer:coarse),(max-width:900px){
+  #menu #viewMode{height:28px!important;min-height:28px!important;min-width:90px;padding:0 9px!important;border-radius:999px;font-size:10px}
+}
+@media(orientation:landscape) and (max-height:560px){
+  html.handheld-device[data-galaxy-view="3d"] #menu .menu-scene{width:100%;min-height:100svh;aspect-ratio:auto;margin:0}
+  html.handheld-device[data-galaxy-view="3d"] #menu .menu-body{padding-top:max(148px,38svh);padding-bottom:8px}
+  html.handheld-device[data-galaxy-view="3d"] #menu .galaxy3d-brand{top:74px!important}
+  html.handheld-device[data-galaxy-view="3d"] #menu .galaxy3d-wordmark{font-size:clamp(26px,4.5vw,38px)}
+}
