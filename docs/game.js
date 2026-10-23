@@ -601,8 +601,9 @@
     engineFxCursor=(engineFxCursor+1)%ENGINE_FX_MAX;
 
     particle.owner=owner;
-    particle.x=x+backX*(SHIP_DRAW_SIZE*.43)+sideX*jitter;
-    particle.y=y+backY*(SHIP_DRAW_SIZE*.43)+sideY*jitter;
+    const visualShipSize=SHIP_DRAW_SIZE*(scene3D?.shipScale||1);
+    particle.x=x+backX*(visualShipSize*.43)+sideX*jitter;
+    particle.y=y+backY*(visualShipSize*.43)+sideY*jitter;
     particle.vx=(Number(vx)||0)*.18+backX*exhaust+sideX*(Math.random()-.5)*16;
     particle.vy=(Number(vy)||0)*.18+backY*exhaust+sideY*(Math.random()-.5)*16;
     particle.maxLife=.42+Math.random()*.34;
@@ -5382,7 +5383,7 @@
       ctx.globalAlpha=.82*hitT;
       ctx.strokeStyle='#fff3bd';
       ctx.lineWidth=2.2;
-      ctx.beginPath();ctx.arc(x,y,SHIP_DRAW_SIZE*.52+7*(1-hitT),0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,SHIP_DRAW_SIZE*(scene3D?.shipScale||1)*.52+7*(1-hitT),0,Math.PI*2);ctx.stroke();
       ctx.restore();
     }
     // V19.66: la bengala equipada se indica sobre la propia nave, igual que

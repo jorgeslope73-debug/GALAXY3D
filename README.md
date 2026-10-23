@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.04: nave GLB del usuario sobre el combate 2.5D y la simulación original de GALAXY COMBAT.
+Versión V23.05: naves un 50 % más grandes durante las partidas 3D, con escudos, accesorios, propulsores, rastro y aviso de impacto ajustados a la nueva escala visual. Se conservan las reglas, los tamaños de colisión y la escala del menú.
 
 V23.04 aplica la textura original `mas/asteroideAzul.png` a las rocas 3D, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original. Se mantienen las naves azul y fucsia y la vista superior corregida en V23.02.
 

@@ -2,6 +2,7 @@
 'use strict';
 (() => {
   const W=1920,H=1080,TAU=Math.PI*2;
+  const SHIP_VISUAL_SCALE=1.5;
   const mobile=document.documentElement.classList.contains('handheld-device')||matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const preferenceKey='galaxy3d-view-v1';
@@ -191,7 +192,7 @@
       record.bodyRoot.visible=false;
       record.flames.position.y=-4;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.04';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.05';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
@@ -290,6 +291,7 @@
     }
     const api={
       lost:false,
+      shipScale:SHIP_VISUAL_SCALE,
       begin(ctx,time,snapshot,localIndex){
         now=time;bolts=0;
         const width=Math.min(ctx.canvas.width,mobile?1280:1920);
@@ -316,7 +318,7 @@
         const record=take('ship:'+index,index),root=record.root;
         attachImportedShip(record,index);
         place(root,x,y,18);
-        root.scale.setScalar(size/72);
+        root.scale.setScalar(size/72*(showcase?1:SHIP_VISUAL_SCALE));
         root.rotation.z=rotation*Math.PI/180;
         const roll=reducedMotion?0:Math.sin(now*.002+index)*.10;
         record.tilt.rotation.set(showcase?.38:.18,showcase?Math.sin(now*.0006)*.30:roll,0);
