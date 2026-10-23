@@ -165,7 +165,7 @@
       const shield=add(root,sphere,shieldMaterial,0,0,0,40,40,24);
       const shieldRim=add(root,ringGeometry,new T.MeshBasicMaterial({color:0x88eaff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false}),0,0,1,40);
       const shock=add(tilt,ringGeometry,glow(0xc5efff),0,22,10,8);
-      const flare=add(tilt,box,glow(0xffb55a),0,-27,8,6,3,2);
+      const flare=add(tilt,box,glow(0xffb55a),0,-27,8,8,4,2.5);
       const mounts=[18,-18].map(x=>{
         const root=new T.Group();root.name=x>0?'rocket-hardpoint-right':'rocket-hardpoint-left';
         root.position.set(x,-7,4);tilt.add(root);
@@ -219,7 +219,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.19';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.20';
     import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);

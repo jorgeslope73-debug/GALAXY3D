@@ -586,7 +586,7 @@
       }
     }else engineTrailHidden[owner]=false;
   }
-  function emitEngineParticle(player,x,y,rot,now,vx,vy){
+  function emitEngineParticle(player,x,y,rot,now,vx,vy,thrusting=false){
     const owner=Math.max(0,Math.min(3,Number(player&&player.i)||0));
     if(engineTrailHidden[owner]||now-engineEmitAt[owner]<ENGINE_FX_INTERVAL)return;
     engineEmitAt[owner]=now;
@@ -595,28 +595,31 @@
     // Frente = (-sin,-cos); por tanto la parte trasera apunta a (sin,cos).
     const backX=Math.sin(rr),backY=Math.cos(rr);
     const sideX=Math.cos(rr),sideY=-Math.sin(rr);
-    const jitter=(Math.random()-.5)*10;
-    const exhaust=45+Math.random()*45;
-    const particle=engineParticles[engineFxCursor];
-    engineFxCursor=(engineFxCursor+1)%ENGINE_FX_MAX;
+    // Use the same bounded pool and fire palette; accelerating emits a denser pair.
+    for(let emitted=0;emitted<(thrusting?2:1);emitted++){
+      const jitter=(Math.random()-.5)*10;
+      const exhaust=45+Math.random()*45;
+      const particle=engineParticles[engineFxCursor];
+      engineFxCursor=(engineFxCursor+1)%ENGINE_FX_MAX;
 
-    particle.owner=owner;
-    const visualShipSize=SHIP_DRAW_SIZE*(scene3D?.shipScale||1);
-    particle.x=x+backX*(visualShipSize*.43)+sideX*jitter;
-    particle.y=y+backY*(visualShipSize*.43)+sideY*jitter;
-    particle.vx=(Number(vx)||0)*.18+backX*exhaust+sideX*(Math.random()-.5)*16;
-    particle.vy=(Number(vy)||0)*.18+backY*exhaust+sideY*(Math.random()-.5)*16;
-    particle.maxLife=.42+Math.random()*.34;
-    particle.life=particle.maxLife;
+      particle.owner=owner;
+      const visualShipSize=SHIP_DRAW_SIZE*(scene3D?.shipScale||1);
+      particle.x=x+backX*(visualShipSize*.43)+sideX*jitter;
+      particle.y=y+backY*(visualShipSize*.43)+sideY*jitter;
+      particle.vx=(Number(vx)||0)*.18+backX*exhaust+sideX*(Math.random()-.5)*16;
+      particle.vy=(Number(vy)||0)*.18+backY*exhaust+sideY*(Math.random()-.5)*16;
+      particle.maxLife=.42+Math.random()*.34;
+      particle.life=particle.maxLife;
 
-    // Algo mas pequenas de salida que antes, pero con variedad organica:
-    // la mayoria son medias, algunas son motas pequenas y unas pocas mayores.
-    const sizeRoll=Math.random();
-    const baseSize=(isMobile?2.35:1.95)+Math.random()*(isMobile?3.15:2.85);
-    particle.size=baseSize*(sizeRoll<.20?.64:(sizeRoll>.86?1.24:1));
+      // Algo mas pequenas de salida que antes, pero con variedad organica:
+      // la mayoria son medias, algunas son motas pequenas y unas pocas mayores.
+      const sizeRoll=Math.random();
+      const baseSize=(isMobile?2.35:1.95)+Math.random()*(isMobile?3.15:2.85);
+      particle.size=baseSize*(sizeRoll<.20?.64:(sizeRoll>.86?1.24:1));
 
-    // La gama se decide una sola vez al nacer: amarillo-negro o rojo-negro.
-    particle.palette=Math.random()<.5?0:1;
+      // La gama se decide una sola vez al nacer: amarillo-negro o rojo-negro.
+      particle.palette=Math.random()<.5?0:1;
+    }
   }
   function drawEngineParticles(now){
     if(!engineFxLastAt){engineFxLastAt=now;return;}
@@ -5359,7 +5362,7 @@
     if(thrusting||turning){
       const visualVx=local&&localVisual.ready?localVisual.vx:p.vx;
       const visualVy=local&&localVisual.ready?localVisual.vy:p.vy;
-      emitEngineParticle(p,x,y,r,now,visualVx,visualVy);
+      emitEngineParticle(p,x,y,r,now,visualVx,visualVy,thrusting);
     }
     const armed=p.armed===true;
     const selected=images[thrusting?(armed?variants.af:variants.a):(armed?variants.f:variants.base)];

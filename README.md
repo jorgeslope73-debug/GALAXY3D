@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.19: los misiles toman el color de su nave (azul, fucsia, verde o rojo), tanto equipados en las alas como en vuelo. Se recolorea únicamente la pintura original del modelo; las luces verdes, juntas y partes metálicas conservan su color. Las geometrías se guardan por equipo y se comparten entre instancias; cada cohete mantiene sus materiales independientes. El testigo verde de bala queda centrado en la punta, a menor altura que la cubierta.
+Versión V23.20: al acelerar se emite el doble de partículas originales del motor, con la misma paleta de fuego y el mismo tamaño, duración y frecuencia. Al girar sin acelerar se conserva la cantidad anterior. Se usa el mismo conjunto limitado de partículas. El testigo naranja de bengalas es aproximadamente un tercio mayor en ancho y alto, manteniendo su posición junto al motor.
+
+Los misiles toman el color de su nave (azul, fucsia, verde o rojo), tanto equipados en las alas como en vuelo. Se recolorea únicamente la pintura original del modelo; las luces verdes, juntas y partes metálicas conservan su color. Las geometrías se guardan por equipo y se comparten entre instancias; cada cohete mantiene sus materiales independientes. El testigo verde de bala queda centrado en la punta, a menor altura que la cubierta.
 
 Reutiliza las partículas originales del motor también al girar sin acelerar, con los mismos colores, tamaño, duración, origen trasero, frecuencia y conjunto de partículas de siempre. Se retira el sistema adicional de partículas laterales. La emisión al girar usa el control local o el cambio de orientación ya recibido para las otras naves; no añade datos de red ni modifica la aceleración.
 
