@@ -3,6 +3,7 @@
 (() => {
   const W=1920,H=1080,TAU=Math.PI*2;
   const SHIP_VISUAL_SCALE=1.5;
+  const SHIP_BANK_LIMIT=14*Math.PI/180;
   const mobile=document.documentElement.classList.contains('handheld-device')||matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const preferenceKey='galaxy3d-view-v1';
@@ -107,7 +108,7 @@
     scene.add(shardMesh);
     const effects=new Map(),seenEffects=new Set();
     const rockGeometries=Array.from({length:6},(_,variant)=>makeRockGeometry(variant));
-    let now=0,contextKey='',lastSequence=-1,bolts=0;
+    let now=0,contextKey='',poseContext='',lastSequence=-1,bolts=0;
 
     function makeRockGeometry(variant){
       const geometry=new T.IcosahedronGeometry(1,mobile?1:2);
@@ -184,7 +185,7 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.07';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.08';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
@@ -236,7 +237,7 @@
       let record=records.get(key);
       if(!record){
         record=spares.get(kind)?.pop()||model(kind);
-        record.kind=kind;
+        record.kind=kind;record.turnPose=null;
         if(!record.root.parent)scene.add(record.root);
         records.set(key,record);
       }
@@ -244,6 +245,24 @@
       return record;
     }
     function place(root,x,y,z=0){root.position.set(x-W/2,H/2-y,z);}
+    function turnBank(record,rotation,showcase){
+      const context=poseContext+':'+showcase,previous=record.turnPose;
+      const elapsed=previous?now-previous.time:0;
+      let bank=0;
+      if(!showcase&&!reducedMotion&&previous&&previous.context===context&&elapsed>0&&elapsed<=250){
+        const delta=((rotation-previous.rotation)%360+540)%360-180;
+        // Follow the shortest turn across 0/360; ignore sudden pose corrections.
+        if(Math.abs(delta)<=Math.max(12,elapsed*.72)){
+          const speed=delta*1000/elapsed;
+          const target=-Math.max(-1,Math.min(1,speed/240))*SHIP_BANK_LIMIT;
+          const response=target===0?180:120;
+          bank=previous.bank+(target-previous.bank)*(1-Math.exp(-elapsed/response));
+          if(Math.abs(bank)<.0001)bank=0;
+        }
+      }
+      record.turnPose={rotation,time:now,bank,context};
+      return bank;
+    }
     function collectEffects(snapshot,localIndex){
       if(!snapshot)return;
       const nextContext=[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':');
@@ -285,6 +304,7 @@
       shipScale:SHIP_VISUAL_SCALE,
       begin(ctx,time,snapshot,localIndex){
         now=time;bolts=0;
+        poseContext=snapshot?[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':'):'menu';
         const width=Math.min(ctx.canvas.width,mobile?1280:1920);
         const height=Math.round(width*H/W);
         if(surface.width!==width||surface.height!==height)renderer.setSize(width,height,false);
@@ -311,8 +331,9 @@
         place(root,x,y,18);
         root.scale.setScalar(size/72*(showcase?1:SHIP_VISUAL_SCALE));
         root.rotation.z=rotation*Math.PI/180;
-        // In matches the model stays directly overhead, like the Blender reference.
-        record.tilt.rotation.set(showcase?.38:0,showcase?Math.sin(now*.0006)*.30:0,0);
+        // Bank only while turning; ease back to the overhead pose when the turn stops.
+        const bank=turnBank(record,rotation,showcase);
+        record.tilt.rotation.set(showcase?.38:0,showcase?Math.sin(now*.0006)*.30:bank,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
         // Thrust trails are drawn by the existing particle system in game.js.
