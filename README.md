@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.15: integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en el soporte del ala derecha. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
+Versión V23.16: añade partículas de maniobra al girar y sitúa el testigo verde de disparo sobre el centro de la cúpula. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo. Las partículas siguen la orientación e inclinación, caducan rápidamente y se eliminan al ocultarse o desaparecer la nave, cambiar de ronda o volver de una pausa. Se respeta el movimiento reducido.
+
+Integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en los soportes de las alas. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
 
 El original se conserva en `mas/final/cohete_galaxy_combat.glb` y se publica una copia idéntica en `docs/assets/models/`. El cargador agrupa las 38 piezas estáticas en una malla de 8200 triángulos, con colores por vértice y geometría compartida entre instancias. No se añaden llamas geométricas; se conserva la estela de partículas y se ajusta su origen a la tobera. La preferencia de movimiento reducido desactiva el giro continuo. Si el GLB falla, se mantiene el cohete de respaldo.
 
