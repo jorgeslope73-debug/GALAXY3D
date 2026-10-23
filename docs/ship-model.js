@@ -4,7 +4,7 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const authoredPaints=new WeakMap();
 const unarmedPaints=new WeakMap(),lightStates=new WeakMap();
-const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde.png','naveroja.png'];
+const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde-luces-rojas.png','naveroja.png'];
 const unarmedFiles=['naveazul-sin-balas.png','navefuxia-sin-balas.png','naveverde-sin-balas.png','naveroja-sin-balas.png'];
 
 function assetURL(name){

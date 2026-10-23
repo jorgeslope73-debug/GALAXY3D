@@ -23,6 +23,7 @@ const SHELL_FILES = [
   './assets/models/naveazul-cupula-oscura.png',
   './assets/models/navefuxia.jpg',
   './assets/models/naveverde.png',
+  './assets/models/naveverde-luces-rojas.png',
   './assets/models/naveroja.png',
   './assets/models/naveazul-sin-balas.png',
   './assets/models/navefuxia-sin-balas.png',
