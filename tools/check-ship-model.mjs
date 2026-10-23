@@ -22,17 +22,20 @@ const bounds=new T.Box3().setFromObject(template),size=bounds.getSize(new T.Vect
 assert.ok(bounds.getCenter(new T.Vector3()).length()<1e-5,'Rotation must use the ship centre');
 assert.ok(Math.abs(size.y-62)<1e-4&&size.x<size.y,'The nose must point along the game Y axis');
 assert.ok(size.z>0&&size.z<32,'The mesh must have depth and fit its effects');
-let triangles=0,frontWidth=0,backWidth=0;
+let triangles=0,frontWidth=0,backWidth=0,deckLocalZ=Infinity,deckWorldZ=0;
 template.traverse(object=>{
   if(!object.isMesh)return;
   triangles+=(object.geometry.index?.count||object.geometry.attributes.position.count)/3;
   const points=object.geometry.attributes.position;
   for(let i=0;i<points.count;i++){
     const point=new T.Vector3().fromBufferAttribute(points,i).applyMatrix4(object.matrixWorld);
+    // The raised upper deck is the negative local-Z side in this specific GLB.
+    if(points.getZ(i)<deckLocalZ){deckLocalZ=points.getZ(i);deckWorldZ=point.z;}
     if(point.y>size.y*.35)frontWidth=Math.max(frontWidth,Math.abs(point.x));
     if(point.y< -size.y*.35)backWidth=Math.max(backWidth,Math.abs(point.x));
   }
 });
 assert.ok(frontWidth<backWidth,'The narrow nose must face forwards and the engines backwards');
+assert.ok(deckWorldZ>0,'The upper deck must face the overhead camera, not the underside');
 assert.ok(triangles>0&&triangles<=10000,'Unexpected ship geometry cost');
 console.log(`Ship GLB OK: ${triangles} triangles; centred, forwards, embedded textures; ${size.toArray().map(x=>x.toFixed(2)).join(' × ')}`);

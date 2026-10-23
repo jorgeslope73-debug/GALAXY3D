@@ -5,9 +5,9 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 const teamColors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
 
 export function prepareShipTemplate(source){
-  // This Blender export points along -X and uses Y as its vertical axis.
-  // The game's models point along +Y, with Z facing the overhead camera.
-  const level=new T.Group();level.rotation.x=-Math.PI/2;level.add(source);
+  // This export points along -X, with its upper deck facing +Y.
+  // Turn the deck towards the overhead camera (+Z), then align the nose to +Y.
+  const level=new T.Group();level.rotation.x=Math.PI/2;level.add(source);
   const facing=new T.Group();facing.rotation.z=-Math.PI/2;facing.add(level);
   facing.updateMatrixWorld(true);
   const bounds=new T.Box3().setFromObject(facing);

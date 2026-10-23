@@ -190,7 +190,7 @@
       record.bodyRoot.visible=false;
       record.flames.position.y=-4;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.01';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.02';
     import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadShipTemplate();
       createImportedShip=assets.createShipFactory(template);

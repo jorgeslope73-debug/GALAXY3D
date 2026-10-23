@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.01: nave GLB del usuario sobre el combate 2.5D y la simulación original de GALAXY COMBAT.
+Versión V23.02: nave GLB del usuario sobre el combate 2.5D y la simulación original de GALAXY COMBAT.
+
+V23.02 corrige la orientación del GLB para mostrar la cabina y el casco superior, manteniendo el morro en la dirección de avance.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
 - Se ajustan visualmente el centro, el tamaño y la orientación. La pintura fucsia se adapta a los cuatro colores de jugador conservando el casco y el mapa de normales.
