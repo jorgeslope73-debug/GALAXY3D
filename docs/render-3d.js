@@ -158,8 +158,8 @@
       add(bodyRoot,box,light,23,-15,0,3,6,2);
       add(bodyRoot,box,dark,-7,19,0,2,14,2);
       add(bodyRoot,box,dark,7,19,0,2,14,2);
-      // Above the centre of the imported cockpit, attached to the banking ship.
-      const ammoLight=add(tilt,sphere,glow(0x8aff9d),0,-2,12.5,1.8,2.3,1.2);
+      // Centred on the nose, low on the ship rather than above its deck.
+      const ammoLight=add(tilt,sphere,glow(0x8aff9d),0,31,-2,1.8,2.3,1.2);
       ammoLight.visible=false;
       const shieldMaterial=new T.MeshBasicMaterial({color:0x72eaff,transparent:true,opacity:.11,depthWrite:false,wireframe:true,toneMapped:false});
       const shield=add(root,sphere,shieldMaterial,0,0,0,40,40,24);
@@ -170,7 +170,7 @@
         const root=new T.Group();root.name=x>0?'rocket-hardpoint-right':'rocket-hardpoint-left';
         root.position.set(x,-7,4);tilt.add(root);
         add(root,box,dark,0,-1,-3,4,11,2);
-        const fallback=add(root,cylinder,metal(0xf4f8ff),0,0,0,2,22,2);
+        const fallback=add(root,cylinder,metal(colors[index]),0,0,0,2,22,2);
         root.visible=false;
         return {root,fallback,visual:null};
       });
@@ -195,11 +195,11 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    function attachMountedRocket(record){
+    function attachMountedRocket(record,index){
       if(!createImportedRocket)return;
       for(const mount of record.mounts){
         if(mount.visual)continue;
-        const visual=createImportedRocket();visual.scale.setScalar(.6);
+        const visual=createImportedRocket(index);visual.scale.setScalar(.6);
         mount.root.add(visual);mount.visual=visual;mount.fallback.visible=false;
         visual.traverse(object=>{
           if(!object.isMesh)return;
@@ -209,12 +209,17 @@
         });
       }
     }
-    function attachFlyingRocket(record){
-      if(!createImportedRocket||record.importedRocket)return;
-      record.importedRocket=createImportedRocket();record.roll.add(record.importedRocket);
+    function attachFlyingRocket(record,owner){
+      if(!createImportedRocket)return;
+      const team=Math.max(0,Math.min(3,Math.trunc(Number(owner)||0)));
+      if(record.importedRocket)record.importedRocket.visible=false;
+      if(!record.rocketVariants.has(team)){
+        const visual=createImportedRocket(team);record.rocketVariants.set(team,visual);record.roll.add(visual);
+      }
+      record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.18';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.19';
     import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);
@@ -251,12 +256,12 @@
       }
       if(kind==='rocket'){
         const roll=new T.Group(),procedural=new T.Group();root.add(roll);roll.add(procedural);
-        const trim=metal(0x69d9ff);
-        add(procedural,cylinder,metal(0xe4eaf2),0,0,0,3.2,20,3.2);
-        add(procedural,cone,metal(0xe9faff),0,14,0,3.2,9,3.2);
+        const trim=metal(0x69d9ff),paint=metal(0x69d9ff);
+        add(procedural,cylinder,paint,0,0,0,3.2,20,3.2);
+        add(procedural,cone,paint,0,14,0,3.2,9,3.2);
         add(procedural,box,trim,0,-7,0,16,4,2);
         add(procedural,box,trim,0,-7,0,2,4,12);
-        return {root,roll,procedural,trim};
+        return {root,roll,procedural,trim,paint,rocketVariants:new Map()};
       }
       if(kind==='ufo'){
         add(root,sphere,metal(0xabb8ca),0,0,0,31,26,7);
@@ -369,7 +374,7 @@
       ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false,missileCount=missile?1:0){
         const record=take('ship:'+index,index),root=record.root;
         attachImportedShip(record,index);
-        attachMountedRocket(record);
+        attachMountedRocket(record,index);
         place(root,x,y,18);
         root.scale.setScalar(size/72*(showcase?1:SHIP_VISUAL_SCALE));
         root.rotation.z=rotation*Math.PI/180;
@@ -401,11 +406,12 @@
       },
       rocket(id,x,y,rotation,owner){
         const record=take('rocket',id);place(record.root,x,y,18);
-        attachFlyingRocket(record);
+        attachFlyingRocket(record,owner);
         if(record.launchContext!==poseContext||now<record.launchAt){record.launchAt=now;record.launchContext=poseContext;}
         record.root.rotation.z=rotation*Math.PI/180;
         record.roll.rotation.y=reducedMotion?0:((now-record.launchAt)*.001*TAU*1.6)%TAU;
         record.trim.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
+        record.paint.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
       },
       bolt(x,y,vx,vy){
         if(bolts>=256)return;

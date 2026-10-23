@@ -4,6 +4,7 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
 export const ROCKET_LENGTH=40;
+const teamPaints=[0x28bce8,0xf232a3,0x47df3f,0xf14450].map(hex=>new T.Color(hex));
 
 export function prepareRocketTemplate(source){
   // The supplied model points along +Z. Align its nose with the game's +Y.
@@ -45,14 +46,35 @@ export async function loadRocketTemplate(){
 }
 
 export function createRocketFactory(template){
-  return ()=>{
+  const palettes=new Map();
+  function paintedGeometry(original,index){
+    const key=original.uuid+':'+index;
+    if(palettes.has(key))return palettes.get(key);
+    const geometry=original.clone(),source=original.attributes.color,paint=geometry.attributes.color;
+    const team=teamPaints[index];
+    if(source){
+      for(let i=0;i<source.count;i++){
+        const r=source.getX(i),g=source.getY(i),b=source.getZ(i);
+        // Only the authored magenta paint changes; lamps, seams and metal stay intact.
+        if(r>g*3&&b>g*3&&r>b){
+          const shade=r/(242/255);
+          paint.setXYZ(i,team.r*shade,team.g*shade,team.b*shade);
+        }
+      }
+    }
+    palettes.set(key,geometry);return geometry;
+  }
+  return index=>{
     const visual=template.clone(true),materials=new Map();
+    const team=Math.max(0,Math.min(3,Math.trunc(Number(index)||0)));
     visual.traverse(object=>{
       if(!object.isMesh)return;
+      if(index!==undefined)object.geometry=paintedGeometry(object.geometry,team);
       const original=object.material;
       if(!materials.has(original))materials.set(original,original.clone());
       object.material=materials.get(original);
     });
+    if(index!==undefined)visual.userData.galaxyRocketTeam=team;
     return visual;
   };
 }

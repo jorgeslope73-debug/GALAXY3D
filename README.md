@@ -1,10 +1,12 @@
 # GALAXY3D
 
-Versión V23.18: reutiliza las partículas originales del motor también al girar sin acelerar, con los mismos colores, tamaño, duración, origen trasero, frecuencia y conjunto de partículas de siempre. Se retira el sistema adicional de partículas laterales. La emisión al girar usa el control local o el cambio de orientación ya recibido para las otras naves; no añade datos de red ni modifica la aceleración.
+Versión V23.19: los misiles toman el color de su nave (azul, fucsia, verde o rojo), tanto equipados en las alas como en vuelo. Se recolorea únicamente la pintura original del modelo; las luces verdes, juntas y partes metálicas conservan su color. Las geometrías se guardan por equipo y se comparten entre instancias; cada cohete mantiene sus materiales independientes. El testigo verde de bala queda centrado en la punta, a menor altura que la cubierta.
+
+Reutiliza las partículas originales del motor también al girar sin acelerar, con los mismos colores, tamaño, duración, origen trasero, frecuencia y conjunto de partículas de siempre. Se retira el sistema adicional de partículas laterales. La emisión al girar usa el control local o el cambio de orientación ya recibido para las otras naves; no añade datos de red ni modifica la aceleración.
 
 Sitúa el testigo de bengalas en la parte trasera, sobre la zona del motor, y limita la inclinación progresiva de los giros a 60 grados. El testigo acompaña la inclinación y se muestra mientras haya cargas de bengalas.
 
-Sitúa el testigo verde de disparo sobre el centro de la cúpula. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo.
+Sitúa el testigo verde de disparo en la punta y por debajo de la cubierta. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo.
 
 Integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en los soportes de las alas. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
 
