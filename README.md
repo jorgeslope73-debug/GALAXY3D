@@ -1,6 +1,10 @@
 # GALAXY3D
 
-Versión V23.14: cuatro naves con texturas distintas: azul, fucsia, verde y roja, asignadas en ese orden a los jugadores 1–4. Las variantes verde y roja se han creado con Adobe Photoshop cambiando la pintura del casco: verde a partir de la azul con cúpula oscura y roja a partir de la fucsia. Se conservan los cristales oscuros, el metal, las luces y el atlas UV de 1014 × 1014 píxeles.
+Versión V23.15: integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en el soporte del ala derecha. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
+
+El original se conserva en `mas/final/cohete_galaxy_combat.glb` y se publica una copia idéntica en `docs/assets/models/`. El cargador agrupa las 38 piezas estáticas en una malla de 8200 triángulos, con colores por vértice y geometría compartida entre instancias. No se añaden llamas geométricas; se conserva la estela de partículas y se ajusta su origen a la tobera. La preferencia de movimiento reducido desactiva el giro continuo. Si el GLB falla, se mantiene el cohete de respaldo.
+
+Las cuatro naves conservan sus texturas azul, fucsia, verde y roja, asignadas en ese orden a los jugadores 1–4. Las variantes verde y roja se crearon con Adobe Photoshop a partir de la azul con cúpula oscura y la fucsia, respectivamente.
 
 Las nuevas texturas se guardan como `mas/final/naveverde.png` y `mas/final/naveroja.png`, con copias idénticas en `docs/assets/models/`. Se conservan los originales `mas/final/naveazul.jpg`, `mas/final/navefuxia.jpg` y la variante `naveazul-cupula-oscura.png`. El color del HUD y los accesorios del cuarto jugador pasa a rojo para corresponder con su nave.
 
@@ -16,6 +20,7 @@ Las rocas 3D conservan la textura original `mas/asteroideAzul.png`, incluidos lo
 - Se conservan partículas de propulsión, escudo, camuflaje e indicadores de armas. La nave geométrica anterior sigue como respaldo durante la carga o si falla el archivo, también sin llamas geométricas.
 - El cargador GLTFLoader y BufferGeometryUtils proceden de Three.js r180, con imports locales y la licencia MIT de `docs/vendor/THREE-LICENSE.txt`.
 - Comprobación del archivo y su orientación: `node tools/check-ship-model.mjs`. La visualización, colores y estados se comprueban además en navegador.
+- Comprobación del cohete, eje de giro, orientación y reutilización de geometría: `node tools/check-rocket-model.mjs`.
 
 - Jugar: https://jorgeslope73-debug.github.io/GALAXY3D/
 - Vista 3D por defecto: naves con fuselaje, alas, cabina y propulsores; asteroides con relieve y rotación; OVNIs, misiles, disparos y fragmentos de impacto.

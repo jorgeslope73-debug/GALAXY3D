@@ -812,8 +812,9 @@
     const back=burst?(45+Math.random()*90):(30+Math.random()*55);
     const side=(Math.random()-.5)*(burst?34:20);
 
-    particle.x=x+tx*side*.08+dx*(burst?0:-10);
-    particle.y=y+ty*side*.08+dy*(burst?0:-10);
+    const tailOffset=window.Galaxy3D?.active?window.Galaxy3D.rocketTailOffset:10;
+    particle.x=x+tx*side*.08+dx*(burst?0:-tailOffset);
+    particle.y=y+ty*side*.08+dy*(burst?0:-tailOffset);
     particle.vx=-dx*back+tx*spread*28;
     particle.vy=-dy*back+ty*spread*28;
     particle.maxLife=burst?(.28+Math.random()*.28):(.42+Math.random()*.34);

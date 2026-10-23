@@ -51,6 +51,7 @@
 
   window.Galaxy3D={
     get active(){return !!(enabled&&world&&!world.lost&&!failed);},
+    get rocketTailOffset(){return world?.rocketTailOffset||10;},
     begin(ctx,now,snapshot,localIndex){
       if(!this.active)return null;
       try{world.begin(ctx,now,snapshot,localIndex);return world;}catch(error){fallback(error);return null;}
@@ -88,9 +89,10 @@
     const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xff5d5d];
     const records=new Map(),spares=new Map();
-    let createImportedShip=null,rockTexture=null;
+    let createImportedShip=null,createImportedRocket=null,rockTexture=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
+    document.documentElement.dataset.galaxyRocket='loading';
     const matrix=new T.Matrix4(),position=new T.Vector3(),scale=new T.Vector3(),quaternion=new T.Quaternion(),euler=new T.Euler();
     const metal=(color,extra={})=>new T.MeshStandardMaterial({color,metalness:.48,roughness:.36,...extra});
     const glow=color=>new T.MeshBasicMaterial({color,toneMapped:false});
@@ -163,11 +165,13 @@
       const shieldRim=add(root,ringGeometry,new T.MeshBasicMaterial({color:0x88eaff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false}),0,0,1,40);
       const shock=add(tilt,ringGeometry,glow(0xc5efff),0,22,10,8);
       const flare=add(tilt,box,glow(0xffb55a),-14,-9,5,3,8,3);
-      const missile=add(tilt,cylinder,metal(0xf4f8ff),14,0,6,2,14,2);
+      const missile=new T.Group();missile.name='rocket-hardpoint';missile.position.set(18,-7,4);tilt.add(missile);
+      add(missile,box,dark,0,-1,-3,4,11,2);
+      const missileFallback=add(missile,cylinder,metal(0xf4f8ff),0,0,0,2,22,2);
       const materials=[];
       root.traverse(o=>{if(o.isMesh&&!materials.includes(o.material))materials.push(o.material);});
       for(const material of materials)rememberMaterial(material);
-      return {root,tilt,bodyRoot,ammoLight,canopy,canopyMaterial,shield,shieldRim,shieldMaterial,shock,flare,missile,materials};
+      return {root,tilt,bodyRoot,ammoLight,canopy,canopyMaterial,shield,shieldRim,shieldMaterial,shock,flare,missile,missileFallback,materials};
     }
     function rememberMaterial(material){
       material.userData.galaxyBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};
@@ -185,7 +189,33 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.14';
+    function attachMountedRocket(record){
+      if(!createImportedRocket||record.mountedRocket)return;
+      const visual=createImportedRocket();visual.scale.setScalar(.6);
+      record.missile.add(visual);record.mountedRocket=visual;
+      record.missileFallback.visible=false;
+      visual.traverse(object=>{
+        if(!object.isMesh)return;
+        if(!record.materials.includes(object.material)){
+          rememberMaterial(object.material);record.materials.push(object.material);
+        }
+      });
+    }
+    function attachFlyingRocket(record){
+      if(!createImportedRocket||record.importedRocket)return;
+      record.importedRocket=createImportedRocket();record.roll.add(record.importedRocket);
+      record.procedural.visible=false;
+    }
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.15';
+    import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+      const template=await assets.loadRocketTemplate();
+      createImportedRocket=assets.createRocketFactory(template);
+      document.documentElement.dataset.galaxyRocket='cohete-glb';
+      window.dispatchEvent(new Event('galaxy3d-rocketready'));
+    }).catch(error=>{
+      document.documentElement.dataset.galaxyRocket='fallback';
+      console.warn('[GALAXY3D] Se conserva el cohete de respaldo:',error?.message||error);
+    });
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
@@ -212,12 +242,13 @@
         return {root,rock,material};
       }
       if(kind==='rocket'){
+        const roll=new T.Group(),procedural=new T.Group();root.add(roll);roll.add(procedural);
         const trim=metal(0x69d9ff);
-        add(root,cylinder,metal(0xe4eaf2),0,0,0,3.2,20,3.2);
-        add(root,cone,metal(0xe9faff),0,14,0,3.2,9,3.2);
-        add(root,box,trim,0,-7,0,16,4,2);
-        add(root,box,trim,0,-7,0,2,4,12);
-        return {root,trim};
+        add(procedural,cylinder,metal(0xe4eaf2),0,0,0,3.2,20,3.2);
+        add(procedural,cone,metal(0xe9faff),0,14,0,3.2,9,3.2);
+        add(procedural,box,trim,0,-7,0,16,4,2);
+        add(procedural,box,trim,0,-7,0,2,4,12);
+        return {root,roll,procedural,trim};
       }
       if(kind==='ufo'){
         add(root,sphere,metal(0xabb8ca),0,0,0,31,26,7);
@@ -237,7 +268,7 @@
       let record=records.get(key);
       if(!record){
         record=spares.get(kind)?.pop()||model(kind);
-        record.kind=kind;record.turnPose=null;
+        record.kind=kind;record.turnPose=null;record.launchAt=now;record.launchContext=poseContext;
         if(!record.root.parent)scene.add(record.root);
         records.set(key,record);
       }
@@ -303,6 +334,7 @@
     const api={
       lost:false,
       shipScale:SHIP_VISUAL_SCALE,
+      get rocketTailOffset(){return createImportedRocket?20:10;},
       begin(ctx,time,snapshot,localIndex){
         now=time;bolts=0;
         poseContext=snapshot?[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':'):'menu';
@@ -329,6 +361,7 @@
       ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false){
         const record=take('ship:'+index,index),root=record.root;
         attachImportedShip(record,index);
+        attachMountedRocket(record);
         place(root,x,y,18);
         root.scale.setScalar(size/72*(showcase?1:SHIP_VISUAL_SCALE));
         root.rotation.z=rotation*Math.PI/180;
@@ -358,7 +391,10 @@
       },
       rocket(id,x,y,rotation,owner){
         const record=take('rocket',id);place(record.root,x,y,18);
+        attachFlyingRocket(record);
+        if(record.launchContext!==poseContext||now<record.launchAt){record.launchAt=now;record.launchContext=poseContext;}
         record.root.rotation.z=rotation*Math.PI/180;
+        record.roll.rotation.y=reducedMotion?0:((now-record.launchAt)*.001*TAU*1.6)%TAU;
         record.trim.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
       },
       bolt(x,y,vx,vy){
@@ -391,6 +427,7 @@
         ctx.canvas.dataset.geometries=String(renderer.info.memory.geometries);
         ctx.canvas.dataset.shipModel=createImportedShip?'nave-glb':'procedural';
         ctx.canvas.dataset.rockMaterial=rockTexture?'asteroide-azul':'procedural';
+        ctx.canvas.dataset.rocketModel=createImportedRocket?'cohete-glb':'procedural';
       },
       menu(ctx,time){
         const t=reducedMotion?0:time;
