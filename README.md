@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.22: las luces propias de cada nave indican la munición normal. En la nave verde son rojas con una o más balas y grises sin balas; su fuselaje conserva el verde. En las otras tres naves siguen siendo verdes con balas y grises sin balas. Las variantes se preparan en Adobe. Se retira el punto verde añadido delante de la nave. Las ocho texturas se cargan una vez y se comparten; cambiar de estado no crea materiales ni texturas. La pintura de las naves, incluida la verde, conserva su color. El estado usa la cantidad de balas ya recibida y no parpadea durante la recarga si aún quedan balas.
+Versión V23.23: la cabecera muestra GALAXY COMBAT sin la insignia 3D ni el subtítulo 2.5D · MULTIPLAYER.
+
+Las luces propias de cada nave indican la munición normal. En la nave verde son rojas con una o más balas y grises sin balas; su fuselaje conserva el verde. En las otras tres naves siguen siendo verdes con balas y grises sin balas. Las variantes se preparan en Adobe. Se retira el punto verde añadido delante de la nave. Las ocho texturas se cargan una vez y se comparten; cambiar de estado no crea materiales ni texturas. La pintura de las naves, incluida la verde, conserva su color. El estado usa la cantidad de balas ya recibida y no parpadea durante la recarga si aún quedan balas.
 
 Al acelerar se emite el doble de partículas originales del motor, con la misma paleta de fuego y el mismo tamaño, duración y frecuencia. Al girar sin acelerar se conserva la cantidad anterior. Se usa el mismo conjunto limitado de partículas. El testigo naranja de bengalas es aproximadamente un tercio mayor en ancho y alto, manteniendo su posición junto al motor.
 
