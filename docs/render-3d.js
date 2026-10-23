@@ -8,12 +8,14 @@
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const preferenceKey='galaxy3d-view-v1';
   const requested=new URLSearchParams(location.search).get('view');
-  let enabled=true,world=null,failed=false,button=null;
+  let enabled=true,world=null,failed=false,button=null,assetsComplete=false;
+  let resolveAssetsReady;
+  const assetsReady=new Promise(resolve=>{resolveAssetsReady=resolve;});
   try{enabled=(requested||localStorage.getItem(preferenceKey))!=='2d';}catch(_){enabled=requested!=='2d';}
 
   const labels={es:['VISTA 3D','VISTA 2D','Cambiar entre vista 3D y 2D'],en:['3D VIEW','2D VIEW','Switch between 3D and 2D'],fr:['VUE 3D','VUE 2D','Changer entre la vue 3D et 2D'],it:['VISTA 3D','VISTA 2D','Cambia tra vista 3D e 2D'],de:['3D ANSICHT','2D ANSICHT','Zwischen 3D und 2D wechseln'],zh:['3D 视图','2D 视图','切换 3D 和 2D 视图']};
   function updateUI(){
-    const active=enabled&&world&&!world.lost;
+    const active=enabled&&assetsComplete&&world&&!world.lost;
     document.documentElement.dataset.galaxyView=active?'3d':'2d';
     if(!button)return;
     const language=window.GalaxyI18n?.getLanguage?.()||'es';
@@ -22,12 +24,14 @@
     button.title=failed?'Vista 2D disponible en este dispositivo':text[2];
     button.setAttribute('aria-label',button.title);
     button.setAttribute('aria-pressed',active?'true':'false');
-    button.disabled=!world||failed;
+    button.disabled=!assetsComplete||failed;
     button.classList.toggle('active',!!active);
   }
   function fallback(error){
     failed=true;
     if(world)world.lost=true;
+    document.documentElement.dataset.galaxyModels='error';
+    resolveAssetsReady({ok:false});
     updateUI();
     console.warn('[GALAXY3D] Se mantiene la vista 2D:',error?.message||error);
   }
@@ -50,7 +54,9 @@
   else setupUI();
 
   window.Galaxy3D={
-    get active(){return !!(enabled&&world&&!world.lost&&!failed);},
+    ready:assetsReady,
+    get requested(){return enabled;},
+    get active(){return !!(enabled&&assetsComplete&&world&&!world.lost&&!failed);},
     get rocketTailOffset(){return world?.rocketTailOffset||10;},
     begin(ctx,now,snapshot,localIndex){
       if(!this.active)return null;
@@ -67,10 +73,16 @@
   };
 
   // Vendored and pinned: no CDN dependency while starting a match or playing offline.
-  import('./vendor/three.module.min.js').then(THREE=>{
+  document.documentElement.dataset.galaxyModels='loading';
+  import('./vendor/three.module.min.js').then(async THREE=>{
     world=createWorld(THREE);
+    await world.ready;
+    if(world.lost)throw new Error('Se ha perdido el contexto 3D durante la carga');
+    assetsComplete=true;
+    document.documentElement.dataset.galaxyModels='ready';
     updateUI();
-    window.dispatchEvent(new Event('galaxy3d-ready'));
+    resolveAssetsReady({ok:true});
+    for(const event of ['galaxy3d-ready','galaxy3d-rocketready','galaxy3d-rockready','galaxy3d-modelready'])window.dispatchEvent(new Event(event));
   }).catch(fallback);
 
   function createWorld(T){
@@ -239,34 +251,35 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.25';
-    import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.26';
+    const modelLoads=[];
+    modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);
       document.documentElement.dataset.galaxyRocket='cohete-glb';
-      window.dispatchEvent(new Event('galaxy3d-rocketready'));
     }).catch(error=>{
       document.documentElement.dataset.galaxyRocket='fallback';
       console.warn('[GALAXY3D] Se conserva el cohete de respaldo:',error?.message||error);
-    });
-    import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
+      throw error;
+    }));
+    modelLoads.push(import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
-      window.dispatchEvent(new Event('galaxy3d-rockready'));
     }).catch(error=>{
       document.documentElement.dataset.galaxyRock='fallback';
       console.warn('[GALAXY3D] Se conserva el material de respaldo del asteroide:',error?.message||error);
-    });
-    import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
-      const template=await assets.loadShipTemplate();
+      throw error;
+    }));
+    modelLoads.push(import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+      const template=await assets.loadShipTemplate({strict:true});
       createImportedShip=assets.createShipFactory(template);
       setImportedShipAmmo=assets.setShipAmmoLights;
       document.documentElement.dataset.galaxyShip='nave-glb';
-      window.dispatchEvent(new Event('galaxy3d-modelready'));
     }).catch(error=>{
       document.documentElement.dataset.galaxyShip='fallback';
       console.warn('[GALAXY3D] No se pudo cargar nave.glb; se conserva la nave de respaldo:',error?.message||error);
-    });
+      throw error;
+    }));
     function model(kind){
       if(kind.startsWith('ship:'))return shipModel(Number(kind.split(':')[1])||0);
       const root=new T.Group();
@@ -476,6 +489,23 @@
         this.flush(ctx);
       }
     };
+    api.ready=Promise.all(modelLoads).then(()=>{
+      // Upload textures and compile the actual models behind the loading screen.
+      const cache=document.createElement('canvas');cache.width=256;cache.height=144;
+      const ctx=cache.getContext('2d');
+      ctx.setTransform(256/W,0,0,144/H,0,0);
+      for(let pass=0;pass<3;pass++){
+        api.begin(ctx,pass*16,{code:'graphics-warmup',round:0,seq:pass,fx:[]},-1);
+        for(let team=0;team<4;team++){
+          api.ship(team,240+team*480,540,0,100,pass===2?.4:1,false,true,1,true,true,true,0,false,2,pass!==1);
+          api.rocket('warm-rocket-'+team,240+team*480,800,0,team);
+        }
+        api.rock('warm-rock',960,230,100,1,0);
+        api.flush(ctx);
+      }
+      // Leave the pool in its normal menu state before exposing the first frame.
+      api.menu(ctx,0);
+    });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();});
     window.addEventListener('beforeunload',()=>renderer.dispose(),{once:true});

@@ -30,7 +30,7 @@ export function prepareShipTemplate(source){
   return template;
 }
 
-export async function loadShipTemplate(){
+export async function loadShipTemplate({strict=false}={}){
   const textureLoader=new T.TextureLoader();
   const loadPaints=files=>Promise.all(files.map(async file=>{
     try{
@@ -49,6 +49,9 @@ export async function loadShipTemplate(){
       console.warn('[GALAXY3D] Se conservan las luces de la textura:',error);return null;
     })
   ]);
+  if(strict&&(!paints.every(Boolean)||!offPaints.every(Boolean)||!mask)){
+    throw new Error('No se han podido cargar todas las texturas de las naves');
+  }
   const template=prepareShipTemplate(gltf.scene);
   authoredPaints.set(template,paints);
   unarmedPaints.set(template,offPaints);

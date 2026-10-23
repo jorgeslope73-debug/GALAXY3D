@@ -2411,6 +2411,9 @@ html.handheld-device #menu.submenu-open > #buildVersion{
   color:#f2eaff;
 }
 html.menu-first-loading body{overflow:hidden}
+.menu-first-loader-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.menu-first-loader-actions[hidden]{display:none!important}
+.menu-first-loader-actions button{width:auto;min-width:125px;min-height:38px;padding:9px 14px;border:1px solid #bc87ec;border-radius:6px;background:#251534;color:#f2eaff;font:700 12px Arial,sans-serif;cursor:pointer}
 
 
 /* V21.75: esquema grafico del mando en el manual. */

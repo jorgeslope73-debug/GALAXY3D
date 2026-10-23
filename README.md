@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.25: el escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
+Versión V23.26: el inicio en 3D espera a los modelos definitivos, las ocho pinturas de las naves, su máscara y la textura del asteroide. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
+
+El escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
 
 Las luces quedan negras sin balas y se encienden con un color intenso: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
 
