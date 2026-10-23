@@ -1,0 +1,16 @@
+newmtl e75c93d927d6d44dd3568c83f9c19:Material
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+map_Kd texture_pbr_20250901.png
+Ni 1.50
+newmtl lambert4SG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd difuse.jpg
+map_Ka color.jpg
+bump  -bm 1 normal.png
+Ni 1.00
