@@ -1,15 +1,15 @@
 # GALAXY3D
 
-Versión V23.11: las naves se ladean progresivamente hacia el giro, hasta 75 grados en los giros más cerrados, y vuelven suavemente a quedar planas al dejar de girar. La curva progresiva depende de la velocidad de giro (18,75 grados a media velocidad), con una entrada más gradual y sin saltar al ángulo máximo. La inclinación se calcula localmente a partir de la orientación visible, también para los rivales, y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
+Versión V23.12: las naves usan directamente las dos texturas originales `mas/final/naveazul.jpg` y `mas/final/navefuxia.jpg`, sin recolorear ni editar sus píxeles. Las copias publicadas en `docs/assets/models/` son idénticas a los originales. Se alternan azul y fucsia entre los cuatro jugadores, mientras se dispone de estas dos pinturas.
 
-Las naves usan directamente `mas/difuse.jpg`, sin recolorear ni editar sus píxeles. La copia publicada en `docs/assets/models/difuse.jpg` es idéntica al original. Por ahora las cuatro naves comparten esta pintura fucsia con cabina verde, pendientes de las otras tres texturas del autor.
+Se conserva la inclinación progresiva de hasta 75 grados en los giros más cerrados y el retorno suave a la vista plana. La curva depende de la velocidad de giro (18,75 grados a media velocidad), con entrada gradual. La inclinación se calcula localmente para cada nave y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
 
 Se retiran las llamas geométricas de naves y misiles; la propulsión conserva las partículas existentes del juego. La iluminación es blanca y equilibrada para mostrar el color y el relieve del modelo. Las naves conservan el aumento visual del 50 % y la vista cenital cuando no giran, con morro arriba en giro cero. Se mantienen las reglas y los tamaños de colisión.
 
 Las rocas 3D conservan la textura original `mas/asteroideAzul.png`, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
-- Se ajustan visualmente el centro, el tamaño y la orientación. La textura `difuse.jpg` conserva los UV y el mapa de normales del GLB. No se generan colores alternativos para los jugadores.
+- Se ajustan visualmente el centro, el tamaño y la orientación. Ambas texturas conservan los UV y el mapa de normales del GLB. No se generan colores alternativos para los jugadores.
 - Las texturas se cargan y guardan para uso offline. Si falta una imagen se conserva la pintura de respaldo incluida en el modelo.
 - Se conservan partículas de propulsión, escudo, camuflaje e indicadores de armas. La nave geométrica anterior sigue como respaldo durante la carga o si falla el archivo, también sin llamas geométricas.
 - El cargador GLTFLoader y BufferGeometryUtils proceden de Three.js r180, con imports locales y la licencia MIT de `docs/vendor/THREE-LICENSE.txt`.

@@ -3,7 +3,7 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const authoredPaints=new WeakMap();
-const paintFile='difuse.jpg';
+const paintFiles=['naveazul.jpg','navefuxia.jpg'];
 
 function assetURL(name){
   const asset=new URL('./assets/models/'+name,import.meta.url);
@@ -30,17 +30,22 @@ export function prepareShipTemplate(source){
 
 export async function loadShipTemplate(){
   const textureLoader=new T.TextureLoader();
-  const [gltf,paint]=await Promise.all([
+  const [gltf,paints]=await Promise.all([
     new GLTFLoader().loadAsync(assetURL('nave.glb')),
-    textureLoader.loadAsync(assetURL(paintFile)).catch(()=>{
-      console.warn('[GALAXY3D] Se usa la pintura incluida en el GLB al faltar '+paintFile);
-      return null;
-    })
+    Promise.all(paintFiles.map(async file=>{
+      try{
+        const paint=await textureLoader.loadAsync(assetURL(file));
+        paint.name=file;paint.colorSpace=T.SRGBColorSpace;
+        return paint;
+      }catch(_){
+        console.warn('[GALAXY3D] Se usa la pintura incluida en el GLB al faltar '+file);
+        return null;
+      }
+    }))
   ]);
-  if(paint){paint.name=paintFile;paint.colorSpace=T.SRGBColorSpace;}
   const template=prepareShipTemplate(gltf.scene);
-  authoredPaints.set(template,paint);
-  document.documentElement.dataset.galaxyShipTextures=paint?'difuse-original':'embedded';
+  authoredPaints.set(template,paints);
+  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-fucsia-original':paints.some(Boolean)?'partial':'embedded';
   return template;
 }
 
@@ -53,8 +58,11 @@ function mappedPaint(original,paint){
 
 export function createShipFactory(template){
   const palettes=new Map();
-  const paint=authoredPaints.get(template);
-  return ()=>{
+  const paints=authoredPaints.get(template)||[];
+  return index=>{
+    // Alternate the two supplied artworks until more original paints are available.
+    const player=Math.max(0,Math.min(3,Math.trunc(Number(index)||0)));
+    const paintIndex=player%paintFiles.length,paint=paints[paintIndex];
     const visual=template.clone(true),materials=new Map();
     visual.traverse(object=>{
       if(!object.isMesh)return;
@@ -62,12 +70,12 @@ export function createShipFactory(template){
         if(materials.has(original))return materials.get(original);
         const material=original.clone();
         if(original.map){
-          const key=original.map.uuid;
+          const key=original.map.uuid+':'+paintIndex;
           if(!palettes.has(key)){
             palettes.set(key,paint?mappedPaint(original.map,paint):original.map);
           }
           material.map=palettes.get(key);
-          // Player identity stays in the HUD; do not tint the supplied artwork.
+          // Keep both supplied artworks unchanged; never generate team recolours.
           if(paint)material.color.setHex(0xffffff);
         }
         materials.set(original,material);

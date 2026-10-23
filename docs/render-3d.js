@@ -185,7 +185,7 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.11';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.12';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
