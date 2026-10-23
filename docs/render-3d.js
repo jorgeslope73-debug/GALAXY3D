@@ -3,7 +3,7 @@
 (() => {
   const W=1920,H=1080,TAU=Math.PI*2;
   const SHIP_VISUAL_SCALE=1.5;
-  const SHIP_BANK_LIMIT=45*Math.PI/180;
+  const SHIP_BANK_LIMIT=90*Math.PI/180;
   const mobile=document.documentElement.classList.contains('handheld-device')||matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const preferenceKey='galaxy3d-view-v1';
@@ -185,7 +185,7 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.09';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.10';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
