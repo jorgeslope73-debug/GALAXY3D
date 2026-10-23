@@ -97,6 +97,7 @@
     const metal=(color,extra={})=>new T.MeshStandardMaterial({color,metalness:.48,roughness:.36,...extra});
     const glow=color=>new T.MeshBasicMaterial({color,toneMapped:false});
     const sphere=new T.SphereGeometry(1,mobile?12:20,mobile?8:12);
+    const shieldGeometry=new T.SphereGeometry(1,mobile?24:40,mobile?16:24);
     const cylinder=new T.CylinderGeometry(1,1,1,8);
     const cone=new T.ConeGeometry(1,1,8);
     const box=new T.BoxGeometry(1,1,1);
@@ -158,9 +159,31 @@
       add(bodyRoot,box,light,23,-15,0,3,6,2);
       add(bodyRoot,box,dark,-7,19,0,2,14,2);
       add(bodyRoot,box,dark,7,19,0,2,14,2);
-      const shieldMaterial=new T.MeshBasicMaterial({color:0x72eaff,transparent:true,opacity:.11,depthWrite:false,wireframe:true,toneMapped:false});
-      const shield=add(root,sphere,shieldMaterial,0,0,0,40,40,24);
-      const shieldRim=add(root,ringGeometry,new T.MeshBasicMaterial({color:0x88eaff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false}),0,0,1,40);
+      const shieldMaterial=new T.ShaderMaterial({
+        transparent:true,depthWrite:false,toneMapped:false,
+        uniforms:{shieldColour:{value:new T.Color(0x78e8ff)},shieldOpacity:{value:1}},
+        vertexShader:`
+          varying vec3 shieldNormal;
+          void main(){
+            shieldNormal=normalMatrix*normal;
+            gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+          }
+        `,
+        fragmentShader:`
+          uniform vec3 shieldColour;
+          uniform float shieldOpacity;
+          varying vec3 shieldNormal;
+          void main(){
+            // The overhead camera is orthographic: its view direction is +Z.
+            float edge=1.0-clamp(abs(normalize(shieldNormal).z),0.0,1.0);
+            float opacity=(0.025+0.42*pow(edge,2.0))*shieldOpacity;
+            gl_FragColor=vec4(shieldColour,opacity);
+            #include <colorspace_fragment>
+          }
+        `
+      });
+      const shield=add(root,shieldGeometry,shieldMaterial,0,0,0,40);
+      shield.renderOrder=5;
       const shock=add(tilt,ringGeometry,glow(0xc5efff),0,22,10,8);
       const flare=add(tilt,box,glow(0xffb55a),0,-27,8,8,4,2.5);
       const mounts=[18,-18].map(x=>{
@@ -174,7 +197,7 @@
       const materials=[];
       root.traverse(o=>{if(o.isMesh&&!materials.includes(o.material))materials.push(o.material);});
       for(const material of materials)rememberMaterial(material);
-      return {root,tilt,bodyRoot,canopy,canopyMaterial,shield,shieldRim,shieldMaterial,shock,flare,mounts,materials};
+      return {root,tilt,bodyRoot,canopy,canopyMaterial,shield,shieldMaterial,shock,flare,mounts,materials};
     }
     function rememberMaterial(material){
       material.userData.galaxyBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};
@@ -216,7 +239,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.24';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.25';
     import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);
@@ -382,20 +405,19 @@
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
         // Engine trails for thrust and turns use the existing particle system in game.js.
-        record.shield.visible=record.shieldRim.visible=!!shield;
+        record.shield.visible=!!shield;
         record.shock.visible=!!shock;record.flare.visible=!!flare;
         const mountedCount=Math.max(0,Math.min(2,Math.trunc(Number(missileCount)||0)));
         record.mounts.forEach((mount,i)=>{mount.root.visible=i<mountedCount;});
         if(record.importedShip)setImportedShipAmmo(record.importedShip,hasAmmo);
         for(const material of record.materials){
-          if(material===record.shieldMaterial||material===record.shieldRim.material)continue;
+          if(material===record.shieldMaterial)continue;
           const base=material.userData.galaxyBase;
           material.transparent=base.transparent||alpha<.999;
           material.opacity=base.opacity*alpha;
           material.depthWrite=base.depthWrite&&alpha>.8;
         }
-        record.shieldMaterial.opacity=.11*alpha*(Number(shield)||0);
-        record.shieldRim.material.opacity=.65*alpha*(Number(shield)||0);
+        record.shieldMaterial.uniforms.shieldOpacity.value=alpha*(Number(shield)||0);
         record.canopyMaterial.emissiveIntensity=hit>0?2:.75;
       },
       ufo(id,x,y,angle){

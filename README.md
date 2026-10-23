@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.24: las luces quedan negras sin balas y se encienden con un color intenso: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
+Versión V23.25: el escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
+
+Las luces quedan negras sin balas y se encienden con un color intenso: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
 
 La cabecera muestra GALAXY COMBAT sin la insignia 3D ni el subtítulo 2.5D · MULTIPLAYER.
 
