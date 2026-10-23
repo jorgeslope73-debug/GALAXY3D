@@ -108,20 +108,6 @@
     const shardMesh=new T.InstancedMesh(shardGeometry,glow(0xffa64c),mobile?128:256);
     shardMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);shardMesh.frustumCulled=false;shardMesh.count=0;
     scene.add(shardMesh);
-    // Small manoeuvring puffs: fixed local pool, independent of simulation and networking.
-    const turnParticles=Array.from({length:mobile?48:96},()=>({life:0}));
-    const turnGeometry=new T.BufferGeometry();
-    turnGeometry.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(turnParticles.length*3),3).setUsage(T.DynamicDrawUsage));
-    turnGeometry.setAttribute('radius',new T.Float32BufferAttribute(new Float32Array(turnParticles.length),1).setUsage(T.DynamicDrawUsage));
-    turnGeometry.setAttribute('fade',new T.Float32BufferAttribute(new Float32Array(turnParticles.length),1).setUsage(T.DynamicDrawUsage));
-    const turnMaterial=new T.ShaderMaterial({
-      uniforms:{pixelScale:{value:1}},transparent:true,depthWrite:false,blending:T.AdditiveBlending,
-      vertexShader:'uniform float pixelScale; attribute float radius; attribute float fade; varying float vFade; void main(){vFade=fade; gl_PointSize=max(1.0,radius*2.0*pixelScale); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader:'varying float vFade; void main(){float d=length(gl_PointCoord-vec2(0.5)); float a=1.0-smoothstep(0.12,0.5,d); if(a<=0.0)discard; gl_FragColor=vec4(0.45,0.82,1.0,a*vFade);}'
-    });
-    const turnPoints=new T.Points(turnGeometry,turnMaterial);turnPoints.frustumCulled=false;scene.add(turnPoints);
-    const jetOrigin=new T.Vector3(),jetDirection=new T.Vector3();
-    let turnCursor=0,turnLastAt=0,turnContext='',turnParticleCount=0;
     const effects=new Map(),seenEffects=new Set();
     const rockGeometries=Array.from({length:6},(_,variant)=>makeRockGeometry(variant));
     let now=0,contextKey='',poseContext='',lastSequence=-1,bolts=0;
@@ -228,7 +214,7 @@
       record.importedRocket=createImportedRocket();record.roll.add(record.importedRocket);
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.17';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.18';
     import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);
@@ -290,7 +276,7 @@
       let record=records.get(key);
       if(!record){
         record=spares.get(kind)?.pop()||model(kind);
-        record.kind=kind;record.turnPose=null;record.jetAt=-Infinity;record.launchAt=now;record.launchContext=poseContext;
+        record.kind=kind;record.turnPose=null;record.launchAt=now;record.launchContext=poseContext;
         if(!record.root.parent)scene.add(record.root);
         records.set(key,record);
       }
@@ -302,57 +288,20 @@
       const context=poseContext+':'+showcase,previous=record.turnPose;
       const elapsed=previous?now-previous.time:0;
       let bank=0;
-      record.turnSpeed=0;
-      if(!showcase&&previous&&previous.context===context&&elapsed>0&&elapsed<=250){
+      if(!showcase&&!reducedMotion&&previous&&previous.context===context&&elapsed>0&&elapsed<=250){
         const delta=((rotation-previous.rotation)%360+540)%360-180;
         // Follow the shortest turn across 0/360; ignore sudden pose corrections.
         if(Math.abs(delta)<=Math.max(12,elapsed*.72)){
           const speed=delta*1000/elapsed;
-          record.turnSpeed=speed;
           const turn=Math.max(-1,Math.min(1,speed/240));
           const target=-turn*Math.abs(turn)*SHIP_BANK_LIMIT;
           const response=target===0?240:280;
-          bank=reducedMotion?0:previous.bank+(target-previous.bank)*(1-Math.exp(-elapsed/response));
+          bank=previous.bank+(target-previous.bank)*(1-Math.exp(-elapsed/response));
           if(Math.abs(bank)<.0001)bank=0;
         }
       }
       record.turnPose={rotation,time:now,bank,context};
       return bank;
-    }
-    function emitTurnParticles(record,index,showcase){
-      if(showcase||reducedMotion||Math.abs(record.turnSpeed)<15||now-record.jetAt<(mobile?50:32))return;
-      record.jetAt=now;
-      record.root.updateMatrixWorld(true);
-      const side=Math.sign(record.turnSpeed),strength=Math.min(1,Math.abs(record.turnSpeed)/240);
-      for(const front of [true,false]){
-        const jetSide=front?side:-side;
-        jetOrigin.set((front?8:23)*jetSide,front?14:-13,4).applyMatrix4(record.tilt.matrixWorld);
-        jetDirection.set(jetSide,0,0).transformDirection(record.tilt.matrixWorld);
-        const particle=turnParticles[turnCursor];turnCursor=(turnCursor+1)%turnParticles.length;
-        const speed=24+strength*35+Math.random()*15;
-        Object.assign(particle,{life:.22+Math.random()*.13,born:now,owner:index,
-          x:jetOrigin.x,y:jetOrigin.y,z:jetOrigin.z,
-          vx:jetDirection.x*speed,vy:jetDirection.y*speed,vz:jetDirection.z*speed,
-          radius:record.root.scale.x*(.8+Math.random()*.7)});
-      }
-    }
-    function updateTurnParticles(){
-      const positions=turnGeometry.attributes.position,radii=turnGeometry.attributes.radius,fades=turnGeometry.attributes.fade;
-      let count=0;
-      for(const particle of turnParticles){
-        if(!particle.life)continue;
-        const record=records.get('ship:'+particle.owner+'|'+particle.owner);
-        const age=(now-particle.born)/1000;
-        // A hidden, dead or absent ship must leave no marker of its location.
-        if(!record?.used||!record.alpha||age<0||age>=particle.life){particle.life=0;continue;}
-        const fade=1-age/particle.life;
-        positions.setXYZ(count,particle.x+particle.vx*age,particle.y+particle.vy*age,particle.z+particle.vz*age);
-        radii.setX(count,particle.radius*(.25+.75*fade));fades.setX(count,fade*record.alpha);
-        count++;
-      }
-      turnParticleCount=count;turnPoints.visible=count>0;turnGeometry.setDrawRange(0,count);
-      positions.needsUpdate=radii.needsUpdate=fades.needsUpdate=true;
-      turnMaterial.uniforms.pixelScale.value=surface.width/W;
     }
     function collectEffects(snapshot,localIndex){
       if(!snapshot)return;
@@ -397,10 +346,6 @@
       begin(ctx,time,snapshot,localIndex){
         now=time;bolts=0;
         poseContext=snapshot?[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':'):'menu';
-        if(poseContext!==turnContext||now-turnLastAt>250||now<turnLastAt||(Number.isFinite(snapshot?.seq)&&snapshot.seq<lastSequence)){
-          for(const particle of turnParticles)particle.life=0;
-        }
-        turnContext=poseContext;turnLastAt=now;
         const width=Math.min(ctx.canvas.width,mobile?1280:1920);
         const height=Math.round(width*H/W);
         if(surface.width!==width||surface.height!==height)renderer.setSize(width,height,false);
@@ -433,14 +378,12 @@
         record.tilt.rotation.set(showcase?.38:0,showcase?Math.sin(now*.0006)*.30:bank,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
-        // Thrust trails are drawn by the existing particle system in game.js.
+        // Engine trails for thrust and turns use the existing particle system in game.js.
         record.shield.visible=record.shieldRim.visible=!!shield;
         record.shock.visible=!!shock;record.flare.visible=!!flare;
         const mountedCount=Math.max(0,Math.min(2,Math.trunc(Number(missileCount)||0)));
         record.mounts.forEach((mount,i)=>{mount.root.visible=i<mountedCount;});
         record.ammoLight.visible=!!record.importedShip&&!!armed;
-        record.alpha=alpha;
-        emitTurnParticles(record,index,showcase);
         for(const material of record.materials){
           if(material===record.shieldMaterial||material===record.shieldRim.material)continue;
           const base=material.userData.galaxyBase;
@@ -479,7 +422,6 @@
       flush(ctx){
         boltMesh.count=bolts;boltMesh.instanceMatrix.needsUpdate=true;
         updateEffects();
-        updateTurnParticles();
         for(const [key,record] of records){
           if(record.used)continue;
           record.root.visible=false;records.delete(key);
@@ -496,7 +438,6 @@
         ctx.canvas.dataset.shipModel=createImportedShip?'nave-glb':'procedural';
         ctx.canvas.dataset.rockMaterial=rockTexture?'asteroide-azul':'procedural';
         ctx.canvas.dataset.rocketModel=createImportedRocket?'cohete-glb':'procedural';
-        ctx.canvas.dataset.turnParticles=String(turnParticleCount);
       },
       menu(ctx,time){
         const t=reducedMotion?0:time;

@@ -5114,6 +5114,15 @@
     else if(phase>0.75)alpha=(window-phase)/0.25;
     return Math.max(0,Math.min(1,alpha));
   }
+  function shipTurningForEngineFx(p,previous,now,materializing){
+    if(p.dead||materializing)return false;
+    // Local controls react immediately; other ships use their existing snapshots.
+    if(Number(p.i)===Number(myIndex))return Math.abs(lastControlTurn)>.001;
+    if(!previous||previous.dead||now-lastStateTime>250)return false;
+    const elapsed=lastStateTime-previousStateTime;
+    const delta=Math.abs(angleDelta(previous.r,p.r));
+    return elapsed>0&&delta>.01&&delta<=Math.max(12,elapsed*.72);
+  }
   function drawShip(p,previous,blend,now){
     const local=p.i===myIndex;
     let x=p.x,y=p.y,r=p.r;
@@ -5340,12 +5349,14 @@
     // Python: armado = balas > 0 y recarga terminada. El servidor confirma
     // ese estado; no cambiamos el movimiento ni el efecto de propulsion web.
     const variants=SHIP_IMAGE_KEYS[p.i]||SHIP_IMAGE_KEYS[0];
-    // La propulsion visual depende del acelerador, no de la velocidad.
+    // El aspecto de la nave depende del acelerador, no de la velocidad.
     // Para la nave local usamos el control de este mismo frame para que el PNG
     // cambie al instante al pulsar/soltar, incluso mientras sigue por inercia.
     const materializing=spawnFxLeft>0;
     const thrusting=!materializing&&(Number(p.i)===Number(myIndex)?!!lastControlThrust:p.thrust===true);
-    if(thrusting){
+    const turning=shipTurningForEngineFx(p,previous,now,materializing);
+    // Reuse the original engine particles, once per frame, also when only turning.
+    if(thrusting||turning){
       const visualVx=local&&localVisual.ready?localVisual.vx:p.vx;
       const visualVy=local&&localVisual.ready?localVisual.vy:p.vy;
       emitEngineParticle(p,x,y,r,now,visualVx,visualVy);
