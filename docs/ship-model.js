@@ -2,9 +2,8 @@
 import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
-const teamColors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
 const authoredPaints=new WeakMap();
-const paintFiles=['naveazul.jpg','navefuxia.jpg'];
+const paintFile='difuse.jpg';
 
 function assetURL(name){
   const asset=new URL('./assets/models/'+name,import.meta.url);
@@ -31,64 +30,31 @@ export function prepareShipTemplate(source){
 
 export async function loadShipTemplate(){
   const textureLoader=new T.TextureLoader();
-  const [gltf,results]=await Promise.all([
+  const [gltf,paint]=await Promise.all([
     new GLTFLoader().loadAsync(assetURL('nave.glb')),
-    Promise.allSettled(paintFiles.map(file=>textureLoader.loadAsync(assetURL(file))))
-  ]);
-  const paints=results.map((result,index)=>{
-    if(result.status==='rejected'){
-      console.warn('[GALAXY3D] Se usa la pintura de respaldo para '+paintFiles[index]);
+    textureLoader.loadAsync(assetURL(paintFile)).catch(()=>{
+      console.warn('[GALAXY3D] Se usa la pintura incluida en el GLB al faltar '+paintFile);
       return null;
-    }
-    result.value.name=paintFiles[index];
-    result.value.colorSpace=T.SRGBColorSpace;
-    return result.value;
-  });
+    })
+  ]);
+  if(paint){paint.name=paintFile;paint.colorSpace=T.SRGBColorSpace;}
   const template=prepareShipTemplate(gltf.scene);
-  authoredPaints.set(template,paints);
-  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'original':paints.some(Boolean)?'partial':'embedded';
+  authoredPaints.set(template,paint);
+  document.documentElement.dataset.galaxyShipTextures=paint?'difuse-original':'embedded';
   return template;
 }
 
 function mappedPaint(original,paint){
-  // Keep the GLB's UV channel, orientation and sampling settings. Only swap colour.
+  // Keep the GLB's UV channel, orientation and sampling settings, using the JPEG unchanged.
   const texture=original.clone();texture.source=paint.source;
   texture.name=paint.name;texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;
   return texture;
 }
 
-function teamTexture(original,color){
-  const image=original.image;
-  if(!image)return original;
-  const canvas=document.createElement('canvas');
-  canvas.width=image.width;canvas.height=image.height;
-  const ctx=canvas.getContext('2d',{willReadFrequently:true});
-  if(!ctx)throw new Error('No se pueden preparar los colores de la nave');
-  ctx.drawImage(image,0,0);
-  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-  const red=(color>>>16)&255,green=(color>>>8)&255,blue=color&255;
-  for(let i=0;i<pixels.data.length;i+=4){
-    const r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
-    // Only the magenta paint changes. Keep the hull, wear and normal map intact.
-    const amount=Math.max(0,Math.min(1,(Math.min(r,b)-g-12)/42));
-    if(!amount)continue;
-    const shade=Math.max(r,b)/255;
-    pixels.data[i]=r+(red*shade-r)*amount;
-    pixels.data[i+1]=g+(green*shade-g)*amount;
-    pixels.data[i+2]=b+(blue*shade-b)*amount;
-  }
-  ctx.putImageData(pixels,0,0);
-  // Texture.clone shares its Source; give each paint its own source so recolouring
-  // one team never overwrites the original or another player's texture.
-  const texture=original.clone();texture.source=new T.Source(canvas);texture.needsUpdate=true;
-  return texture;
-}
-
 export function createShipFactory(template){
   const palettes=new Map();
-  const paints=authoredPaints.get(template)||[];
-  return index=>{
-    const team=Math.max(0,Math.min(3,Number(index)||0));
+  const paint=authoredPaints.get(template);
+  return ()=>{
     const visual=template.clone(true),materials=new Map();
     visual.traverse(object=>{
       if(!object.isMesh)return;
@@ -96,15 +62,13 @@ export function createShipFactory(template){
         if(materials.has(original))return materials.get(original);
         const material=original.clone();
         if(original.map){
-          const key=original.map.uuid+':'+team;
+          const key=original.map.uuid;
           if(!palettes.has(key)){
-            const paint=team<2?paints[team]:paints[1];
-            const base=paint?mappedPaint(original.map,paint):original.map;
-            const texture=team<2&&paint?base:teamTexture(base,teamColors[team]);
-            if(base!==original.map&&base!==texture)base.dispose();
-            palettes.set(key,texture);
+            palettes.set(key,paint?mappedPaint(original.map,paint):original.map);
           }
           material.map=palettes.get(key);
+          // Player identity stays in the HUD; do not tint the supplied artwork.
+          if(paint)material.color.setHex(0xffffff);
         }
         materials.set(original,material);
         return material;

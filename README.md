@@ -1,15 +1,15 @@
 # GALAXY3D
 
-Versión V23.06: vista completamente cenital de las naves en partida, siguiendo la referencia de Blender: cabina visible, morro arriba en giro cero y motores abajo. Se retiran la inclinación fija y el balanceo automático durante el combate.
+Versión V23.07: las naves usan directamente `mas/difuse.jpg`, sin recolorear ni editar sus píxeles. La copia publicada en `docs/assets/models/difuse.jpg` es idéntica al original. Por ahora las cuatro naves comparten esta pintura fucsia con cabina verde, pendientes de las otras tres texturas del autor.
 
-Las naves conservan el aumento visual del 50 %, con escudos, accesorios, propulsores, rastro y aviso de impacto ajustados a su escala. Se conservan las reglas, los tamaños de colisión y la presentación del menú.
+Se retiran las llamas geométricas de naves y misiles; la propulsión conserva las partículas existentes del juego. La iluminación es blanca y equilibrada para mostrar el color y el relieve del modelo. Las naves conservan el aumento visual del 50 % y la vista completamente cenital en partida, con morro arriba en giro cero. Se mantienen las reglas y los tamaños de colisión.
 
-V23.04 aplica la textura original `mas/asteroideAzul.png` a las rocas 3D, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original. Se mantienen las naves azul y fucsia y la vista superior corregida en V23.02.
+Las rocas 3D conservan la textura original `mas/asteroideAzul.png`, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
-- Se ajustan visualmente el centro, el tamaño y la orientación. Las naves azul y fucsia usan directamente `mas/final/naveazul.jpg` y `mas/final/navefuxia.jpg`, copiadas sin cambios en `docs/assets/models/`. Verde y amarillo se generan desde la pintura fucsia; se conserva el mapa de normales del GLB.
+- Se ajustan visualmente el centro, el tamaño y la orientación. La textura `difuse.jpg` conserva los UV y el mapa de normales del GLB. No se generan colores alternativos para los jugadores.
 - Las texturas se cargan y guardan para uso offline. Si falta una imagen se conserva la pintura de respaldo incluida en el modelo.
-- Se conservan propulsores, escudo, camuflaje e indicadores de armas. La nave geométrica anterior sigue como respaldo durante la carga o si falla el archivo.
+- Se conservan partículas de propulsión, escudo, camuflaje e indicadores de armas. La nave geométrica anterior sigue como respaldo durante la carga o si falla el archivo, también sin llamas geométricas.
 - El cargador GLTFLoader y BufferGeometryUtils proceden de Three.js r180, con imports locales y la licencia MIT de `docs/vendor/THREE-LICENSE.txt`.
 - Comprobación del archivo y su orientación: `node tools/check-ship-model.mjs`. La visualización, colores y estados se comprueban además en navegador.
 

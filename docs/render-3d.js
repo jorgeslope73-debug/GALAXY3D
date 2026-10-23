@@ -77,14 +77,14 @@
     renderer.setClearColor(0x000000,0);
     renderer.outputColorSpace=T.SRGBColorSpace;
     renderer.toneMapping=T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure=1.3;
+    renderer.toneMappingExposure=.85;
     const scene=new T.Scene();
     const camera=new T.OrthographicCamera(-W/2,W/2,H/2,-H/2,1,4000);
     camera.position.set(0,0,1800);
     camera.lookAt(0,0,0);
-    scene.add(new T.HemisphereLight(0x8bcaff,0x171222,2.1));
-    const key=new T.DirectionalLight(0xfff2df,3.1);key.position.set(-450,600,1000);scene.add(key);
-    const rim=new T.DirectionalLight(0x687bff,2.5);rim.position.set(650,-280,450);scene.add(rim);
+    scene.add(new T.HemisphereLight(0xffffff,0x555555,1.2));
+    const key=new T.DirectionalLight(0xffffff,2);key.position.set(-450,600,1000);scene.add(key);
+    const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
     const records=new Map(),spares=new Map();
     let createImportedShip=null,rockTexture=null;
@@ -157,13 +157,6 @@
       add(bodyRoot,box,dark,7,19,0,2,14,2);
       const ammoLight=add(tilt,sphere,glow(0x8aff9d),0,15,12,1.8,3,1);
       ammoLight.visible=false;
-      const flames=new T.Group();tilt.add(flames);
-      for(const x of [-8,8]){
-        const outer=add(flames,cone,glow(colors[index]),x,-39,-1,4.5,24,4.5);
-        outer.rotation.z=Math.PI;
-        const core=add(flames,cone,glow(0xe8faff),x,-34,0,2.5,16,2.5);
-        core.rotation.z=Math.PI;
-      }
       const shieldMaterial=new T.MeshBasicMaterial({color:0x72eaff,transparent:true,opacity:.11,depthWrite:false,wireframe:true,toneMapped:false});
       const shield=add(root,sphere,shieldMaterial,0,0,0,40,40,24);
       const shieldRim=add(root,ringGeometry,new T.MeshBasicMaterial({color:0x88eaff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false}),0,0,1,40);
@@ -173,7 +166,7 @@
       const materials=[];
       root.traverse(o=>{if(o.isMesh&&!materials.includes(o.material))materials.push(o.material);});
       for(const material of materials)rememberMaterial(material);
-      return {root,tilt,bodyRoot,ammoLight,canopy,canopyMaterial,flames,shield,shieldRim,shieldMaterial,shock,flare,missile,materials};
+      return {root,tilt,bodyRoot,ammoLight,canopy,canopyMaterial,shield,shieldRim,shieldMaterial,shock,flare,missile,materials};
     }
     function rememberMaterial(material){
       material.userData.galaxyBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};
@@ -190,9 +183,8 @@
       });
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
-      record.flames.position.y=-4;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.06';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.07';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
@@ -224,8 +216,7 @@
         add(root,cone,metal(0xe9faff),0,14,0,3.2,9,3.2);
         add(root,box,trim,0,-7,0,16,4,2);
         add(root,box,trim,0,-7,0,2,4,12);
-        const flame=add(root,cone,glow(0xffa25a),0,-18,0,3,16,3);flame.rotation.z=Math.PI;
-        return {root,flame,trim};
+        return {root,trim};
       }
       if(kind==='ufo'){
         add(root,sphere,metal(0xabb8ca),0,0,0,31,26,7);
@@ -324,8 +315,7 @@
         record.tilt.rotation.set(showcase?.38:0,showcase?Math.sin(now*.0006)*.30:0,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
-        record.flames.visible=!!thrust;
-        record.flames.scale.y=.8+Math.sin(now*.041+index)*.14;
+        // Thrust trails are drawn by the existing particle system in game.js.
         record.shield.visible=record.shieldRim.visible=!!shield;
         record.shock.visible=!!shock;record.flare.visible=!!flare;record.missile.visible=!!missile;
         record.ammoLight.visible=!!record.importedShip&&!!armed;
@@ -348,7 +338,6 @@
         const record=take('rocket',id);place(record.root,x,y,18);
         record.root.rotation.z=rotation*Math.PI/180;
         record.trim.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
-        record.flame.scale.y=14+Math.sin(now*.05)*3;
       },
       bolt(x,y,vx,vy){
         if(bolts>=256)return;
