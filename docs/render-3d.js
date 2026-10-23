@@ -251,7 +251,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.26';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.27';
     const modelLoads=[];
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
@@ -422,7 +422,7 @@
         record.shock.visible=!!shock;record.flare.visible=!!flare;
         const mountedCount=Math.max(0,Math.min(2,Math.trunc(Number(missileCount)||0)));
         record.mounts.forEach((mount,i)=>{mount.root.visible=i<mountedCount;});
-        if(record.importedShip)setImportedShipAmmo(record.importedShip,hasAmmo);
+        if(record.importedShip)setImportedShipAmmo(record.importedShip,armed&&hasAmmo);
         for(const material of record.materials){
           if(material===record.shieldMaterial)continue;
           const base=material.userData.galaxyBase;

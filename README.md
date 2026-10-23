@@ -1,14 +1,16 @@
 # GALAXY3D
 
-Versión V23.26: el inicio en 3D espera a los modelos definitivos, las ocho pinturas de las naves, su máscara y la textura del asteroide. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
+Versión V23.27: las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
+
+El inicio en 3D espera a los modelos definitivos, las ocho pinturas de las naves, su máscara y la textura del asteroide. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
 
 El escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
 
-Las luces quedan negras sin balas y se encienden con un color intenso: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
+Las luces quedan negras sin balas o mientras se recarga y se encienden con un color intenso al estar listo el disparo: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
 
 La cabecera muestra GALAXY COMBAT sin la insignia 3D ni el subtítulo 2.5D · MULTIPLAYER.
 
-Las luces propias de cada nave indican la munición normal. En la nave verde son rojas con una o más balas y negras sin balas; su fuselaje conserva el verde. En las otras tres naves siguen siendo verdes con balas y negras sin balas. Las variantes se preparan en Adobe. Se retira el punto verde añadido delante de la nave. Las ocho texturas y la máscara de luces se cargan una vez y se comparten; cambiar de estado no crea materiales ni texturas. La pintura de las naves, incluida la verde, conserva su color. El estado usa la cantidad de balas ya recibida y no parpadea durante la recarga si aún quedan balas.
+Las luces propias de cada nave indican la disponibilidad del disparo normal. En la nave verde son rojas al estar listo el disparo y negras durante la recarga o sin balas; su fuselaje conserva el verde. En las otras tres naves son verdes al estar listas y negras si no pueden disparar. Las variantes se preparan en Adobe. Se retira el punto verde añadido delante de la nave. Las ocho texturas y la máscara de luces se cargan una vez y se comparten; cambiar de estado no crea materiales ni texturas. La pintura de las naves, incluida la verde, conserva su color. El estado usa la disponibilidad de disparo y la cantidad de balas ya recibidas.
 
 Al acelerar se emite el doble de partículas originales del motor, con la misma paleta de fuego y el mismo tamaño, duración y frecuencia. Al girar sin acelerar se conserva la cantidad anterior. Se usa el mismo conjunto limitado de partículas. El testigo naranja de bengalas es aproximadamente un tercio mayor en ancho y alto, manteniendo su posición junto al motor.
 
@@ -18,7 +20,7 @@ Reutiliza las partículas originales del motor también al girar sin acelerar, c
 
 Sitúa el testigo de bengalas en la parte trasera, sobre la zona del motor, y limita la inclinación progresiva de los giros a 60 grados. El testigo acompaña la inclinación y se muestra mientras haya cargas de bengalas.
 
-Las luces de la textura son negras sin balas y se encienden cuando hay balas: rojas en la nave verde y verdes en las otras tres. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo.
+Las luces de la textura son negras durante la recarga o sin balas y se encienden al poder disparar: rojas en la nave verde y verdes en las otras tres. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo.
 
 Integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en los soportes de las alas. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
 
