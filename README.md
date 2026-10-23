@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.12: las naves usan directamente las dos texturas originales `mas/final/naveazul.jpg` y `mas/final/navefuxia.jpg`, sin recolorear ni editar sus píxeles. Las copias publicadas en `docs/assets/models/` son idénticas a los originales. Se alternan azul y fucsia entre los cuatro jugadores, mientras se dispone de estas dos pinturas.
+Versión V23.13: la nave azul usa una variante con la cúpula oscura, editada en Adobe Photoshop para aproximarla al cristal negro de la nave fucsia. Se ha seleccionado únicamente el cristal de la cabina. El archivo PNG conserva el atlas de 1014 × 1014 píxeles, el casco azul, el marco y las luces. Se guarda como `mas/final/naveazul-cupula-oscura.png` y se publica una copia idéntica en `docs/assets/models/`.
+
+Se conservan los originales `mas/final/naveazul.jpg` y `mas/final/navefuxia.jpg`. La nave fucsia sigue usando su textura original; azul y fucsia se alternan entre los cuatro jugadores.
 
 Se conserva la inclinación progresiva de hasta 75 grados en los giros más cerrados y el retorno suave a la vista plana. La curva depende de la velocidad de giro (18,75 grados a media velocidad), con entrada gradual. La inclinación se calcula localmente para cada nave y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
 
@@ -9,7 +11,7 @@ Se retiran las llamas geométricas de naves y misiles; la propulsión conserva l
 Las rocas 3D conservan la textura original `mas/asteroideAzul.png`, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
-- Se ajustan visualmente el centro, el tamaño y la orientación. Ambas texturas conservan los UV y el mapa de normales del GLB. No se generan colores alternativos para los jugadores.
+- Se ajustan visualmente el centro, el tamaño y la orientación. La variante azul y la textura fucsia conservan los UV y el mapa de normales del GLB. No se generan colores adicionales para los jugadores.
 - Las texturas se cargan y guardan para uso offline. Si falta una imagen se conserva la pintura de respaldo incluida en el modelo.
 - Se conservan partículas de propulsión, escudo, camuflaje e indicadores de armas. La nave geométrica anterior sigue como respaldo durante la carga o si falla el archivo, también sin llamas geométricas.
 - El cargador GLTFLoader y BufferGeometryUtils proceden de Three.js r180, con imports locales y la licencia MIT de `docs/vendor/THREE-LICENSE.txt`.
