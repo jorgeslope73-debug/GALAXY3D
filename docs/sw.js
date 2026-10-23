@@ -19,6 +19,7 @@ const SHELL_FILES = [
   './vendor/GLTFLoader.js',
   './vendor/BufferGeometryUtils.js',
   './assets/models/nave.glb',
+  './assets/models/nave-luces-mask.svg',
   './assets/models/cohete_galaxy_combat.glb',
   './assets/models/naveazul-cupula-oscura.png',
   './assets/models/navefuxia.jpg',

@@ -3,7 +3,7 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const authoredPaints=new WeakMap();
-const unarmedPaints=new WeakMap(),lightStates=new WeakMap();
+const unarmedPaints=new WeakMap(),lightStates=new WeakMap(),lampMasks=new WeakMap();
 const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde-luces-rojas.png','naveroja.png'];
 const unarmedFiles=['naveazul-sin-balas.png','navefuxia-sin-balas.png','naveverde-sin-balas.png','naveroja-sin-balas.png'];
 
@@ -42,29 +42,57 @@ export async function loadShipTemplate(){
       return null;
     }
   }));
-  const [gltf,paints,offPaints]=await Promise.all([
+  const [gltf,paints,offPaints,mask]=await Promise.all([
     new GLTFLoader().loadAsync(assetURL('nave.glb')),
-    loadPaints(paintFiles),loadPaints(unarmedFiles)
+    loadPaints(paintFiles),loadPaints(unarmedFiles),
+    textureLoader.loadAsync(assetURL('nave-luces-mask.svg')).catch(error=>{
+      console.warn('[GALAXY3D] Se conservan las luces de la textura:',error);return null;
+    })
   ]);
   const template=prepareShipTemplate(gltf.scene);
   authoredPaints.set(template,paints);
   unarmedPaints.set(template,offPaints);
+  if(mask){mask.name='nave-luces-mask.svg';mask.colorSpace=T.NoColorSpace;lampMasks.set(template,mask);}
   document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-fucsia-verde-roja':paints.some(Boolean)?'partial':'embedded';
   document.documentElement.dataset.galaxyShipAmmoTextures=offPaints.every(Boolean)?'loaded':'partial';
+  document.documentElement.dataset.galaxyShipAmmoMask=mask?'loaded':'fallback';
   return template;
 }
 
 function mappedPaint(original,paint){
   // Keep the GLB's UV channel, orientation and sampling settings, using each image directly.
   const texture=original.clone();texture.source=paint.source;
-  texture.name=paint.name;texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;
+  texture.name=paint.name;texture.colorSpace=paint.colorSpace;texture.needsUpdate=true;
   return texture;
 }
 
+function prepareAmmoLamps(material,mask,player){
+  // The shared vector mask follows the model UVs, including the white lamp cores.
+  // It changes only their final light output, after the hull's normal lighting.
+  const power={value:1};
+  const colour={value:new T.Color(player===2?0xff0802:0x03ff12)};
+  material.onBeforeCompile=shader=>{
+    shader.uniforms.galaxyAmmoMask={value:mask};
+    shader.uniforms.galaxyAmmoPower=power;
+    shader.uniforms.galaxyAmmoColour=colour;
+    shader.fragmentShader='uniform sampler2D galaxyAmmoMask;\nuniform float galaxyAmmoPower;\nuniform vec3 galaxyAmmoColour;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <tonemapping_fragment>',`
+      #include <tonemapping_fragment>
+      #ifdef USE_MAP
+        float galaxyLamp=texture2D(galaxyAmmoMask,vMapUv).r;
+        gl_FragColor.rgb=mix(gl_FragColor.rgb,galaxyAmmoColour*galaxyAmmoPower,galaxyLamp);
+      #endif
+    `);
+  };
+  material.customProgramCacheKey=()=> 'galaxy-ammo-lamps-v2';
+  return power;
+}
+
 export function createShipFactory(template){
-  const palettes=new Map();
+  const palettes=new Map(),masks=new Map();
   const paints=authoredPaints.get(template)||[];
   const offPaints=unarmedPaints.get(template)||[];
+  const mask=lampMasks.get(template);
   return index=>{
     // Each player gets a distinct authored texture, including the two Adobe colour variants.
     const player=Math.max(0,Math.min(3,Math.trunc(Number(index)||0)));
@@ -82,7 +110,12 @@ export function createShipFactory(template){
             palettes.set(key,{on,off:offPaints[paintIndex]?mappedPaint(original.map,offPaints[paintIndex]):on});
           }
           const maps=palettes.get(key);material.map=maps.on;
-          lights.push({material,...maps});
+          let power=null;
+          if(mask){
+            if(!masks.has(original.map.uuid))masks.set(original.map.uuid,mappedPaint(original.map,mask));
+            power=prepareAmmoLamps(material,masks.get(original.map.uuid),player);
+          }
+          lights.push({material,...maps,power});
           // Apply the artwork directly; never generate additional team recolours.
           if(paint)material.color.setHex(0xffffff);
         }
@@ -99,6 +132,9 @@ export function createShipFactory(template){
 export function setShipAmmoLights(visual,hasAmmo){
   const state=lightStates.get(visual),on=!!hasAmmo;
   if(!state||state.hasAmmo===on)return;
-  for(const light of state.lights)light.material.map=on?light.on:light.off;
+  for(const light of state.lights){
+    light.material.map=on?light.on:light.off;
+    if(light.power)light.power.value=on?1:0;
+  }
   state.hasAmmo=on;
 }
