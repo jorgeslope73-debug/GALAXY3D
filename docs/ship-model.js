@@ -3,6 +3,14 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const teamColors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
+const authoredPaints=new WeakMap();
+const paintFiles=['naveazul.jpg','navefuxia.jpg'];
+
+function assetURL(name){
+  const asset=new URL('./assets/models/'+name,import.meta.url);
+  asset.search=new URL(import.meta.url).search;
+  return asset.href;
+}
 
 export function prepareShipTemplate(source){
   // This export points along -X, with its upper deck facing +Y.
@@ -22,10 +30,31 @@ export function prepareShipTemplate(source){
 }
 
 export async function loadShipTemplate(){
-  const asset=new URL('./assets/models/nave.glb',import.meta.url);
-  asset.search=new URL(import.meta.url).search;
-  const gltf=await new GLTFLoader().loadAsync(asset.href);
-  return prepareShipTemplate(gltf.scene);
+  const textureLoader=new T.TextureLoader();
+  const [gltf,results]=await Promise.all([
+    new GLTFLoader().loadAsync(assetURL('nave.glb')),
+    Promise.allSettled(paintFiles.map(file=>textureLoader.loadAsync(assetURL(file))))
+  ]);
+  const paints=results.map((result,index)=>{
+    if(result.status==='rejected'){
+      console.warn('[GALAXY3D] Se usa la pintura de respaldo para '+paintFiles[index]);
+      return null;
+    }
+    result.value.name=paintFiles[index];
+    result.value.colorSpace=T.SRGBColorSpace;
+    return result.value;
+  });
+  const template=prepareShipTemplate(gltf.scene);
+  authoredPaints.set(template,paints);
+  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'original':paints.some(Boolean)?'partial':'embedded';
+  return template;
+}
+
+function mappedPaint(original,paint){
+  // Keep the GLB's UV channel, orientation and sampling settings. Only swap colour.
+  const texture=original.clone();texture.source=paint.source;
+  texture.name=paint.name;texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;
+  return texture;
 }
 
 function teamTexture(original,color){
@@ -57,6 +86,7 @@ function teamTexture(original,color){
 
 export function createShipFactory(template){
   const palettes=new Map();
+  const paints=authoredPaints.get(template)||[];
   return index=>{
     const team=Math.max(0,Math.min(3,Number(index)||0));
     const visual=template.clone(true),materials=new Map();
@@ -67,7 +97,13 @@ export function createShipFactory(template){
         const material=original.clone();
         if(original.map){
           const key=original.map.uuid+':'+team;
-          if(!palettes.has(key))palettes.set(key,teamTexture(original.map,teamColors[team]));
+          if(!palettes.has(key)){
+            const paint=team<2?paints[team]:paints[1];
+            const base=paint?mappedPaint(original.map,paint):original.map;
+            const texture=team<2&&paint?base:teamTexture(base,teamColors[team]);
+            if(base!==original.map&&base!==texture)base.dispose();
+            palettes.set(key,texture);
+          }
           material.map=palettes.get(key);
         }
         materials.set(original,material);

@@ -4,6 +4,12 @@ import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareShipTemplate} from '../docs/ship-model.js';
 
+for(const file of ['naveazul.jpg','navefuxia.jpg']){
+  const image=await readFile(new URL('../docs/assets/models/'+file,import.meta.url));
+  assert.equal(image.readUInt16BE(0),0xffd8,file+' must be a JPEG');
+  assert.equal(image.readUInt16BE(image.length-2),0xffd9,file+' must be complete');
+}
+
 const bytes=await readFile(new URL('../docs/assets/models/nave.glb',import.meta.url));
 assert.equal(bytes.toString('ascii',0,4),'glTF','The asset must be a GLB');
 assert.equal(bytes.readUInt32LE(4),2,'Expected glTF 2');
