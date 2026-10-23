@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.16: añade partículas de maniobra al girar y sitúa el testigo verde de disparo sobre el centro de la cúpula. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo. Las partículas siguen la orientación e inclinación, caducan rápidamente y se eliminan al ocultarse o desaparecer la nave, cambiar de ronda o volver de una pausa. Se respeta el movimiento reducido.
+Versión V23.17: sitúa el testigo de bengalas en la parte trasera, sobre la zona del motor, y limita la inclinación progresiva de los giros a 60 grados. El testigo acompaña la inclinación y se muestra mientras haya cargas de bengalas.
+
+Añade partículas de maniobra al girar y sitúa el testigo verde de disparo sobre el centro de la cúpula. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo. Las partículas siguen la orientación e inclinación, caducan rápidamente y se eliminan al ocultarse o desaparecer la nave, cambiar de ronda o volver de una pausa. Se respeta el movimiento reducido.
 
 Integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en los soportes de las alas. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
 
@@ -10,7 +12,7 @@ Las cuatro naves conservan sus texturas azul, fucsia, verde y roja, asignadas en
 
 Las nuevas texturas se guardan como `mas/final/naveverde.png` y `mas/final/naveroja.png`, con copias idénticas en `docs/assets/models/`. Se conservan los originales `mas/final/naveazul.jpg`, `mas/final/navefuxia.jpg` y la variante `naveazul-cupula-oscura.png`. El color del HUD y los accesorios del cuarto jugador pasa a rojo para corresponder con su nave.
 
-Se conserva la inclinación progresiva de hasta 75 grados en los giros más cerrados y el retorno suave a la vista plana. La curva depende de la velocidad de giro (18,75 grados a media velocidad), con entrada gradual. La inclinación se calcula localmente para cada nave y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
+Se conserva la inclinación progresiva de hasta 60 grados en los giros más cerrados y el retorno suave a la vista plana. La curva depende de la velocidad de giro (15 grados a media velocidad), con entrada gradual. La inclinación se calcula localmente para cada nave y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
 
 Se retiran las llamas geométricas de naves y misiles; la propulsión conserva las partículas existentes del juego. La iluminación es blanca y equilibrada para mostrar el color y el relieve del modelo. Las naves conservan el aumento visual del 50 % y la vista cenital cuando no giran, con morro arriba en giro cero. Se mantienen las reglas y los tamaños de colisión.
 
