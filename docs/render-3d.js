@@ -86,7 +86,7 @@
     scene.add(new T.HemisphereLight(0xffffff,0x555555,1.2));
     const key=new T.DirectionalLight(0xffffff,2);key.position.set(-450,600,1000);scene.add(key);
     const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
-    const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
+    const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xff5d5d];
     const records=new Map(),spares=new Map();
     let createImportedShip=null,rockTexture=null;
     document.documentElement.dataset.galaxyShip='loading';
@@ -185,7 +185,7 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.13';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.14';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';

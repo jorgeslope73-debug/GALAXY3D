@@ -10,10 +10,12 @@ for(const file of ['naveazul.jpg','navefuxia.jpg']){
   assert.equal(image.readUInt16BE(image.length-2),0xffd9,file+' must be complete');
 }
 
-const editedPaint=await readFile(new URL('../docs/assets/models/naveazul-cupula-oscura.png',import.meta.url));
-assert.equal(editedPaint.subarray(0,8).toString('hex'),'89504e470d0a1a0a','The edited paint must be a PNG');
-assert.equal(editedPaint.readUInt32BE(16),1014,'The edited UV atlas width must stay unchanged');
-assert.equal(editedPaint.readUInt32BE(20),1014,'The edited UV atlas height must stay unchanged');
+for(const file of ['naveazul-cupula-oscura.png','naveverde.png','naveroja.png']){
+  const paint=await readFile(new URL('../docs/assets/models/'+file,import.meta.url));
+  assert.equal(paint.subarray(0,8).toString('hex'),'89504e470d0a1a0a',file+' must be a PNG');
+  assert.equal(paint.readUInt32BE(16),1014,file+' UV atlas width must stay unchanged');
+  assert.equal(paint.readUInt32BE(20),1014,file+' UV atlas height must stay unchanged');
+}
 
 const bytes=await readFile(new URL('../docs/assets/models/nave.glb',import.meta.url));
 assert.equal(bytes.toString('ascii',0,4),'glTF','The asset must be a GLB');

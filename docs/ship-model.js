@@ -3,7 +3,7 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const authoredPaints=new WeakMap();
-const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg'];
+const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde.png','naveroja.png'];
 
 function assetURL(name){
   const asset=new URL('./assets/models/'+name,import.meta.url);
@@ -45,12 +45,12 @@ export async function loadShipTemplate(){
   ]);
   const template=prepareShipTemplate(gltf.scene);
   authoredPaints.set(template,paints);
-  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-cupula-oscura-fucsia':paints.some(Boolean)?'partial':'embedded';
+  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-fucsia-verde-roja':paints.some(Boolean)?'partial':'embedded';
   return template;
 }
 
 function mappedPaint(original,paint){
-  // Keep the GLB's UV channel, orientation and sampling settings, using the JPEG unchanged.
+  // Keep the GLB's UV channel, orientation and sampling settings, using each image directly.
   const texture=original.clone();texture.source=paint.source;
   texture.name=paint.name;texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;
   return texture;
@@ -60,9 +60,9 @@ export function createShipFactory(template){
   const palettes=new Map();
   const paints=authoredPaints.get(template)||[];
   return index=>{
-    // Alternate the edited blue canopy artwork and the original fuchsia artwork.
+    // Each player gets a distinct authored texture, including the two Adobe colour variants.
     const player=Math.max(0,Math.min(3,Math.trunc(Number(index)||0)));
-    const paintIndex=player%paintFiles.length,paint=paints[paintIndex];
+    const paintIndex=player,paint=paints[paintIndex];
     const visual=template.clone(true),materials=new Map();
     visual.traverse(object=>{
       if(!object.isMesh)return;
