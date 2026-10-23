@@ -192,7 +192,7 @@
       record.bodyRoot.visible=false;
       record.flames.position.y=-4;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.05';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.06';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
@@ -320,8 +320,8 @@
         place(root,x,y,18);
         root.scale.setScalar(size/72*(showcase?1:SHIP_VISUAL_SCALE));
         root.rotation.z=rotation*Math.PI/180;
-        const roll=reducedMotion?0:Math.sin(now*.002+index)*.10;
-        record.tilt.rotation.set(showcase?.38:.18,showcase?Math.sin(now*.0006)*.30:roll,0);
+        // In matches the model stays directly overhead, like the Blender reference.
+        record.tilt.rotation.set(showcase?.38:0,showcase?Math.sin(now*.0006)*.30:0,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
         record.flames.visible=!!thrust;

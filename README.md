@@ -1,6 +1,8 @@
 # GALAXY3D
 
-Versión V23.05: naves un 50 % más grandes durante las partidas 3D, con escudos, accesorios, propulsores, rastro y aviso de impacto ajustados a la nueva escala visual. Se conservan las reglas, los tamaños de colisión y la escala del menú.
+Versión V23.06: vista completamente cenital de las naves en partida, siguiendo la referencia de Blender: cabina visible, morro arriba en giro cero y motores abajo. Se retiran la inclinación fija y el balanceo automático durante el combate.
+
+Las naves conservan el aumento visual del 50 %, con escudos, accesorios, propulsores, rastro y aviso de impacto ajustados a su escala. Se conservan las reglas, los tamaños de colisión y la presentación del menú.
 
 V23.04 aplica la textura original `mas/asteroideAzul.png` a las rocas 3D, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original. Se mantienen las naves azul y fucsia y la vista superior corregida en V23.02.
 
