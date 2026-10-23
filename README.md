@@ -1,8 +1,8 @@
 # GALAXY3D
 
-Versión V23.03: nave GLB del usuario sobre el combate 2.5D y la simulación original de GALAXY COMBAT.
+Versión V23.04: nave GLB del usuario sobre el combate 2.5D y la simulación original de GALAXY COMBAT.
 
-V23.03 incorpora las texturas originales azul y fucsia del usuario. Conserva la vista de la cabina y el casco superior corregida en V23.02.
+V23.04 aplica la textura original `mas/asteroideAzul.png` a las rocas 3D, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original. Se mantienen las naves azul y fucsia y la vista superior corregida en V23.02.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
 - Se ajustan visualmente el centro, el tamaño y la orientación. Las naves azul y fucsia usan directamente `mas/final/naveazul.jpg` y `mas/final/navefuxia.jpg`, copiadas sin cambios en `docs/assets/models/`. Verde y amarillo se generan desde la pintura fucsia; se conserva el mapa de normales del GLB.

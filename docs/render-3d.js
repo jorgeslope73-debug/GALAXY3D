@@ -86,8 +86,9 @@
     const rim=new T.DirectionalLight(0x687bff,2.5);rim.position.set(650,-280,450);scene.add(rim);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
     const records=new Map(),spares=new Map();
-    let createImportedShip=null;
+    let createImportedShip=null,rockTexture=null;
     document.documentElement.dataset.galaxyShip='loading';
+    document.documentElement.dataset.galaxyRock='loading';
     const matrix=new T.Matrix4(),position=new T.Vector3(),scale=new T.Vector3(),quaternion=new T.Quaternion(),euler=new T.Euler();
     const metal=(color,extra={})=>new T.MeshStandardMaterial({color,metalness:.48,roughness:.36,...extra});
     const glow=color=>new T.MeshBasicMaterial({color,toneMapped:false});
@@ -190,7 +191,15 @@
       record.bodyRoot.visible=false;
       record.flames.position.y=-4;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.03';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.04';
+    import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
+      rockTexture=texture;
+      document.documentElement.dataset.galaxyRock='asteroide-azul';
+      window.dispatchEvent(new Event('galaxy3d-rockready'));
+    }).catch(error=>{
+      document.documentElement.dataset.galaxyRock='fallback';
+      console.warn('[GALAXY3D] Se conserva el material de respaldo del asteroide:',error?.message||error);
+    });
     import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadShipTemplate();
       createImportedShip=assets.createShipFactory(template);
@@ -292,7 +301,12 @@
       rock(id,x,y,size,type=1,angle=0){
         const record=take('rock',id),variant=Math.abs(Number(type)||0)%6;
         record.rock.geometry=rockGeometries[variant];
-        record.material.color.setHex([0x9086ad,0xb29ab8,0x779fa8,0xc2a58a,0x7c91b0,0x879a83][variant]);
+        if(rockTexture){
+          if(record.material.map!==rockTexture){
+            record.material.map=rockTexture;record.material.vertexColors=false;record.material.needsUpdate=true;
+          }
+          record.material.color.setHex(0xffffff);
+        }else record.material.color.setHex([0x9086ad,0xb29ab8,0x779fa8,0xc2a58a,0x7c91b0,0x879a83][variant]);
         record.root.scale.setScalar(size*.5);
         place(record.root,x,y,-8);
         const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
@@ -363,6 +377,7 @@
         ctx.canvas.dataset.triangles=String(renderer.info.render.triangles);
         ctx.canvas.dataset.geometries=String(renderer.info.memory.geometries);
         ctx.canvas.dataset.shipModel=createImportedShip?'nave-glb':'procedural';
+        ctx.canvas.dataset.rockMaterial=rockTexture?'asteroide-azul':'procedural';
       },
       menu(ctx,time){
         const t=reducedMotion?0:time;
