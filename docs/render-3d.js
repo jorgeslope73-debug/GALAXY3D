@@ -3,7 +3,7 @@
 (() => {
   const W=1920,H=1080,TAU=Math.PI*2;
   const SHIP_VISUAL_SCALE=1.5;
-  const SHIP_BANK_LIMIT=14*Math.PI/180;
+  const SHIP_BANK_LIMIT=45*Math.PI/180;
   const mobile=document.documentElement.classList.contains('handheld-device')||matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const preferenceKey='galaxy3d-view-v1';
@@ -185,7 +185,7 @@
       record.tilt.add(imported);record.importedShip=imported;
       record.bodyRoot.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.08';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.09';
     import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
       rockTexture=texture;
       document.documentElement.dataset.galaxyRock='asteroide-azul';
@@ -254,7 +254,8 @@
         // Follow the shortest turn across 0/360; ignore sudden pose corrections.
         if(Math.abs(delta)<=Math.max(12,elapsed*.72)){
           const speed=delta*1000/elapsed;
-          const target=-Math.max(-1,Math.min(1,speed/240))*SHIP_BANK_LIMIT;
+          const turn=Math.max(-1,Math.min(1,speed/240));
+          const target=-turn*Math.abs(turn)*SHIP_BANK_LIMIT;
           const response=target===0?180:120;
           bank=previous.bank+(target-previous.bank)*(1-Math.exp(-elapsed/response));
           if(Math.abs(bank)<.0001)bank=0;

@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.08: las naves se ladean suavemente hacia el giro, hasta 14 grados, y vuelven a quedar planas al dejar de girar. La inclinación se calcula localmente a partir de la orientación visible, también para los rivales, y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
+Versión V23.09: las naves se ladean suavemente hacia el giro, hasta 45 grados en los giros más cerrados, y vuelven a quedar planas al dejar de girar. Una curva progresiva mantiene leves los giros suaves (unos 11 grados a media velocidad de giro). La inclinación se calcula localmente a partir de la orientación visible, también para los rivales, y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
 
 Las naves usan directamente `mas/difuse.jpg`, sin recolorear ni editar sus píxeles. La copia publicada en `docs/assets/models/difuse.jpg` es idéntica al original. Por ahora las cuatro naves comparten esta pintura fucsia con cabina verde, pendientes de las otras tres texturas del autor.
 
