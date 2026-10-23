@@ -3,7 +3,9 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const authoredPaints=new WeakMap();
+const unarmedPaints=new WeakMap(),lightStates=new WeakMap();
 const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde.png','naveroja.png'];
+const unarmedFiles=['naveazul-sin-balas.png','navefuxia-sin-balas.png','naveverde-sin-balas.png','naveroja-sin-balas.png'];
 
 function assetURL(name){
   const asset=new URL('./assets/models/'+name,import.meta.url);
@@ -30,22 +32,25 @@ export function prepareShipTemplate(source){
 
 export async function loadShipTemplate(){
   const textureLoader=new T.TextureLoader();
-  const [gltf,paints]=await Promise.all([
+  const loadPaints=files=>Promise.all(files.map(async file=>{
+    try{
+      const paint=await textureLoader.loadAsync(assetURL(file));
+      paint.name=file;paint.colorSpace=T.SRGBColorSpace;
+      return paint;
+    }catch(_){
+      console.warn('[GALAXY3D] Se usa la pintura de respaldo al faltar '+file);
+      return null;
+    }
+  }));
+  const [gltf,paints,offPaints]=await Promise.all([
     new GLTFLoader().loadAsync(assetURL('nave.glb')),
-    Promise.all(paintFiles.map(async file=>{
-      try{
-        const paint=await textureLoader.loadAsync(assetURL(file));
-        paint.name=file;paint.colorSpace=T.SRGBColorSpace;
-        return paint;
-      }catch(_){
-        console.warn('[GALAXY3D] Se usa la pintura incluida en el GLB al faltar '+file);
-        return null;
-      }
-    }))
+    loadPaints(paintFiles),loadPaints(unarmedFiles)
   ]);
   const template=prepareShipTemplate(gltf.scene);
   authoredPaints.set(template,paints);
+  unarmedPaints.set(template,offPaints);
   document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-fucsia-verde-roja':paints.some(Boolean)?'partial':'embedded';
+  document.documentElement.dataset.galaxyShipAmmoTextures=offPaints.every(Boolean)?'loaded':'partial';
   return template;
 }
 
@@ -59,11 +64,12 @@ function mappedPaint(original,paint){
 export function createShipFactory(template){
   const palettes=new Map();
   const paints=authoredPaints.get(template)||[];
+  const offPaints=unarmedPaints.get(template)||[];
   return index=>{
     // Each player gets a distinct authored texture, including the two Adobe colour variants.
     const player=Math.max(0,Math.min(3,Math.trunc(Number(index)||0)));
     const paintIndex=player,paint=paints[paintIndex];
-    const visual=template.clone(true),materials=new Map();
+    const visual=template.clone(true),materials=new Map(),lights=[];
     visual.traverse(object=>{
       if(!object.isMesh)return;
       const clone=original=>{
@@ -72,9 +78,11 @@ export function createShipFactory(template){
         if(original.map){
           const key=original.map.uuid+':'+paintIndex;
           if(!palettes.has(key)){
-            palettes.set(key,paint?mappedPaint(original.map,paint):original.map);
+            const on=paint?mappedPaint(original.map,paint):original.map;
+            palettes.set(key,{on,off:offPaints[paintIndex]?mappedPaint(original.map,offPaints[paintIndex]):on});
           }
-          material.map=palettes.get(key);
+          const maps=palettes.get(key);material.map=maps.on;
+          lights.push({material,...maps});
           // Apply the artwork directly; never generate additional team recolours.
           if(paint)material.color.setHex(0xffffff);
         }
@@ -83,6 +91,14 @@ export function createShipFactory(template){
       };
       object.material=Array.isArray(object.material)?object.material.map(clone):clone(object.material);
     });
+    lightStates.set(visual,{hasAmmo:true,lights});
     return visual;
   };
+}
+
+export function setShipAmmoLights(visual,hasAmmo){
+  const state=lightStates.get(visual),on=!!hasAmmo;
+  if(!state||state.hasAmmo===on)return;
+  for(const light of state.lights)light.material.map=on?light.on:light.off;
+  state.hasAmmo=on;
 }

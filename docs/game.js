@@ -5384,7 +5384,7 @@
       const shieldPulse=p.shield>0?(p.shield<=3?.38+.62*(.5+.5*Math.sin(now*.012)):1):0;
       scene3D.ship(p.i,x,y,r,shipSize,alpha,thrusting,armed,shieldPulse,
         Number(p.flare)>0,p.shock===true,p.mira===true,
-        Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma);
+        Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma,Number(p.ammo)>0);
     }else drawImageCentered(im,x,y,shipSize,-r,alpha);
     // V20.98: confirmacion visual muy corta de impacto. Solo se alimenta de
     // eventos ya recibidos y nunca revela una nave rival en modo FANTASMA.

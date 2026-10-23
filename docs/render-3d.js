@@ -89,7 +89,7 @@
     const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xff5d5d];
     const records=new Map(),spares=new Map();
-    let createImportedShip=null,createImportedRocket=null,rockTexture=null;
+    let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,rockTexture=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -158,9 +158,6 @@
       add(bodyRoot,box,light,23,-15,0,3,6,2);
       add(bodyRoot,box,dark,-7,19,0,2,14,2);
       add(bodyRoot,box,dark,7,19,0,2,14,2);
-      // Centred on the nose, low on the ship rather than above its deck.
-      const ammoLight=add(tilt,sphere,glow(0x8aff9d),0,31,-2,1.8,2.3,1.2);
-      ammoLight.visible=false;
       const shieldMaterial=new T.MeshBasicMaterial({color:0x72eaff,transparent:true,opacity:.11,depthWrite:false,wireframe:true,toneMapped:false});
       const shield=add(root,sphere,shieldMaterial,0,0,0,40,40,24);
       const shieldRim=add(root,ringGeometry,new T.MeshBasicMaterial({color:0x88eaff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false}),0,0,1,40);
@@ -177,7 +174,7 @@
       const materials=[];
       root.traverse(o=>{if(o.isMesh&&!materials.includes(o.material))materials.push(o.material);});
       for(const material of materials)rememberMaterial(material);
-      return {root,tilt,bodyRoot,ammoLight,canopy,canopyMaterial,shield,shieldRim,shieldMaterial,shock,flare,mounts,materials};
+      return {root,tilt,bodyRoot,canopy,canopyMaterial,shield,shieldRim,shieldMaterial,shock,flare,mounts,materials};
     }
     function rememberMaterial(material){
       material.userData.galaxyBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};
@@ -219,7 +216,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.20';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.21';
     import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);
@@ -240,6 +237,7 @@
     import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadShipTemplate();
       createImportedShip=assets.createShipFactory(template);
+      setImportedShipAmmo=assets.setShipAmmoLights;
       document.documentElement.dataset.galaxyShip='nave-glb';
       window.dispatchEvent(new Event('galaxy3d-modelready'));
     }).catch(error=>{
@@ -371,7 +369,7 @@
         const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
         record.rock.rotation.set(now*.00013+phase,now*.00017+phase,angle*Math.PI/180+phase);
       },
-      ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false,missileCount=missile?1:0){
+      ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false,missileCount=missile?1:0,hasAmmo=armed){
         const record=take('ship:'+index,index),root=record.root;
         attachImportedShip(record,index);
         attachMountedRocket(record,index);
@@ -388,7 +386,7 @@
         record.shock.visible=!!shock;record.flare.visible=!!flare;
         const mountedCount=Math.max(0,Math.min(2,Math.trunc(Number(missileCount)||0)));
         record.mounts.forEach((mount,i)=>{mount.root.visible=i<mountedCount;});
-        record.ammoLight.visible=!!record.importedShip&&!!armed;
+        if(record.importedShip)setImportedShipAmmo(record.importedShip,hasAmmo);
         for(const material of record.materials){
           if(material===record.shieldMaterial||material===record.shieldRim.material)continue;
           const base=material.userData.galaxyBase;

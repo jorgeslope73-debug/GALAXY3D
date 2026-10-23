@@ -1,14 +1,16 @@
 # GALAXY3D
 
-Versión V23.20: al acelerar se emite el doble de partículas originales del motor, con la misma paleta de fuego y el mismo tamaño, duración y frecuencia. Al girar sin acelerar se conserva la cantidad anterior. Se usa el mismo conjunto limitado de partículas. El testigo naranja de bengalas es aproximadamente un tercio mayor en ancho y alto, manteniendo su posición junto al motor.
+Versión V23.21: las luces verdes de cada textura indican la munición normal. Con una o más balas conservan su pintura verde; sin balas usan una variante gris preparada en Adobe. Se retira el punto verde añadido delante de la nave. Las ocho texturas se cargan una vez y se comparten; cambiar de estado no crea materiales ni texturas. La pintura de las naves, incluida la verde, conserva su color. El estado usa la cantidad de balas ya recibida y no parpadea durante la recarga si aún quedan balas.
 
-Los misiles toman el color de su nave (azul, fucsia, verde o rojo), tanto equipados en las alas como en vuelo. Se recolorea únicamente la pintura original del modelo; las luces verdes, juntas y partes metálicas conservan su color. Las geometrías se guardan por equipo y se comparten entre instancias; cada cohete mantiene sus materiales independientes. El testigo verde de bala queda centrado en la punta, a menor altura que la cubierta.
+Al acelerar se emite el doble de partículas originales del motor, con la misma paleta de fuego y el mismo tamaño, duración y frecuencia. Al girar sin acelerar se conserva la cantidad anterior. Se usa el mismo conjunto limitado de partículas. El testigo naranja de bengalas es aproximadamente un tercio mayor en ancho y alto, manteniendo su posición junto al motor.
+
+Los misiles toman el color de su nave (azul, fucsia, verde o rojo), tanto equipados en las alas como en vuelo. Se recolorea únicamente la pintura original del modelo; las luces verdes, juntas y partes metálicas conservan su color. Las geometrías se guardan por equipo y se comparten entre instancias; cada cohete mantiene sus materiales independientes. La munición se indica en las propias luces verdes de la nave.
 
 Reutiliza las partículas originales del motor también al girar sin acelerar, con los mismos colores, tamaño, duración, origen trasero, frecuencia y conjunto de partículas de siempre. Se retira el sistema adicional de partículas laterales. La emisión al girar usa el control local o el cambio de orientación ya recibido para las otras naves; no añade datos de red ni modifica la aceleración.
 
 Sitúa el testigo de bengalas en la parte trasera, sobre la zona del motor, y limita la inclinación progresiva de los giros a 60 grados. El testigo acompaña la inclinación y se muestra mientras haya cargas de bengalas.
 
-Sitúa el testigo verde de disparo en la punta y por debajo de la cubierta. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo.
+Las luces de la textura son grises sin balas y verdes cuando hay balas. Con una carga guiada se muestra un cohete en el ala derecha; con dos o más se equipa también el ala izquierda. Se usa el contador `ma` ya recibido: no cambia la munición ni el protocolo.
 
 Integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en los soportes de las alas. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
 
