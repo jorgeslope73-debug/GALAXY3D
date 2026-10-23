@@ -1,6 +1,12 @@
 # GALAXY3D
 
-Versión V23.00: combate 2.5D con Three.js y la simulación original de GALAXY COMBAT.
+Versión V23.01: nave GLB del usuario sobre el combate 2.5D y la simulación original de GALAXY COMBAT.
+
+- La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
+- Se ajustan visualmente el centro, el tamaño y la orientación. La pintura fucsia se adapta a los cuatro colores de jugador conservando el casco y el mapa de normales.
+- Se conservan propulsores, escudo, camuflaje e indicadores de armas. La nave geométrica anterior sigue como respaldo durante la carga o si falla el archivo.
+- El cargador GLTFLoader y BufferGeometryUtils proceden de Three.js r180, con imports locales y la licencia MIT de `docs/vendor/THREE-LICENSE.txt`.
+- Comprobación del archivo y su orientación: `node tools/check-ship-model.mjs`. La visualización, colores y estados se comprueban además en navegador.
 
 - Jugar: https://jorgeslope73-debug.github.io/GALAXY3D/
 - Vista 3D por defecto: naves con fuselaje, alas, cabina y propulsores; asteroides con relieve y rotación; OVNIs, misiles, disparos y fragmentos de impacto.

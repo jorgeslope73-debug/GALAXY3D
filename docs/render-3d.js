@@ -86,6 +86,8 @@
     const rim=new T.DirectionalLight(0x687bff,2.5);rim.position.set(650,-280,450);scene.add(rim);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffdc46];
     const records=new Map(),spares=new Map();
+    let createImportedShip=null;
+    document.documentElement.dataset.galaxyShip='loading';
     const matrix=new T.Matrix4(),position=new T.Vector3(),scale=new T.Vector3(),quaternion=new T.Quaternion(),euler=new T.Euler();
     const metal=(color,extra={})=>new T.MeshStandardMaterial({color,metalness:.48,roughness:.36,...extra});
     const glow=color=>new T.MeshBasicMaterial({color,toneMapped:false});
@@ -138,18 +140,21 @@
 
     function shipModel(index){
       const root=new T.Group(),tilt=new T.Group();root.add(tilt);
+      const bodyRoot=new T.Group();tilt.add(bodyRoot);
       const body=metal(0xb5c6d6),trim=metal(colors[index]),dark=metal(0x1b293b),light=glow(colors[index]);
-      add(tilt,wings,trim,0,0,-3);
-      add(tilt,hull,body,0,0,0);
-      add(tilt,tailFin,trim,0,0,7);
-      add(tilt,cylinder,dark,-8,-22,0,4.8,10,4.8);
-      add(tilt,cylinder,dark,8,-22,0,4.8,10,4.8);
+      add(bodyRoot,wings,trim,0,0,-3);
+      add(bodyRoot,hull,body,0,0,0);
+      add(bodyRoot,tailFin,trim,0,0,7);
+      add(bodyRoot,cylinder,dark,-8,-22,0,4.8,10,4.8);
+      add(bodyRoot,cylinder,dark,8,-22,0,4.8,10,4.8);
       const canopyMaterial=metal(0x51d9ff,{emissive:0x0c596b,emissiveIntensity:.7,metalness:.25,roughness:.16});
-      const canopy=add(tilt,sphere,canopyMaterial,0,9,7,5.8,10,4.5);
-      add(tilt,box,light,-23,-15,0,3,6,2);
-      add(tilt,box,light,23,-15,0,3,6,2);
-      add(tilt,box,dark,-7,19,0,2,14,2);
-      add(tilt,box,dark,7,19,0,2,14,2);
+      const canopy=add(bodyRoot,sphere,canopyMaterial,0,9,7,5.8,10,4.5);
+      add(bodyRoot,box,light,-23,-15,0,3,6,2);
+      add(bodyRoot,box,light,23,-15,0,3,6,2);
+      add(bodyRoot,box,dark,-7,19,0,2,14,2);
+      add(bodyRoot,box,dark,7,19,0,2,14,2);
+      const ammoLight=add(tilt,sphere,glow(0x8aff9d),0,15,12,1.8,3,1);
+      ammoLight.visible=false;
       const flames=new T.Group();tilt.add(flames);
       for(const x of [-8,8]){
         const outer=add(flames,cone,glow(colors[index]),x,-39,-1,4.5,24,4.5);
@@ -165,8 +170,36 @@
       const missile=add(tilt,cylinder,metal(0xf4f8ff),14,0,6,2,14,2);
       const materials=[];
       root.traverse(o=>{if(o.isMesh&&!materials.includes(o.material))materials.push(o.material);});
-      return {root,tilt,canopy,canopyMaterial,flames,shield,shieldRim,shieldMaterial,shock,flare,missile,materials};
+      for(const material of materials)rememberMaterial(material);
+      return {root,tilt,bodyRoot,ammoLight,canopy,canopyMaterial,flames,shield,shieldRim,shieldMaterial,shock,flare,missile,materials};
     }
+    function rememberMaterial(material){
+      material.userData.galaxyBase={opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite};
+    }
+    function attachImportedShip(record,index){
+      if(!createImportedShip||record.importedShip)return;
+      const imported=createImportedShip(index);
+      imported.traverse(object=>{
+        if(!object.isMesh)return;
+        for(const material of (Array.isArray(object.material)?object.material:[object.material])){
+          if(record.materials.includes(material))continue;
+          rememberMaterial(material);record.materials.push(material);
+        }
+      });
+      record.tilt.add(imported);record.importedShip=imported;
+      record.bodyRoot.visible=false;
+      record.flames.position.y=-4;
+    }
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.01';
+    import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+      const template=await assets.loadShipTemplate();
+      createImportedShip=assets.createShipFactory(template);
+      document.documentElement.dataset.galaxyShip='nave-glb';
+      window.dispatchEvent(new Event('galaxy3d-modelready'));
+    }).catch(error=>{
+      document.documentElement.dataset.galaxyShip='fallback';
+      console.warn('[GALAXY3D] No se pudo cargar nave.glb; se conserva la nave de respaldo:',error?.message||error);
+    });
     function model(kind){
       if(kind.startsWith('ship:'))return shipModel(Number(kind.split(':')[1])||0);
       const root=new T.Group();
@@ -267,6 +300,7 @@
       },
       ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false){
         const record=take('ship:'+index,index),root=record.root;
+        attachImportedShip(record,index);
         place(root,x,y,18);
         root.scale.setScalar(size/72);
         root.rotation.z=rotation*Math.PI/180;
@@ -278,11 +312,13 @@
         record.flames.scale.y=.8+Math.sin(now*.041+index)*.14;
         record.shield.visible=record.shieldRim.visible=!!shield;
         record.shock.visible=!!shock;record.flare.visible=!!flare;record.missile.visible=!!missile;
+        record.ammoLight.visible=!!record.importedShip&&!!armed;
         for(const material of record.materials){
           if(material===record.shieldMaterial||material===record.shieldRim.material)continue;
-          material.transparent=alpha<.999;
-          material.opacity=alpha;
-          material.depthWrite=alpha>.8;
+          const base=material.userData.galaxyBase;
+          material.transparent=base.transparent||alpha<.999;
+          material.opacity=base.opacity*alpha;
+          material.depthWrite=base.depthWrite&&alpha>.8;
         }
         record.shieldMaterial.opacity=.11*alpha*(Number(shield)||0);
         record.shieldRim.material.opacity=.65*alpha*(Number(shield)||0);
@@ -326,6 +362,7 @@
         ctx.canvas.dataset.meshes=String(renderer.info.render.calls);
         ctx.canvas.dataset.triangles=String(renderer.info.render.triangles);
         ctx.canvas.dataset.geometries=String(renderer.info.memory.geometries);
+        ctx.canvas.dataset.shipModel=createImportedShip?'nave-glb':'procedural';
       },
       menu(ctx,time){
         const t=reducedMotion?0:time;

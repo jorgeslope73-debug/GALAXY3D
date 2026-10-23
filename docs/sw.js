@@ -11,8 +11,12 @@ const SHELL_FILES = [
   './style.css',
   './view-3d.css',
   './render-3d.js',
+  './ship-model.js',
   './vendor/three.module.min.js',
   './vendor/three.core.min.js',
+  './vendor/GLTFLoader.js',
+  './vendor/BufferGeometryUtils.js',
+  './assets/models/nave.glb',
   './menu-portada.css',
   './menu-decor.js',
   './menu-loader.js',
@@ -119,7 +123,8 @@ async function networkFirst(request) {
 
 async function cacheFirst(request) {
   const cache = await caches.open(ASSET_CACHE);
-  const cached = await cache.match(request);
+  const shell = await caches.open(SHELL_CACHE);
+  const cached = await cache.match(request) || await shell.match(request,{ignoreSearch:true});
   if (cached) return cached;
   const response = await fetch(request);
   if (response && response.ok) await cache.put(request, response.clone());

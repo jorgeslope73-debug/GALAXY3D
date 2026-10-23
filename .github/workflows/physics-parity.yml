@@ -10,6 +10,11 @@ on:
       - 'docs/p2p-network.js'
       - 'docs/game.js'
       - 'docs/render-3d.js'
+      - 'docs/ship-model.js'
+      - 'docs/assets/models/**'
+      - 'docs/vendor/GLTFLoader.js'
+      - 'docs/vendor/BufferGeometryUtils.js'
+      - 'tools/check-ship-model.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -37,6 +42,11 @@ on:
       - 'docs/p2p-network.js'
       - 'docs/game.js'
       - 'docs/render-3d.js'
+      - 'docs/ship-model.js'
+      - 'docs/assets/models/**'
+      - 'docs/vendor/GLTFLoader.js'
+      - 'docs/vendor/BufferGeometryUtils.js'
+      - 'tools/check-ship-model.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -81,7 +91,9 @@ jobs:
       - name: Check host/local shared physics parity
         run: node tools/check-physics-parity.js
       - name: Check 3D presentation syntax
-        run: node --check docs/render-3d.js && node --check docs/menu-decor.js
+        run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/menu-decor.js
+      - name: Check ship GLB orientation and embedded resources
+        run: node tools/check-ship-model.mjs
       - name: Check network resilience
         run: node tools/check-network-resilience.js
       - name: Check scoring and spawn behaviour
