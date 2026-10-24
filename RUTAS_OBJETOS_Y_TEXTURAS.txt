@@ -1,0 +1,65 @@
+GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
+V23.33
+Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
+
+Las rutas siguientes parten de la raíz del repositorio.
+La web publicada carga docs/assets/. Cambiar un original en mas/ por sí solo
+no actualiza la copia utilizada por el juego.
+
+MODELOS 3D ACTIVOS
+- Nave de los cuatro jugadores: docs/assets/models/nave.glb
+- Meteoritos, asteroides, fragmentos y gigante: docs/assets/models/meteor.glb
+- Cohete equipado en las alas y disparado: docs/assets/models/cohete_galaxy_combat.glb
+
+TEXTURAS ACTIVAS DE LAS NAVES
+- Azul: docs/assets/models/naveazul-cupula-oscura.png
+- Fucsia: docs/assets/models/navefuxia.jpg
+- Verde: docs/assets/models/naveverde-luces-rojas.png
+- Roja: docs/assets/models/naveroja.png
+
+TEXTURAS CON DISPARO NO DISPONIBLE
+- Azul: docs/assets/models/naveazul-sin-balas.png
+- Fucsia: docs/assets/models/navefuxia-sin-balas.png
+- Verde: docs/assets/models/naveverde-sin-balas.png
+- Roja: docs/assets/models/naveroja-sin-balas.png
+- Máscara compartida de las luces: docs/assets/models/nave-luces-mask.svg
+Las luces se ven negras mientras no se puede disparar. Al estar listo,
+se encienden verdes en azul/fucsia/roja y rojas en la nave verde.
+
+TEXTURA DEL METEORITO
+- Está incluida dentro de docs/assets/models/meteor.glb (imagen luna, JPEG).
+- No se carga un JPG morado externo.
+- El morado se aplica al material en docs/meteor-model.js, color #c5a4e8.
+- El archivo actualizado del usuario se conserva también en mas/final/meteor.glb.
+
+COLORES DEL COHETE
+- Están incorporados en el modelo como colores por vértice, sin JPG externo.
+- docs/rocket-model.js adapta el color al equipo de la nave.
+
+OTROS OBJETOS Y GRÁFICOS
+- Fondos, sprites 2D e iconos de mejoras: docs/assets/sprites/
+- Escudo, OVNI 3D, disparos normales, anillos y restos de explosión:
+  se generan por código en docs/render-3d.js; no tienen GLB independiente.
+- Partículas del motor, del cohete y bengalas: docs/game.js.
+- El uso concreto de los sprites se define en docs/game.js.
+
+ARCHIVOS QUE CARGAN Y PREPARAN LOS MODELOS
+- Naves y pinturas: docs/ship-model.js
+- Meteorito y morado: docs/meteor-model.js
+- Cohete y color de equipo: docs/rocket-model.js
+- Iluminación, tamaños y dibujo de la escena: docs/render-3d.js
+
+ORIGINALES Y RECURSOS ANTERIORES
+- Carpeta de originales: mas/final/
+- Carpeta que usa la web: docs/assets/models/
+- difuse.jpg, naveazul.jpg, naveverde.png y asteroideAzul.png, si se conservan
+  en docs/assets/models/, son recursos anteriores y no son las pinturas
+  seleccionadas actualmente por los cargadores.
+
+ENLACES
+Modelos/texturas activos:
+https://github.com/jorgeslope73-debug/GALAXY3D/tree/main/docs/assets/models
+Originales:
+https://github.com/jorgeslope73-debug/GALAXY3D/tree/main/mas/final
+Sprites/fondos:
+https://github.com/jorgeslope73-debug/GALAXY3D/tree/main/docs/assets/sprites

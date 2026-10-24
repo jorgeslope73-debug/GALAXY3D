@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.32: corrige las colisiones de los meteoritos de lluvia entre sí y con asteroides y fragmentos. Todas las posiciones se actualizan antes de resolver contactos, con impulso relativo y separación completa. El gigante aparta los pequeños después de avanzar; se corrigen centros coincidentes y la protección inicial de fragmentos. Las rocas que salen conservan su trayectoria y apartan a las demás. El ajuste se comparte entre física local y host online; conserva el modelo, el morado y los tamaños 3D.
+Versión V23.33: sustituye meteor.glb por el archivo actualizado del usuario, con su textura integrada y el tono morado del material. Conserva el ajuste visual y las colisiones corregidas de V23.32. Las rutas de modelos y texturas activos se detallan en RUTAS_OBJETOS_Y_TEXTURAS.txt.
 
 Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 
