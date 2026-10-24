@@ -1,10 +1,28 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareUfoTemplate,createUfoFactory,setUfoPose,setUfoLights,UFO_DIAMETER,UFO_ROCK_LIMIT,UFO_ROCK_PERIOD_MS,UFO_LIGHT_PERIOD_MS} from '../docs/ufo-model.js';
 
 const bytes=await readFile(new URL('../docs/assets/models/ovni.glb',import.meta.url));
+const gameSource=await readFile(new URL('../docs/game.js',import.meta.url),'utf8');
+const spinSource=gameSource.match(/function ufoSpinAngle\([^)]*\)\{[\s\S]*?\n  \}/);
+assert.ok(spinSource,'The game must use the shared visual spin helper');
+const spin=vm.runInNewContext('('+spinSource[0]+')');
+const angleDelta=(a,b)=>(b-a+540)%360-180;
+for(const id of [0,1,2,37,99999]){
+  let previous=spin(0,id),previousSpeed=null,minSpeed=Infinity,maxSpeed=-Infinity;
+  for(let time=16;time<=60000;time+=16){
+    const angle=spin(time,id),speed=angleDelta(previous,angle)/.016;
+    assert.ok(angle>=0&&angle<360);
+    assert.ok(speed>=29.99&&speed<=114.01,'Spin keeps a smooth forward angular speed');
+    if(previousSpeed!==null)assert.ok(Math.abs(speed-previousSpeed)<.405,'Acceleration changes gradually without jumps');
+    minSpeed=Math.min(minSpeed,speed);maxSpeed=Math.max(maxSpeed,speed);previous=angle;previousSpeed=speed;
+  }
+  assert.ok(minSpeed<30.1&&maxSpeed>113.9,'Each UFO visibly accelerates and slows down');
+  const at=spin(12345,id);spin(987654,id);assert.equal(spin(12345,id),at,'Spin does not depend on previous frames');
+}
 assert.equal(bytes.toString('ascii',0,4),'glTF');assert.equal(bytes.readUInt32LE(8),bytes.length);
 assert.ok(bytes.length<3*1024*1024,'The web copy must stay small enough for mobile startup');
 const jsonSize=bytes.readUInt32LE(12),json=JSON.parse(bytes.subarray(20,20+jsonSize).toString());
@@ -80,4 +98,4 @@ setUfoPose(root,72,1000);assert.ok(Math.abs(root.rotation.z-72*Math.PI/180)<1e-9
 setUfoPose(root,0,0);assert.ok(Math.abs(shaderA.uniforms.ufoLampPower.value-.1)<1e-9);
 setUfoPose(root,0,UFO_LIGHT_PERIOD_MS/2);assert.equal(shaderA.uniforms.ufoLampPower.value,1,'The game pose update also animates the lights');
 assert.ok(b.rotation.x===0&&b.rotation.y===0&&b.rotation.z===0,'One UFO pose never rotates another instance');
-console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, shared geometry/textures, independent soft lamp pulses, continuous spin and smooth +/-45 degree rocking.`);
+console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, shared geometry/textures, independent soft lamp pulses, smooth variable-speed spin and +/-45 degree rocking.`);

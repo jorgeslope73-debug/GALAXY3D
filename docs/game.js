@@ -966,6 +966,12 @@
     }
   }
 
+  function ufoSpinAngle(now,id=0){
+    const index=Number(id)||0,phase=index*.7;
+    // Integral of a smooth 30-114 degree/s velocity, independent of frame rate.
+    const angle=now*.072+70*(Math.sin(now*.0006+phase)-Math.sin(phase))+index*37;
+    return (angle%360+360)%360;
+  }
   function drawUfoParticles(now){
     if(!ufoFxLastAt){ufoFxLastAt=now;return;}
     const elapsed=now-ufoFxLastAt;
@@ -6645,7 +6651,7 @@
         const ufoY=oldUfo?lerp(oldUfo.y,ufo.y,blend):ufo.y;
         // V21.61: cada OVNI gira de forma visual e independiente.
         // La fase depende de su id; no toca trayectoria, IA ni colisiones.
-        const ufoAngle=(now*.072+(Number(ufo.id)||0)*37)%360;
+        const ufoAngle=ufoSpinAngle(now,ufo.id);
         if(scene3D)scene3D.ufo(ufo.id,ufoX,ufoY,ufoAngle);
         else drawImageCentered(images.ufo,ufoX,ufoY,56,ufoAngle,1);
       }
