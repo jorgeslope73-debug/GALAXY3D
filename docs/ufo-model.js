@@ -3,6 +3,7 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 export const UFO_DIAMETER=60;
+export const UFO_ROCK_LIMIT=Math.PI/4,UFO_ROCK_PERIOD_MS=8000;
 export function prepareUfoTemplate(source){
   const level=new T.Group();level.rotation.x=Math.PI/2;level.add(source);
   level.updateMatrixWorld(true);
@@ -22,5 +23,5 @@ export async function loadUfoTemplate(){
 }
 export function createUfoFactory(template){return ()=>template.clone(true);}
 export function setUfoPose(root,angle,time,phase=0){
-  root.rotation.set(.035*Math.sin(time*.0011+phase*.7),.08*Math.sin(time*.0016+phase),angle*Math.PI/180);
+  root.rotation.set(.035*Math.sin(time*.0011+phase*.7),UFO_ROCK_LIMIT*Math.sin(time*Math.PI*2/UFO_ROCK_PERIOD_MS+phase),angle*Math.PI/180);
 }

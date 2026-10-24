@@ -242,7 +242,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.46';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.47';
     const modelLoads=[];
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();

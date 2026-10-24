@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareUfoTemplate,createUfoFactory,setUfoPose,UFO_DIAMETER} from '../docs/ufo-model.js';
+import {prepareUfoTemplate,createUfoFactory,setUfoPose,UFO_DIAMETER,UFO_ROCK_LIMIT,UFO_ROCK_PERIOD_MS} from '../docs/ufo-model.js';
 
 const bytes=await readFile(new URL('../docs/assets/models/ovni.glb',import.meta.url));
 assert.equal(bytes.toString('ascii',0,4),'glTF');assert.equal(bytes.readUInt32LE(8),bytes.length);
@@ -51,11 +51,16 @@ const factory=createUfoFactory(template),a=factory(),b=factory();let ma,mb;
 a.traverse(o=>{if(o.isMesh)ma=o;});b.traverse(o=>{if(o.isMesh)mb=o;});
 assert.equal(ma.geometry,mb.geometry);assert.equal(ma.material,mb.material);
 const root=new T.Group();root.position.set(100,200,13);root.add(a);const origin=root.position.clone();
-for(let ms=0;ms<=10000;ms+=16){
+assert.ok(Math.abs(UFO_ROCK_LIMIT-Math.PI/4)<1e-9);
+let previousRoll=null,minRoll=Infinity,maxRoll=-Infinity;
+for(let ms=0;ms<=UFO_ROCK_PERIOD_MS*2;ms+=16){
   setUfoPose(root,ms*.072,ms,.7);
-  assert.ok(Math.abs(root.rotation.x)<=.035001&&Math.abs(root.rotation.y)<=.080001);
+  assert.ok(Math.abs(root.rotation.x)<=.035001&&Math.abs(root.rotation.y)<=UFO_ROCK_LIMIT+1e-9);
+  if(previousRoll!==null)assert.ok(Math.abs(root.rotation.y-previousRoll)<.011,'Rocking stays smooth at 60 Hz, including direction changes');
+  previousRoll=root.rotation.y;minRoll=Math.min(minRoll,previousRoll);maxRoll=Math.max(maxRoll,previousRoll);
   assert.ok(root.position.distanceTo(origin)===0,'Visual rocking never shifts the collision centre');
 }
+assert.ok(minRoll<-.78&&maxRoll>.78,'Reach 45 degrees on both sides');
 setUfoPose(root,72,1000);assert.ok(Math.abs(root.rotation.z-72*Math.PI/180)<1e-9);
 assert.ok(b.rotation.x===0&&b.rotation.y===0&&b.rotation.z===0,'One UFO pose never rotates another instance');
-console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, dome up, radius 30, shared buffers, continuous spin and gentle rocking.`);
+console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, dome up, radius 30, shared buffers, continuous spin and smooth +/-45 degree rocking over 8 seconds.`);
