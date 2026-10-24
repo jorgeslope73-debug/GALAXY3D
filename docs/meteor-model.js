@@ -3,9 +3,9 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
-// The irregular outline averages 90% of its enclosing sphere in projection.
+// The uploaded cratered model averages 92.3% of its enclosing sphere in projection.
 // Match that visible outline to the existing circular gameplay radius.
-export const METEOR_VISUAL_SCALE=1.11;
+export const METEOR_VISUAL_SCALE=1.083;
 
 export function prepareMeteorTemplate(source){
   source.updateMatrixWorld(true);

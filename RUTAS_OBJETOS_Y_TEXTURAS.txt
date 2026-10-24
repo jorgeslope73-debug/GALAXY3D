@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.46
+V23.51
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -33,10 +33,12 @@ LUCES Y ESTADO DEL DISPARO
   se utiliza la última copia guardada.
 
 TEXTURA DEL METEORITO
-- Está incluida dentro de docs/assets/models/meteor.glb (imagen luna, JPEG).
+- Color, normales y metal/rugosidad incluidos dentro de docs/assets/models/meteor.glb.
+- Nuevo meteorito del usuario: copia web de 498.856 bytes, 10.000 triángulos y mapas JPEG de 1024 px.
 - No se carga un JPG morado externo.
 - El morado se aplica al material en docs/meteor-model.js, color #c5a4e8.
-- Fuente original: mas/final/meteorrit.obj, mas/final/meteorrit.mtl y mas/final/luna.jpg.
+- Fuente utilizada: meteorito.glb proporcionado por el usuario (original conservado sin modificar).
+- meteorrit.obj, meteorrit.mtl y luna.jpg en mas/final/ son recursos anteriores.
 - GLB convertido para la web: docs/assets/models/meteor.glb.
 - Copia del GLB convertido: mas/final/meteor.glb.
 

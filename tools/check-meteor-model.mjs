@@ -8,12 +8,17 @@ const bytes=await readFile(new URL('../docs/assets/models/meteor.glb',import.met
 assert.equal(bytes.toString('ascii',0,4),'glTF');
 assert.equal(bytes.readUInt32LE(4),2);
 assert.equal(bytes.readUInt32LE(8),bytes.length);
+assert.ok(bytes.length<750000,'the web meteor must stay below 750 kB');
 assert.deepEqual(bytes,await readFile(new URL('../mas/final/meteor.glb',import.meta.url)),'published and source copies must match');
 const json=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
 assert.ok(json.buffers.every(b=>!b.uri),'buffers must be embedded');
 assert.ok(json.images.every(i=>Number.isInteger(i.bufferView)),'images must be embedded');
 assert.ok(!json.skins?.length&&!json.animations?.length,'the meteor must be static');
 assert.ok(!json.extensionsRequired?.length,'no additional decoder should be required');
+assert.equal(json.images.length,3,'keep colour, normal and metallic/roughness maps');
+assert.ok(json.images.every(image=>image.mimeType==='image/jpeg'),'web maps should use compact JPEG images');
+assert.ok(json.materials.every(material=>material.normalTexture&&material.pbrMetallicRoughness.metallicRoughnessTexture),'keep the authored PBR relief and roughness');
+assert.ok(json.materials.every(material=>!material.doubleSided),'the closed rock should render its front surface once');
 const paints=json.materials.map(m=>m.pbrMetallicRoughness);
 assert.equal(new Set(paints.map(p=>json.textures[p.baseColorTexture.index].source)).size,1,'all surfaces must share the same artwork');
 assert.equal(new Set(paints.map(p=>json.textures[p.baseColorTexture.index].sampler)).size,1);
@@ -25,7 +30,7 @@ const template=prepareMeteorTemplate(gltf.scene),factory=createMeteorFactory(tem
 assert.equal(template.children.length,1,'the authored mesh should use a single draw call');
 const mesh=first.children[0],other=second.children[0],geometry=mesh.geometry;
 const triangles=geometry.index.count/3;
-assert.equal(triangles,5846,'preserve every triangle of the uploaded artwork');
+assert.equal(triangles,10000,'keep the optimized cratered model within its geometry budget');
 assert.ok(geometry.boundingSphere.center.length()<1e-5,'rotation must be centred');
 assert.ok(Math.abs(geometry.boundingSphere.radius-1)<1e-5,'radius must match the existing size mapping');
 assert.equal(geometry.attributes.uv.count,geometry.attributes.position.count,'preserve the authored UVs');
