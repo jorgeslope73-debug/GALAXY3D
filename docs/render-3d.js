@@ -179,7 +179,14 @@
       const shield=add(root,shieldGeometry,shieldMaterial,0,0,0,40);
       shield.renderOrder=5;
       const shock=add(tilt,ringGeometry,glow(0xc5efff),0,22,10,8);
-      const flare=add(tilt,box,glow(0xffb55a),0,-27,8,8,4,2.5);
+      const flare=new T.Group();flare.name='flare-indicator';
+      flare.position.set(0,-27,8);flare.renderOrder=6;tilt.add(flare);
+      const flareMaterial=glow(0xffb55a);
+      flareMaterial.depthTest=false;flareMaterial.depthWrite=false;
+      for(let i=0;i<3;i++){
+        const stroke=add(flare,box,flareMaterial,0,0,0,12,2,2.5);
+        stroke.rotation.z=i*Math.PI/3;
+      }
       const mounts=[18,-18].map(x=>{
         const root=new T.Group();root.name=x>0?'rocket-hardpoint-right':'rocket-hardpoint-left';
         root.position.set(x,-7,4);tilt.add(root);
@@ -233,7 +240,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.41';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.42';
     const modelLoads=[];
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
