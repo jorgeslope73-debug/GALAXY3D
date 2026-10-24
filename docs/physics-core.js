@@ -1,6 +1,16 @@
 'use strict';
 (() => {
   const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
+  function chooseSpawnSector(player,players,width=1920,height=1080){
+    const occupied=new Set();
+    for(const other of players){
+      if(!other||other.dead||Number(other.index)===Number(player.index)||!Number.isFinite(other.x)||!Number.isFinite(other.y))continue;
+      occupied.add((other.x<width/2?0:1)+(other.y<height/2?0:2));
+    }
+    const free=[0,1,2,3].filter(sector=>!occupied.has(sector));
+    // A four-player roster always leaves at least one sector for this ship.
+    return free[Math.floor(Math.random()*free.length)];
+  }
   // Arena units: the visible shield and every damaging contact share this edge.
   const SHIELD_RADIUS=60;
   function shipCollisionRadius(ship,hullRadius=24){
@@ -592,6 +602,7 @@
   }
 
   window.GalaxyPhysicsCore=Object.freeze({
+    chooseSpawnSector,
     SHIELD_RADIUS,shipCollisionRadius,shipImpactPoint,separateShipContact,
     MOVEMENT_DT,stepShipMovement,createMotionStream,acceptMotionFrames,consumeMotionFrame,
     cpuSpawnEscapeControl,

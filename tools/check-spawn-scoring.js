@@ -46,4 +46,52 @@ for(const Engine of [GalaxyHostPhysics,GalaxyLocalCpu]){
   victim=player(0,2);attacker=player(1,4);engine.destroyShip(victim,attacker);
   assert.equal(attacker.kills,5);assert.equal(engine.finished,true);
 }
-console.log('Bajas y apariciones OK en CPU local y host online.');
+// Exercise real starts/restarts/respawns, including the worst RNG that used
+// to put every player in the same corner. The same rule covers late joins.
+const vm=require('node:vm');
+const {engineContext}=require('./check-session-regressions.js');
+const sector=p=>(p.x<960?0:1)+(p.y<540?0:2);
+function distinctSpawns(players,label){
+  assert.equal(new Set(players.map(sector)).size,players.length,label+': zona repetida');
+  for(let i=0;i<players.length;i++){
+    const p=players[i];
+    assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.y),label+': posicion no finita');
+    assert.equal(p.spawnAnchorX,p.x);assert.equal(p.spawnAnchorY,p.y);
+    for(let j=i+1;j<players.length;j++){
+      assert.ok(Math.hypot(p.x-players[j].x,p.y-players[j].y)>240,label+': naves demasiado proximas');
+    }
+  }
+}
+let spawnBatches=0;
+for(const random of ['()=>0','()=>.999999','(()=>{let seed=42;return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};})()']){
+  const ctx=engineContext();vm.runInContext('Math.random='+random,ctx);
+  for(const name of ['GalaxyHostPhysics','GalaxyLocalCpu'])for(const count of [2,3,4]){
+    const engine=new ctx.window[name]({});
+    if(name==='GalaxyHostPhysics')engine.start(Array.from({length:count},(_,i)=>({i,n:'J'+i})));
+    else engine.start('J0','facil',count-1,null,false,1);
+    distinctSpawns(engine.players,name+' inicio '+count);spawnBatches++;
+    for(let round=0;round<25;round++){
+      // All ships die in one tick and then materialize in different orders.
+      for(const p of engine.players)p.dead=true;
+      const order=round%2?engine.players.slice().reverse():engine.players;
+      for(const p of order)engine.respawnPlayer(p);
+      distinctSpawns(engine.players,name+' reaparicion '+round);spawnBatches++;
+      engine.restart();
+      distinctSpawns(engine.players,name+' reinicio '+round);spawnBatches++;
+    }
+    // Starting from an old overlapping snapshot must also recover unique zones.
+    for(const p of engine.players){p.x=74;p.y=350;p.px=p.x;p.py=p.y;}
+    for(const p of engine.players){
+      engine.respawnPlayer(p);
+      assert.ok(engine.players.every(other=>other===p||other.dead||sector(other)!==sector(p)),name+': reaparece en zona ocupada');
+    }
+    distinctSpawns(engine.players,name+' recuperacion');spawnBatches++;
+  }
+  const engine=new ctx.window.GalaxyHostPhysics({});
+  // Sparse player slots and a join during a running match use actual index values.
+  engine.start([{i:3,n:'J3'},{i:1,n:'J1'}]);
+  const joined=engine.makePlayer(2,'J2',false);
+  engine.placeAtSpawn(joined);engine.players.push(joined);
+  distinctSpawns(engine.players,'incorporacion a partida');spawnBatches++;
+}
+console.log('Bajas y apariciones OK en CPU local y host online; '+spawnBatches+' tandas con zonas distintas, RNG extremo, reapariciones y reinicios.');

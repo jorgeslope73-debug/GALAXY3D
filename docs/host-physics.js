@@ -941,7 +941,7 @@
     placeAtSpawn(p){
       this.motionEpoch=(this.motionEpoch||0)+1;
       p.motionStream=PHYSICS_CORE.createMotionStream(this.motionEpoch);
-      const area=spawnArea(Math.floor(Math.random()*4));
+      const area=spawnArea(PHYSICS_CORE.chooseSpawnSector(p,this.players,W,H));
       const obstacles=this.asteroids.map(a=>({x:a.x,y:a.y,r:a.r}));
       for(const m of this.meteors)obstacles.push({x:m.x,y:m.y,r:SMALL_METEOR_RADIUS});
       if(this.giant)obstacles.push({x:this.giant.x,y:this.giant.y,r:GIANT_RADIUS});
