@@ -31,6 +31,7 @@ on:
       - 'server/net-protocol.js'
       - 'tools/check-physics-parity.js'
       - 'tools/check-rock-collisions.js'
+      - 'tools/check-shield-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -70,6 +71,7 @@ on:
       - 'server/net-protocol.js'
       - 'tools/check-physics-parity.js'
       - 'tools/check-rock-collisions.js'
+      - 'tools/check-shield-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -106,6 +108,8 @@ jobs:
         run: node tools/check-physics-parity.js
       - name: Check rock collisions in local and host engines
         run: node tools/check-rock-collisions.js
+      - name: Check shield perimeter, projectiles and ramming in both engines
+        run: node tools/check-shield-collisions.js
       - name: Check 3D presentation syntax
         run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js
       - name: Check ship GLB orientation and embedded resources

@@ -493,7 +493,7 @@
   if(cpuButton)cpuButton.disabled=false;
   // Tamano visual de las naves. Solo cambia el dibujo: fisica, colisiones y red quedan iguales.
   const SHIP_DRAW_SIZE=isMobile?86:72;
-  const SHIELD_DRAW_RADIUS=isMobile?48:43;
+  const SHIELD_DRAW_RADIUS=window.GalaxyPhysicsCore.SHIELD_RADIUS;
   const HUD_SCALE=isMobile?1.60:1.12;
   const HUD_PANEL_W=128*HUD_SCALE;
   const HUD_PANEL_H=153*HUD_SCALE;

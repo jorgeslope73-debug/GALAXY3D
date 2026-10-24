@@ -9,6 +9,7 @@
   const CAMPAIGN=window.GalaxyCampaign||null;
   const CAMPAIGN_LEVELS=CAMPAIGN&&Number(CAMPAIGN.count)>0?Number(CAMPAIGN.count):5;
   const SHIP_RADIUS=24,ASTEROID_RADIUS=45,GIANT_RADIUS=135,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
+  const shipCollisionRadius=p=>PHYSICS_CORE.shipCollisionRadius(p,SHIP_RADIUS);
   const SPAWN_PROTECTION_SECONDS=3,SPAWN_MATERIALIZE_SECONDS=1.15,BRUTAL_SHOT_DISTANCE=850;
   // V22.29: memoria anti-bucle de combate. Es estado local de la CPU, no viaja por red.
   const CPU_QUICK_DEATH_WINDOW=6,CPU_RESPAWN_RETHINK_SECONDS=2,CPU_LOOP_EVASION_BASE=7,CPU_LOOP_EVASION_MAX=12,CPU_LOOP_DECAY_SECONDS=12;
@@ -1280,7 +1281,7 @@
       }
       let x=player.x,y=player.y;
       if(!destroyed&&source&&Number.isFinite(source.x)&&Number.isFinite(source.y)){
-        const n=normalize(source.x-x,source.y-y);x+=n.x*SHIP_RADIUS;y+=n.y*SHIP_RADIUS;
+        const impact=PHYSICS_CORE.shipImpactPoint(player,source);x=impact.x;y=impact.y;
       }
       this.fxEvents.push({
         id:++this.fxSeq,i:player.index,x:+x.toFixed(1),y:+y.toFixed(1),
@@ -1506,7 +1507,7 @@
       const obstacles=this.asteroids.map(a=>({x:a.x,y:a.y,r:a.r}));
       for(const m of this.meteors)obstacles.push({x:m.x,y:m.y,r:SMALL_METEOR_RADIUS});
       if(this.giant)obstacles.push({x:this.giant.x,y:this.giant.y,r:GIANT_RADIUS});
-      for(const other of this.players)if(other.index!==p.index&&!other.dead)obstacles.push({x:other.x,y:other.y,r:SHIP_RADIUS});
+      for(const other of this.players)if(other.index!==p.index&&!other.dead)obstacles.push({x:other.x,y:other.y,r:shipCollisionRadius(other)});
       let best=null,bestScore=-Infinity;
       for(let attempt=0;attempt<24;attempt++){
         const candidate={x:rand(area.minX,area.maxX),y:rand(area.minY,area.maxY)};
@@ -2272,7 +2273,8 @@
             const dx=target.x-wave.x,dy=target.y-wave.y;
             const distance=Math.hypot(dx,dy);
             // La nave explota solo cuando el frente circular visible la alcanza.
-            if(distance-SHIP_RADIUS<=radius&&distance+SHIP_RADIUS>=previous){
+            const targetRadius=shipCollisionRadius(target);
+            if(distance-targetRadius<=radius&&distance+targetRadius>=previous){
               wave.hitMask=(Number(wave.hitMask)||0)|bit;
               if(owner){
                 const targetHasActiveWave=(activeShockOwnerMask&bit)!==0;
@@ -2281,8 +2283,8 @@
                   // un aviso privado de que sus ondas se han anulado.
                   this.emit({t:'shock-cancel',indices:[owner.index,target.index]});
                 }else if(target.shield>0){
-                  target.shield=0;
                   this.emitShipImpact(target,owner,false);
+                  target.shield=0;
                   this.emit({t:'sound',kind:'impact'});
                 }else if(target.protection>0){
                   this.emitShipImpact(target,owner,false);
@@ -2826,12 +2828,17 @@
         }
         if(removed)continue;
         for(const p of this.players){
-          if(!p.dead&&sweptCircles(m,SMALL_METEOR_RADIUS,p,SHIP_RADIUS,false)){
+          if(!p.dead&&sweptCircles(m,SMALL_METEOR_RADIUS,p,shipCollisionRadius(p),false)){
             if(p.cpu&&p.meteorDecision){
               const penalty=p.meteorDecision.meteorId===m.id?(p.shield>0?-.45:-1.6):(p.shield>0?-.25:-1.0);
               this.settleMeteorDecision(p,penalty);
             }
-            if(p.shield>0){this.emitShipImpact(p,m,false);const n=normalize(m.x-p.x,m.y-p.y),dot=m.vx*n.x+m.vy*n.y;m.vx-=2*dot*n.x;m.vy-=2*dot*n.y;}
+            if(p.shield>0){
+              this.emitShipImpact(p,m,false);
+              PHYSICS_CORE.separateShipContact(p,m,SMALL_METEOR_RADIUS,0);
+              const n=normalize(m.x-p.x,m.y-p.y),dot=(m.vx-p.vx)*n.x+(m.vy-p.vy)*n.y;
+              if(dot<0){m.vx-=2*dot*n.x;m.vy-=2*dot*n.y;}
+            }
             else{this.destroyShip(p,null);this.meteors.splice(i,1);removed=true;}
             break;
           }
@@ -2864,7 +2871,12 @@
         this.emit({t:'sound',kind:'impact'});
         this.flares.splice(f,1);
       }
-      for(const p of this.players)if(!p.dead&&sweptCircles(g,GIANT_RADIUS,p,SHIP_RADIUS,false)){if(p.shield>0||p.protection>0){this.emitShipImpact(p,g,false);const n=normalize(p.x-g.x,p.y-g.y);p.vx=n.x*130;p.vy=n.y*130;p.x+=n.x*8;p.y+=n.y*8;}else this.destroyShip(p,null);}
+      for(const p of this.players)if(!p.dead&&sweptCircles(g,GIANT_RADIUS,p,shipCollisionRadius(p),false)){
+        if(p.shield>0||p.protection>0){
+          this.emitShipImpact(p,g,false);const n=PHYSICS_CORE.separateShipContact(p,g,GIANT_RADIUS);
+          p.vx=n.x*130;p.vy=n.y*130;
+        }else this.destroyShip(p,null);
+      }
       for(const a of this.asteroids)this.resolveGiantAsteroidCollision(g,a);
       for(const m of this.meteors)PHYSICS_CORE.resolveGiantAsteroidCollision(g,m,GIANT_RADIUS,SMALL_METEOR_RADIUS,240);
       for(let i=this.pickups.length-1;i>=0;i--)if(circles(g,GIANT_RADIUS,this.pickups[i],PICKUP_RADIUS))this.pickups.splice(i,1);
@@ -3221,16 +3233,18 @@
 
       // La embestida mantiene la regla actual: puede matar, pero el OVNI rebota.
       for(const p of this.players){
-        if(!p||p.dead||!circles(u,UFO_RADIUS,p,SHIP_RADIUS))continue;
-        if(p.shield>0||p.protection>0){
+        if(!p||p.dead||!circles(u,UFO_RADIUS,p,shipCollisionRadius(p)))continue;
+        const protectedContact=p.shield>0||p.protection>0;
+        if(protectedContact){
           this.emitShipImpact(p,u,false);
+          PHYSICS_CORE.separateShipContact(p,u,UFO_RADIUS,0);
         }else{
           this.destroyShip(p,null);
         }
         const n=normalize(u.x-p.x,u.y-p.y);
         const speed=Math.max(150,Math.hypot(u.vx,u.vy));
         u.vx=n.x*speed*.86;u.vy=n.y*speed*.86;
-        u.x+=n.x*7;u.y+=n.y*7;
+        if(!protectedContact){u.x+=n.x*7;u.y+=n.y*7;}
         u.bounceUntil=this.fxClock+.25;
         break;
       }
@@ -3251,7 +3265,7 @@
         for(let f=this.flares.length-1;f>=0;f--){
           const flare=this.flares[f];
           if(Number(flare.owner)===Number(p.index)&&(Number(flare.ownerSafe)||0)>0)continue;
-          if(!sweptCircles(p,SHIP_RADIUS,flare,FLARE_RADIUS,false))continue;
+          if(!sweptCircles(p,shipCollisionRadius(p),flare,FLARE_RADIUS,false))continue;
           const flareOwner=this.players.find(q=>Number(q.index)===Number(flare.owner))||null;
           this.flares.splice(f,1);
           if(p.shield>0||p.protection>0){
@@ -3275,7 +3289,13 @@
         }
         if(p.dead)continue;
 
-        for(const a of this.asteroids)if(sweptCircles(p,SHIP_RADIUS,a,a.r,false)){if(p.shield>0){this.emitShipImpact(p,a,false);const n=normalize(p.x-a.x,p.y-a.y),dot=p.vx*n.x+p.vy*n.y;if(dot<0){p.vx-=1.85*dot*n.x;p.vy-=1.85*dot*n.y;}p.x+=n.x*5;p.y+=n.y*5;}else this.destroyShip(p,null);}
+        for(const a of this.asteroids)if(sweptCircles(p,shipCollisionRadius(p),a,a.r,false)){
+          if(p.shield>0){
+            this.emitShipImpact(p,a,false);const n=PHYSICS_CORE.separateShipContact(p,a,a.r);
+            const dot=(p.vx-a.vx)*n.x+(p.vy-a.vy)*n.y;
+            if(dot<0){p.vx-=1.85*dot*n.x;p.vy-=1.85*dot*n.y;}
+          }else this.destroyShip(p,null);
+        }
       }
       for(let i=0;i<this.players.length;i++)for(let j=i+1;j<this.players.length;j++){
         const a=this.players[i],b=this.players[j];
@@ -3285,13 +3305,16 @@
         // V21.29: a 60 Hz la velocidad maxima no permite atravesar
         // completamente otra nave en un tick. Exigimos solape REAL para que
         // toda embestida corresponda con un contacto visible.
-        if(a.dead||b.dead||!circles(a,SHIP_RADIUS,b,SHIP_RADIUS))continue;
+        if(a.dead||b.dead||!circles(a,shipCollisionRadius(a),b,shipCollisionRadius(b)))continue;
         if(a.shield>0||a.protection>0)this.emitShipImpact(a,b,false);
         if(b.shield>0||b.protection>0)this.emitShipImpact(b,a,false);
         if(a.shield>0&&b.shield<=0)this.destroyShip(b,a,true);
         else if(b.shield>0&&a.shield<=0)this.destroyShip(a,b,true);
         else if(a.shield<=0&&b.shield<=0){this.destroyShip(a,null);this.destroyShip(b,null);}
-        else{const n=normalize(wrapDelta(a.x-b.x,W),wrapDelta(a.y-b.y,H));a.vx=n.x*120;a.vy=n.y*120;b.vx=-n.x*120;b.vy=-n.y*120;}
+        if(!a.dead&&!b.dead){
+          const n=PHYSICS_CORE.separateShipContact(a,b,shipCollisionRadius(b),.5);
+          a.vx=n.x*120;a.vy=n.y*120;b.vx=-n.x*120;b.vy=-n.y*120;
+        }
       }
     }
     takePerfDebug(){

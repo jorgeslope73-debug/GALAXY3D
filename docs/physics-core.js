@@ -1,6 +1,45 @@
 'use strict';
 (() => {
   const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
+  // Arena units: the visible shield and every damaging contact share this edge.
+  const SHIELD_RADIUS=60;
+  function shipCollisionRadius(ship,hullRadius=24){
+    return Number(ship&&ship.shield)>0?SHIELD_RADIUS:hullRadius;
+  }
+  function shipImpactPoint(ship,source,sourceRadius=0){
+    const radius=shipCollisionRadius(ship);
+    let dx=source.x-ship.x,dy=source.y-ship.y;
+    const sx=Number.isFinite(source.px)?source.px:source.x,sy=Number.isFinite(source.py)?source.py:source.y;
+    const tx=Number.isFinite(ship.px)?ship.px:ship.x,ty=Number.isFinite(ship.py)?ship.py:ship.y;
+    const x0=sx-tx,y0=sy-ty,vx=dx-x0,vy=dy-y0,a=vx*vx+vy*vy;
+    const r=radius+sourceRadius,c=x0*x0+y0*y0-r*r,b=2*(x0*vx+y0*vy);
+    const discriminant=b*b-4*a*c;
+    // Use the entry side for a fast projectile, never a line across a wrapped edge.
+    if(a>1e-9&&c>=0&&discriminant>=0&&Math.abs(source.x-sx)<960&&Math.abs(source.y-sy)<540&&Math.abs(ship.x-tx)<960&&Math.abs(ship.y-ty)<540){
+      const t=(-b-Math.sqrt(discriminant))/(2*a);
+      if(t>=0&&t<=1){dx=x0+vx*t;dy=y0+vy*t;}
+    }
+    let length=Math.hypot(dx,dy);
+    if(length<1e-8){dx=x0;dy=y0;length=Math.hypot(dx,dy);}
+    if(length<1e-8){dx=1;dy=0;length=1;}
+    return {x:ship.x+dx/length*radius,y:ship.y+dy/length*radius};
+  }
+  function separateShipContact(ship,obstacle,obstacleRadius,shipShare=1){
+    const dx=ship.x-obstacle.x,dy=ship.y-obstacle.y,d=Math.hypot(dx,dy);
+    let nx,ny;
+    if(d>1e-8){nx=dx/d;ny=dy/d;}
+    else{
+      const vx=(Number(ship.vx)||0)-(Number(obstacle.vx)||0),vy=(Number(ship.vy)||0)-(Number(obstacle.vy)||0),speed=Math.hypot(vx,vy);
+      nx=speed>1e-8?-vx/speed:1;ny=speed>1e-8?-vy/speed:0;
+    }
+    const overlap=shipCollisionRadius(ship)+obstacleRadius-d;
+    if(overlap>=0){
+      const correction=overlap+.1;
+      ship.x+=nx*correction*shipShare;ship.y+=ny*correction*shipShare;
+      obstacle.x-=nx*correction*(1-shipShare);obstacle.y-=ny*correction*(1-shipShare);
+    }
+    return {x:nx,y:ny};
+  }
 
   // Un unico integrador para autoridad y prediccion. Un comando = un tick.
   const MOVEMENT_DT=1/60;
@@ -208,6 +247,7 @@
       x:p.x+d.x*35,y:p.y+d.y*35,
       vx:d.x*projectileSpeed,vy:d.y*projectileSpeed,
       age:0,travel:0,guided,
+      leavingOwnerShield:guided&&Number(p.shield)>0,
       target:guided?p.guidedTarget:-1,
       flareTarget:-1,decoyed:false,
       baseSpeed:projectileSpeed
@@ -418,14 +458,21 @@
     for(const target of players){
       if(!target)continue;
 
+      if(Number(target.index)===owner&&projectile.leavingOwnerShield){
+        const dx=projectile.x-target.x,dy=projectile.y-target.y,r=shipCollisionRadius(target,shipRadius)+projectileRadius;
+        if(dx*dx+dy*dy>r*r)projectile.leavingOwnerShield=false;
+        // Let a new missile leave its own field; a later return can still hit it.
+        continue;
+      }
       // Bala normal: nunca hiere al tirador. Misil: sí puede regresar y dañarlo.
       if((Number(target.index)===owner&&!guided)||target.dead||Number(target.protection)>0)continue;
-      if(!sweptCircles(projectile,projectileRadius,target,shipRadius,false))continue;
+      if(!sweptCircles(projectile,projectileRadius,target,shipCollisionRadius(target,shipRadius),false))continue;
 
       const shielded=Number(target.shield)>0;
       const enemyHit=!!attacker&&attacker!==target;
       const longShot=enemyHit&&travel>=brutalDistance;
       const pointBlank=enemyHit&&!guided&&travel<=pointBlankDistance;
+      const impact=shielded?shipImpactPoint(target,projectile,projectileRadius):projectile;
 
       let reward='none';
       if(!shielded){
@@ -443,8 +490,8 @@
         reward,
         owner,
         travel,
-        impactX:Number(projectile.x)||0,
-        impactY:Number(projectile.y)||0
+        impactX:Number(impact.x)||0,
+        impactY:Number(impact.y)||0
       };
     }
     return null;
@@ -545,6 +592,7 @@
   }
 
   window.GalaxyPhysicsCore=Object.freeze({
+    SHIELD_RADIUS,shipCollisionRadius,shipImpactPoint,separateShipContact,
     MOVEMENT_DT,stepShipMovement,createMotionStream,acceptMotionFrames,consumeMotionFrame,
     cpuSpawnEscapeControl,
     TARGET_MIN_ALIGN,

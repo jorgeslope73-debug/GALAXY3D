@@ -233,7 +233,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.40';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.41';
     const modelLoads=[];
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
@@ -386,6 +386,8 @@
         attachMountedRocket(record,index);
         place(root,x,y,18);
         root.scale.setScalar(size/72*(showcase?1:SHIP_VISUAL_SCALE));
+        // Hulls can be enlarged on mobile; the shield edge stays at its physics radius.
+        if(!showcase)record.shield.scale.setScalar((window.GalaxyPhysicsCore?.SHIELD_RADIUS||60)/root.scale.x);
         root.rotation.z=rotation*Math.PI/180;
         // Bank only while turning; ease back to the overhead pose when the turn stops.
         const bank=turnBank(record,rotation,showcase);
