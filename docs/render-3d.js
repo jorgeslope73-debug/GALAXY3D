@@ -226,8 +226,9 @@
         mount.root.add(visual);mount.visual=visual;mount.fallback.visible=false;
         visual.traverse(object=>{
           if(!object.isMesh)return;
-          if(!record.materials.includes(object.material)){
-            rememberMaterial(object.material);record.materials.push(object.material);
+          for(const material of (Array.isArray(object.material)?object.material:[object.material])){
+            if(record.materials.includes(material))continue;
+            rememberMaterial(material);record.materials.push(material);
           }
         });
       }
@@ -242,7 +243,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.49';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.50';
     const modelLoads=[];
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();
@@ -415,11 +416,13 @@
         record.shock.visible=!!shock;record.flare.visible=!!flare;
         const mountedCount=Math.max(0,Math.min(2,Math.trunc(Number(missileCount)||0)));
         record.mounts.forEach((mount,i)=>{mount.root.visible=i<mountedCount;});
-        if(record.importedShip)setImportedShipAmmo(record.importedShip,armed&&hasAmmo);
+        if(record.importedShip)setImportedShipAmmo(record.importedShip,armed&&hasAmmo,alpha);
         for(const material of record.materials){
           if(material===record.shieldMaterial)continue;
           const base=material.userData.galaxyBase;
-          material.transparent=base.transparent||alpha<.999;
+          const transparent=base.transparent||alpha<.999;
+          // Switching from an opaque shader must also recompile its alpha output.
+          if(material.transparent!==transparent){material.transparent=transparent;material.needsUpdate=true;}
           material.opacity=base.opacity*alpha;
           material.depthWrite=base.depthWrite&&alpha>.8;
         }

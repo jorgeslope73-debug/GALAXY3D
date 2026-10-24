@@ -124,15 +124,17 @@ export function createShipFactory(template){
       };
       object.material=Array.isArray(object.material)?object.material.map(clone):clone(object.material);
     });
-    lightStates.set(visual,{hasAmmo:true,lights});
+    lightStates.set(visual,{hasAmmo:true,visibility:1,lights});
     return visual;
   };
 }
 
-export function setShipAmmoLights(visual,hasAmmo){
+export function setShipAmmoLights(visual,hasAmmo,alpha=1){
   const state=lightStates.get(visual),on=!!hasAmmo;
-  if(!state||state.hasAmmo===on)return;
+  const visibility=Math.max(0,Math.min(1,Number(alpha)||0));
+  if(!state||(state.hasAmmo===on&&state.visibility===visibility))return;
   // Keep the current hull paint through reloads; only the masked lamps change.
-  for(const power of state.lights)power.value=on?1:0;
-  state.hasAmmo=on;
+  // Fade their light output too, so the ready lamp never reveals a cloaked hull.
+  for(const power of state.lights)power.value=on?visibility:0;
+  state.hasAmmo=on;state.visibility=visibility;
 }
