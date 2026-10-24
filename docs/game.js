@@ -64,6 +64,7 @@
   const cpuSetupDialog=document.getElementById('cpuSetupDialog'),mobileDifficulty=document.getElementById('mobileDifficulty'),mobileCpuCount=document.getElementById('mobileCpuCount'),cpuSetupPlay=document.getElementById('cpuSetupPlay'),cpuSetupClose=document.getElementById('cpuSetupClose');
   const W=1920,H=1080;
   const playerColors=['#5ae1ff','#ff50a5','#5aff78','#ffe14a'];
+  const playerColorKeys=['shipColorBlue','shipColorFuchsia','shipColorGreen','shipColorYellow'];
   const playerRgb=[[90,225,255],[255,80,165],[90,255,120],[255,225,74]];
   const images={},sounds={};
   let state=null,previousState=null,myIndex=null,hostIndex=0,hostEpoch=1,isHost=false,roomCode='',playerToken='',inGame=false,lastStateTime=0,previousStateTime=0;
@@ -291,6 +292,7 @@
   let onlineStartAt=0,onlineGoAt=0,onlineStartEndAt=0,onlineStartTimer=null,onlineStartRankRound=1;
   let onlineStartPending=false,onlineStartGeneration=0,lastRestartedRound=0;
   let onlineReadyRedCache=null,onlineReadyOrangeCache=null,onlineGoCache=null;
+  let onlineColorCache=null,onlineColorCacheKey='';
   let huntFxStart=0,huntFxUntil=0,huntText='',huntCpuAmmo=false,huntCpuBonus=0,huntCpuIndices=[],huntCpuAmmoTotals=new Map();
   let pendingVictoryIndex=null,victoryShowTimer=null;
   let victoryHudScoreShownAt=null;
@@ -5826,10 +5828,19 @@
     return cache;
   }
   function warmOnlineStartCaches(force=false){
-    if(force){onlineReadyRedCache=null;onlineReadyOrangeCache=null;onlineGoCache=null;}
+    if(force){onlineReadyRedCache=null;onlineReadyOrangeCache=null;onlineGoCache=null;onlineColorCache=null;onlineColorCacheKey='';}
     if(!onlineReadyRedCache)onlineReadyRedCache=buildOnlineStartTitleCache(tr('readyNotice'),'#ff2b24','rgba(255,35,20,.98)',126,14);
     if(!onlineReadyOrangeCache)onlineReadyOrangeCache=buildOnlineStartTitleCache(tr('readyNotice'),'#ff8a20','rgba(255,115,20,.98)',126,14);
     if(!onlineGoCache)onlineGoCache=buildOnlineStartTitleCache(tr('goNotice'),'#54ff63','rgba(55,255,95,.98)',178,16);
+    const index=myIndex==null?-1:Number(myIndex);
+    if(Number.isInteger(index)&&index>=0&&index<playerColors.length){
+      const text=tr('shipColorNotice',{color:tr(playerColorKeys[index])});
+      const key=index+':'+text;
+      if(!onlineColorCache||onlineColorCacheKey!==key){
+        onlineColorCache=buildOnlineStartTitleCache(text,playerColors[index],playerColors[index],92,10);
+        onlineColorCacheKey=key;
+      }
+    }else{onlineColorCache=null;onlineColorCacheKey='';}
     return !!(onlineReadyRedCache&&onlineReadyOrangeCache&&onlineGoCache);
   }
   function clearGameCanvas(){
@@ -5921,6 +5932,10 @@
           ctx.globalAlpha=fadeIn*t;
           ctx.drawImage(onlineReadyOrangeCache,-onlineReadyOrangeCache.width/2,-onlineReadyOrangeCache.height/2);
         }
+        if(onlineColorCache){
+          ctx.globalAlpha=fadeIn;
+          ctx.drawImage(onlineColorCache,-onlineColorCache.width/2,144-onlineColorCache.height/2);
+        }
         if(roomCode==='LOCAL'){
           ctx.globalAlpha=fadeIn;
           const worldText=tr('campaignLevelTitle',{level:localCampaignLevel,name:localCampaignWorldName(localCampaignLevel)});
@@ -5930,8 +5945,8 @@
           ctx.fillStyle='#9eeaff';
           ctx.shadowColor='rgba(80,220,255,.72)';
           ctx.shadowBlur=isMobile?12:16;
-          ctx.strokeText(worldText,0,112);
-          ctx.fillText(worldText,0,112);
+          ctx.strokeText(worldText,0,238);
+          ctx.fillText(worldText,0,238);
           ctx.shadowBlur=0;
         }
       }else{
