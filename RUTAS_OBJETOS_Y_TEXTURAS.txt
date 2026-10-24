@@ -59,6 +59,9 @@ OVNI DECORATIVO DE LA PORTADA
 TEXTURAS DEL OVNI
 - Color, normales y metal/rugosidad incluidos en docs/assets/models/ovni.glb.
 - Copia web optimizada a 1024 px; el original del usuario se conserva sin modificar.
+- Portada y partida usan la misma fábrica de materiales y el mismo entorno de reflejos suaves.
+- El entorno se genera una sola vez en docs/ufo-model.js (sin descargas ni texturas nuevas).
+- El OVNI decorativo se muestra más grande y en vista lateral de tres cuartos para apreciar la cúpula.
 
 COLORES DEL COHETE
 - Están incorporados en el modelo como colores por vértice, sin JPG externo.

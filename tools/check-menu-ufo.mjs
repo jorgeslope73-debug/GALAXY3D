@@ -11,7 +11,7 @@ for(const mobile of [false,true])for(let seed=1;seed<=8;seed++){
     if(pose){
       if(!previous){if(first===null){first=time;assert.ok(first>=12000&&first<=22040,'first visit waits for menu dwell');}else assert.ok(time-ended>=60000,'long pauses separate visits');count++;targets=new Set();}
       assert.ok(Number.isFinite(pose.x)&&Number.isFinite(pose.y)&&Number.isFinite(pose.angle));
-      assert.ok(Math.abs(pose.bank)<.2&&pose.pitch>-1.4&&pose.pitch< -1,'the disc keeps a gentle lateral profile');
+      assert.ok(Math.abs(pose.bank)<.2&&pose.pitch>-1.2&&pose.pitch< -.8,'the lateral three-quarter view keeps the dome and upper metal visible');
       if(previous)assert.ok(Math.hypot(pose.x-previous.x,pose.y-previous.y)<8.6,'motion is continuous at 25 FPS');
       for(const object of objects){const c=object.safety,clearance=Math.hypot(pose.x-c.x,pose.y-c.y)-c.r-MENU_UFO_RADIUS;minimum=Math.min(minimum,clearance);assert.ok(clearance>=MENU_UFO_CLEARANCE-4,'the full UFO silhouette stays clear of every floating object');}
       if(pose.phase==='observing'){targets.add(pose.target);assert.ok(Math.hypot(pose.vx,pose.vy)===0,'observations are unhurried hovering stops');}

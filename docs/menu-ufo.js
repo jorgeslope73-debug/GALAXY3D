@@ -1,5 +1,5 @@
 /* Menu decoration only: this flight never enters gameplay or network state. */
-export const MENU_UFO_RADIUS=60,MENU_UFO_CLEARANCE=40;
+export const MENU_UFO_RADIUS=80,MENU_UFO_CLEARANCE=40;
 const W=1920,H=1080,SPEED=200;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const distance=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
@@ -138,7 +138,7 @@ export function createMenuUfoFlight({random=Math.random,reducedMotion=false}={})
         if(target){const d=Math.hypot(target.x-p.x,target.y-p.y)||1;lookX=(target.x-p.x)/d;lookY=(target.y-p.y)/d;}
       }
       return {...p,vx,vy,phase:observing?'observing':'flying',target:leg.target,
-        bank:-vx/SPEED*.12-look*lookX*.09,pitch:-1.18+vy/SPEED*.08+look*lookY*.10,
+        bank:-vx/SPEED*.12-look*lookX*.09,pitch:-.98+vy/SPEED*.08+look*lookY*.10,
         angle:(clock*.072+70*Math.sin(clock*.0006+.8))%360};
     }
   };

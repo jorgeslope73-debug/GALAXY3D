@@ -244,14 +244,15 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.56';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.57';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
     }));
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();
-      createImportedUfo=assets.createUfoFactory(template);setImportedUfoPose=assets.setUfoPose;
+      const reflections=assets.createUfoEnvironment(renderer);
+      createImportedUfo=assets.createUfoFactory(template,reflections.texture);setImportedUfoPose=assets.setUfoPose;
       document.documentElement.dataset.galaxyUfo='ovni-glb';
     }).catch(error=>{
       document.documentElement.dataset.galaxyUfo='error';
@@ -450,7 +451,7 @@
       },
       menuUfo(pose){
         const record=take('menu-ufo','visitor');
-        place(record.root,pose.x,pose.y,24);record.root.scale.setScalar(mobile?1.5:1.8);
+        place(record.root,pose.x,pose.y,24);record.root.scale.setScalar(mobile?2:2.6);
         record.root.rotation.set(0,0,pose.bank);record.side.rotation.x=pose.pitch;
         setImportedUfoPose(record.spin,pose.angle,now,.8,0,0);
       },
@@ -525,7 +526,7 @@
         }
         for(const role of ['fragment','medium','large'])api.rock('warm-rock-'+role,960,230,100,1,0,role);
         api.ufo('warm-ufo',960,420,pass*30);
-        api.menuUfo({x:960,y:230,bank:0,pitch:-1.18,angle:pass*30});
+        api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         api.flush(ctx);
       }
       // Leave the pool in its normal menu state before exposing the first frame.

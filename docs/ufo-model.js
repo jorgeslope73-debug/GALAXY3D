@@ -8,6 +8,24 @@ export const UFO_LIGHT_PERIOD_MS=2600;
 const lampStates=new WeakMap();
 const leanStates=new WeakMap();
 
+export function createUfoEnvironment(renderer){
+  // Bake once: menus and matches share these soft reflections on the original PBR maps.
+  // Only UFO materials receive this map; other artwork keeps its existing lighting.
+  const studio=new T.Scene();studio.background=new T.Color(0x182235);
+  const geometry=new T.PlaneGeometry(1,1),materials=[];
+  const card=(x,y,z,w,h,r,g,b)=>{
+    const material=new T.MeshBasicMaterial({color:new T.Color().setRGB(r,g,b),side:T.DoubleSide});
+    const mesh=new T.Mesh(geometry,material);materials.push(material);
+    mesh.position.set(x,y,z);mesh.scale.set(w,h,1);mesh.lookAt(0,0,0);studio.add(mesh);
+  };
+  card(-4,5,7,5,4,4,4.1,4.3);
+  card(5,-1,3,2,6,1.5,1.8,2.2);
+  card(-1,-5,-3,3,2,.35,.45,.65);
+  const generator=new T.PMREMGenerator(renderer);
+  try{return generator.fromScene(studio,.03,.1,30,{size:128});}
+  finally{generator.dispose();geometry.dispose();for(const material of materials)material.dispose();}
+}
+
 function prepareLampMaterial(original,geometry,power){
   const material=original.clone();geometry.computeBoundingBox();
   const bounds=geometry.boundingBox,centre=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3());
@@ -49,13 +67,17 @@ export async function loadUfoTemplate(){
   const gltf=await new GLTFLoader().loadAsync(asset.href);
   return prepareUfoTemplate(gltf.scene);
 }
-export function createUfoFactory(template){
+export function createUfoFactory(template,environment=null){
   return ()=>{
     const visual=template.clone(true),power={value:1},materials=new Map();
     visual.traverse(object=>{
       if(!object.isMesh)return;
       const clone=original=>{
-        if(!materials.has(original))materials.set(original,prepareLampMaterial(original,object.geometry,power));
+        if(!materials.has(original)){
+          const material=prepareLampMaterial(original,object.geometry,power);
+          if(environment){material.envMap=environment;material.envMapIntensity=.85;}
+          materials.set(original,material);
+        }
         return materials.get(original);
       };
       object.material=Array.isArray(object.material)?object.material.map(clone):clone(object.material);

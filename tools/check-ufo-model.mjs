@@ -65,10 +65,12 @@ template.traverse(o=>{
 assert.equal(meshes,1);assert.equal(triangles,50000);
 assert.ok(maxRadius<31&&maxRadius>29,'The artwork fits the existing radius-30 collision');
 assert.ok(top>0&&topRadius<18,'The upper dome faces the overhead camera');
-const factory=createUfoFactory(template),a=factory(),b=factory();let ma,mb;
+const environment=new T.Texture(),factory=createUfoFactory(template,environment),a=factory(),b=factory();let ma,mb;
 a.traverse(o=>{if(o.isMesh)ma=o;});b.traverse(o=>{if(o.isMesh)mb=o;});
 assert.equal(ma.geometry,mb.geometry);assert.notEqual(ma.material,mb.material);
 assert.equal(ma.material.map,mb.material.map);assert.equal(ma.material.normalMap,mb.material.normalMap);
+assert.equal(ma.material.envMap,environment);assert.equal(mb.material.envMap,environment,'Menu and match UFOs share one reflection map');
+assert.equal(ma.material.envMapIntensity,mb.material.envMapIntensity);
 const shaderA={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};
 const shaderB={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};
 ma.material.onBeforeCompile(shaderA);mb.material.onBeforeCompile(shaderB);
