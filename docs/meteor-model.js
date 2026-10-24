@@ -25,6 +25,8 @@ export function prepareMeteorTemplate(source){
   geometry.scale(1/radius,1/radius,1/radius);
   geometry.computeBoundingBox();geometry.computeBoundingSphere();
   const material=authoredMaterial.clone();
+  // A pale lavender tint keeps the embedded rock texture and its detail.
+  material.color.multiply(new T.Color(0xeadff8));
   const template=new T.Group();template.name='meteor-glb';
   template.add(new T.Mesh(geometry,material));
   return template;

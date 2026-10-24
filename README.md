@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.28: usa meteor.glb para los meteoritos y asteroides, incluido el gigante y los del menú. Conserva la textura y los materiales propios del archivo. Sus dos piezas se agrupan en una malla de 21978 triángulos con geometría y material compartidos entre instancias; se centra y normaliza el radio para conservar el tamaño y giro existentes. El cargador espera al nuevo modelo antes de mostrar el juego.
+Versión V23.29: usa meteor.glb para los meteoritos y asteroides, incluido el gigante y los del menú. Aplica un matiz morado suave al material conservando la textura integrada y sus detalles; el archivo original no se modifica. Sus dos piezas se agrupan en una malla de 21978 triángulos con geometría y material compartidos entre instancias; se centra y normaliza el radio para conservar el tamaño y giro existentes. El cargador espera al nuevo modelo antes de mostrar el juego.
 
 Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 
