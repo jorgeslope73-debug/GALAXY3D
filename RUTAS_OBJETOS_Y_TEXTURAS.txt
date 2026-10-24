@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.55
+V23.56
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -45,6 +45,16 @@ TEXTURAS DE LOS METEORITOS
 - Cada modelo ajusta su escala visual al radio circular del juego; la fisica conserva sus dimensiones.
 - Los tres originales proporcionados por el usuario se conservan sin modificar.
 - mas/final/meteor.glb, meteorrit.obj, meteorrit.mtl y luna.jpg son recursos anteriores; no los carga el juego.
+
+OVNI DECORATIVO DE LA PORTADA
+- Reutiliza docs/assets/models/ovni.glb con vista lateral, giro y luces suaves.
+- Rutas y objetos flotantes: docs/menu-ufo.js; dibujo: docs/render-3d.js.
+- Primera visita tras 12-22 segundos de portada; entre visitas espera 60-100 segundos.
+- Observa dos objetos diferentes durante 1,6-2,5 segundos cada uno y sale por el lado contrario.
+- Las rutas evitan las envolventes completas de naves y meteoritos, incluido su movimiento decorativo.
+- Es exclusivamente visual, sin disparos, daño, trayectoria de partida ni estado de red.
+- Al ocultar la pestaña o entrar en partida se interrumpe la visita; no se recupera tiempo atrasado.
+- Con movimiento reducido no se muestra este recorrido.
 
 TEXTURAS DEL OVNI
 - Color, normales y metal/rugosidad incluidos en docs/assets/models/ovni.glb.

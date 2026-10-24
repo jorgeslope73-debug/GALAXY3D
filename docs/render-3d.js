@@ -102,6 +102,7 @@
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffe14a];
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
+    let menuActors=null,menuFlight=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -243,8 +244,11 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.55';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.56';
     const modelLoads=[];
+    modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
+      menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
+    }));
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();
       createImportedUfo=assets.createUfoFactory(template);setImportedUfoPose=assets.setUfoPose;
@@ -301,6 +305,10 @@
       if(kind==='ufo'){
         root.add(createImportedUfo());
         return {root};
+      }
+      if(kind==='menu-ufo'){
+        const side=new T.Group(),spin=new T.Group();root.add(side);side.add(spin);spin.add(createImportedUfo());
+        return {root,side,spin};
       }
       if(kind==='pickup'){
         const material=glow(0x7be9ff);
@@ -440,6 +448,12 @@
         setImportedUfoPose(record.root,angle,now,(Number(id)||0)*.7,motionX,motionY,reset);
         record.ufoMotion={x,y,time:now,context:poseContext};
       },
+      menuUfo(pose){
+        const record=take('menu-ufo','visitor');
+        place(record.root,pose.x,pose.y,24);record.root.scale.setScalar(mobile?1.5:1.8);
+        record.root.rotation.set(0,0,pose.bank);record.side.rotation.x=pose.pitch;
+        setImportedUfoPose(record.spin,pose.angle,now,.8,0,0);
+      },
       rocket(id,x,y,rotation,owner){
         const record=take('rocket',id);place(record.root,x,y,18);
         attachFlyingRocket(record,owner);
@@ -486,11 +500,15 @@
       menu(ctx,time){
         const t=reducedMotion?0:time;
         this.begin(ctx,time,null,-1);
-        this.rock('menu1',(mobile?240:410)+Math.sin(t*.00012)*35,mobile?260:340,mobile?72:125,1,0,'large');
-        this.rock('menu2',(mobile?1690:1490)+Math.cos(t*.0001)*25,245,mobile?60:88,3);
-        if(!mobile)this.rock('menu3',1240,465+Math.sin(t*.0002)*18,46,4);
-        this.ship(0,mobile?430:960,398+Math.sin(t*.001)*6,-28+Math.sin(t*.00035)*12,mobile?175:270,1,true,true,false,false,false,false,0,true);
-        this.ship(1,mobile?1500:1430,435,32,mobile?80:98,1,true,false,false,false,false,false,0,true);
+        const objects=menuActors(t,mobile);
+        for(const object of objects){
+          if(object.kind==='rock')this.rock(object.id,object.x,object.y,object.size,object.type,0,object.role);
+          else this.ship(object.index,object.x,object.y,object.rotation,object.size,1,true,object.index===0,false,false,false,false,0,true);
+        }
+        const visitor=menuFlight.update(time,objects);
+        if(visitor)this.menuUfo(visitor);
+        ctx.canvas.dataset.menuUfo=visitor?visitor.phase:'idle';
+        ctx.canvas.dataset.menuUfoTarget=visitor?.target||'';
         this.flush(ctx);
       }
     };
@@ -507,6 +525,7 @@
         }
         for(const role of ['fragment','medium','large'])api.rock('warm-rock-'+role,960,230,100,1,0,role);
         api.ufo('warm-ufo',960,420,pass*30);
+        api.menuUfo({x:960,y:230,bank:0,pitch:-1.18,angle:pass*30});
         api.flush(ctx);
       }
       // Leave the pool in its normal menu state before exposing the first frame.

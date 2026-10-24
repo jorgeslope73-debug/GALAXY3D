@@ -14,6 +14,7 @@ on:
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
       - 'docs/ufo-model.js'
+      - 'docs/menu-ufo.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
@@ -21,6 +22,7 @@ on:
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-ufo-model.mjs'
+      - 'tools/check-menu-ufo.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -57,6 +59,7 @@ on:
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
       - 'docs/ufo-model.js'
+      - 'docs/menu-ufo.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
@@ -64,6 +67,7 @@ on:
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-ufo-model.mjs'
+      - 'tools/check-menu-ufo.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -128,6 +132,8 @@ jobs:
         run: node tools/check-meteor-model.mjs
       - name: Check UFO GLB resources, orientation, size and animation
         run: node tools/check-ufo-model.mjs
+      - name: Check decorative menu UFO timing and clearance
+        run: node tools/check-menu-ufo.mjs
       - name: Check network resilience
         run: node tools/check-network-resilience.js
       - name: Check scoring and spawn behaviour

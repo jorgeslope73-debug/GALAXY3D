@@ -15,6 +15,7 @@ const SHELL_FILES = [
   './rocket-model.js',
   './meteor-model.js',
   './ufo-model.js',
+  './menu-ufo.js',
   './vendor/three.module.min.js',
   './vendor/three.core.min.js',
   './vendor/GLTFLoader.js',
