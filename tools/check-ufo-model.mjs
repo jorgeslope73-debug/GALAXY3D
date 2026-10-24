@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareUfoTemplate,createUfoFactory,setUfoPose,UFO_DIAMETER,UFO_ROCK_LIMIT,UFO_ROCK_PERIOD_MS} from '../docs/ufo-model.js';
+import {prepareUfoTemplate,createUfoFactory,setUfoPose,setUfoLights,UFO_DIAMETER,UFO_ROCK_LIMIT,UFO_ROCK_PERIOD_MS,UFO_LIGHT_PERIOD_MS} from '../docs/ufo-model.js';
 
 const bytes=await readFile(new URL('../docs/assets/models/ovni.glb',import.meta.url));
 assert.equal(bytes.toString('ascii',0,4),'glTF');assert.equal(bytes.readUInt32LE(8),bytes.length);
@@ -49,7 +49,22 @@ assert.ok(maxRadius<31&&maxRadius>29,'The artwork fits the existing radius-30 co
 assert.ok(top>0&&topRadius<18,'The upper dome faces the overhead camera');
 const factory=createUfoFactory(template),a=factory(),b=factory();let ma,mb;
 a.traverse(o=>{if(o.isMesh)ma=o;});b.traverse(o=>{if(o.isMesh)mb=o;});
-assert.equal(ma.geometry,mb.geometry);assert.equal(ma.material,mb.material);
+assert.equal(ma.geometry,mb.geometry);assert.notEqual(ma.material,mb.material);
+assert.equal(ma.material.map,mb.material.map);assert.equal(ma.material.normalMap,mb.material.normalMap);
+const shaderA={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};
+const shaderB={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};
+ma.material.onBeforeCompile(shaderA);mb.material.onBeforeCompile(shaderB);
+assert.ok(shaderA.fragmentShader.includes('ufoLampMask')&&shaderA.vertexShader.includes('ufoLampXY=position.xy'));
+setUfoLights(a,0);assert.ok(Math.abs(shaderA.uniforms.ufoLampPower.value-.1)<1e-9);
+assert.equal(shaderB.uniforms.ufoLampPower.value,1,'The other UFO keeps its independent light state');
+setUfoLights(a,UFO_LIGHT_PERIOD_MS/2);assert.equal(shaderA.uniforms.ufoLampPower.value,1);
+let previousPower=null;
+for(let time=0;time<=UFO_LIGHT_PERIOD_MS*2;time+=16){
+  setUfoLights(a,time);const power=shaderA.uniforms.ufoLampPower.value;
+  assert.ok(power>=.1-1e-9&&power<=1);
+  if(previousPower!==null)assert.ok(Math.abs(power-previousPower)<.018,'Light intensity changes gradually at 60 Hz');
+  previousPower=power;
+}
 const root=new T.Group();root.position.set(100,200,13);root.add(a);const origin=root.position.clone();
 assert.ok(Math.abs(UFO_ROCK_LIMIT-Math.PI/4)<1e-9);
 let previousRoll=null,minRoll=Infinity,maxRoll=-Infinity;
@@ -62,5 +77,7 @@ for(let ms=0;ms<=UFO_ROCK_PERIOD_MS*2;ms+=16){
 }
 assert.ok(minRoll<-.78&&maxRoll>.78,'Reach 45 degrees on both sides');
 setUfoPose(root,72,1000);assert.ok(Math.abs(root.rotation.z-72*Math.PI/180)<1e-9);
+setUfoPose(root,0,0);assert.ok(Math.abs(shaderA.uniforms.ufoLampPower.value-.1)<1e-9);
+setUfoPose(root,0,UFO_LIGHT_PERIOD_MS/2);assert.equal(shaderA.uniforms.ufoLampPower.value,1,'The game pose update also animates the lights');
 assert.ok(b.rotation.x===0&&b.rotation.y===0&&b.rotation.z===0,'One UFO pose never rotates another instance');
-console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, dome up, radius 30, shared buffers, continuous spin and smooth +/-45 degree rocking over 8 seconds.`);
+console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, shared geometry/textures, independent soft lamp pulses, continuous spin and smooth +/-45 degree rocking.`);
