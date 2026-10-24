@@ -95,7 +95,7 @@ for(const [label,src] of [['local',local],['online',host]]){
 
   const asteroids=method(src,'updateAsteroids');
   if(asteroids.includes('collidableAsteroids=this.asteroids.filter'))fail(errors,label+': ha vuelto una asignacion filter() al bucle de colisiones de 60 Hz');
-  if(!asteroids.includes('if(!b||b.exiting)continue;'))fail(errors,label+': asteroides exiting pueden volver a participar en colisiones');
+  if(asteroids.includes('if(!b||b.exiting)continue;'))fail(errors,label+': las rocas salientes vuelven a atravesar otras rocas');
   if(!asteroids.includes('if(a.fragment===true)'))fail(errors,label+': falta la salida definitiva de fragmentos');
 
   const update=method(src,'update');

@@ -31,6 +31,7 @@ on:
       - 'server/p2p-server.js'
       - 'server/net-protocol.js'
       - 'tools/check-physics-parity.js'
+      - 'tools/check-rock-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -69,6 +70,7 @@ on:
       - 'server/p2p-server.js'
       - 'server/net-protocol.js'
       - 'tools/check-physics-parity.js'
+      - 'tools/check-rock-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -102,6 +104,8 @@ jobs:
         run: node --check docs/p2p-network.js && node --check docs/menu-loader.js && node --check docs/game.js && node --check docs/pwa.js && node --check docs/build-version.js && node --check docs/sw.js && node --check server/p2p-server.js && node --check tools/check-game-invariants.js && node --check tools/stress-game.js
       - name: Check host/local shared physics parity
         run: node tools/check-physics-parity.js
+      - name: Check rock collisions in local and host engines
+        run: node tools/check-rock-collisions.js
       - name: Check 3D presentation syntax
         run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/rock-material.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js
       - name: Check ship GLB orientation and embedded resources

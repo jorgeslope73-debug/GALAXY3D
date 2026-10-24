@@ -1711,13 +1711,13 @@
         }
       }
       // V21.92 PERF: no crear un array filter() 60 veces por segundo.
-      // Recorremos el array real y saltamos los asteroides que ya estan saliendo.
+      // Recorremos el array real; el núcleo conserva la trayectoria de los que salen.
       for(let i=0;i<this.asteroids.length;i++){
         const a=this.asteroids[i];
-        if(!a||a.exiting)continue;
+        if(!a)continue;
         for(let j=i+1;j<this.asteroids.length;j++){
           const b=this.asteroids[j];
-          if(!b||b.exiting)continue;
+          if(!b)continue;
           this.resolveAsteroidPairCollision(a,b);
         }
       }
@@ -2041,15 +2041,10 @@
       }
     }
     updateMeteors(dt){
+      for(const m of this.meteors){m.px=m.x;m.py=m.y;m.x+=m.vx*dt;m.y+=m.vy*dt;m.angle=(m.angle+120*dt)%360;}
+      PHYSICS_CORE.resolveMeteorCollisions(this.meteors,this.asteroids,SMALL_METEOR_RADIUS,190,240);
       for(let i=this.meteors.length-1;i>=0;i--){
-        const m=this.meteors[i];m.px=m.x;m.py=m.y;m.x+=m.vx*dt;m.y+=m.vy*dt;m.angle=(m.angle+120*dt)%360;
-        for(const a of this.asteroids)if(circles(m,SMALL_METEOR_RADIUS,a,a.r)){const n=normalize(m.x-a.x,m.y-a.y),dot=m.vx*n.x+m.vy*n.y;if(dot<0){m.vx-=2*dot*n.x;m.vy-=2*dot*n.y;}m.x+=n.x*4;m.y+=n.y*4;}
-        if(this.giant&&circles(m,SMALL_METEOR_RADIUS,this.giant,GIANT_RADIUS)){
-          const g=this.giant,n=normalize(m.x-g.x,m.y-g.y),rvx=m.vx-g.vx,rvy=m.vy-g.vy,dot=rvx*n.x+rvy*n.y;
-          if(dot<0){m.vx=g.vx+(rvx-2*dot*n.x);m.vy=g.vy+(rvy-2*dot*n.y);}
-          const dx=m.x-g.x,dy=m.y-g.y,dist=Math.hypot(dx,dy)||1,overlap=SMALL_METEOR_RADIUS+GIANT_RADIUS-dist;
-          if(overlap>0){m.x+=n.x*(overlap+2);m.y+=n.y*(overlap+2);}
-        }
+        const m=this.meteors[i];
         for(let k=this.pickups.length-1;k>=0;k--)if(circles(m,SMALL_METEOR_RADIUS,this.pickups[k],PICKUP_RADIUS))this.pickups.splice(k,1);
         let removed=false;
         // V19.71: bengala + meteorito pequeno de tormenta destruye ambos.
@@ -2105,6 +2100,7 @@
       }
       for(const p of this.players)if(!p.dead&&sweptCircles(g,GIANT_RADIUS,p,SHIP_RADIUS,false)){if(p.shield>0||p.protection>0){this.emitShipImpact(p,g,false);const n=normalize(p.x-g.x,p.y-g.y);p.vx=n.x*130;p.vy=n.y*130;p.x+=n.x*8;p.y+=n.y*8;}else this.destroyShip(p,null);}
       for(const a of this.asteroids)this.resolveGiantAsteroidCollision(g,a);
+      for(const m of this.meteors)PHYSICS_CORE.resolveGiantAsteroidCollision(g,m,GIANT_RADIUS,SMALL_METEOR_RADIUS,240);
       for(let i=this.pickups.length-1;i>=0;i--)if(circles(g,GIANT_RADIUS,this.pickups[i],PICKUP_RADIUS))this.pickups.splice(i,1);
       if(g.entered&&(g.x<-350||g.x>W+350||g.y<-350||g.y>H+350)){
         this.giant=null;

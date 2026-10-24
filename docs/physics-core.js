@@ -58,8 +58,11 @@
   }
 
   function resolveAsteroidPairCollision(a,b,defaultRadius=45,maxSpeed=190){
-    if(!a||!b||a.exiting||b.exiting)return false;
+    if(!a||!b||(a.exiting&&b.exiting))return false;
     const ra=Number(a.r)||defaultRadius,rb=Number(b.r)||defaultRadius;
+    // Retiring rocks keep their exit trajectory, but remain solid to other rocks.
+    if(a.exiting)return resolveGiantAsteroidCollision(a,b,ra,rb,maxSpeed);
+    if(b.exiting)return resolveGiantAsteroidCollision(b,a,rb,ra,maxSpeed);
     const dx=b.x-a.x,dy=b.y-a.y,minDist=ra+rb,d2=dx*dx+dy*dy;
 
     // Los dos fragmentos de una misma rotura se dejan separar por el impulso
@@ -67,7 +70,8 @@
     // como dos asteroides independientes.
     if(a.fragmentGroup&&a.fragmentGroup===b.fragmentGroup){
       if(!a.fragmentPairReleased||!b.fragmentPairReleased){
-        if(d2>=(minDist+2)*(minDist+2)){
+        const separating=dx*(b.vx-a.vx)+dy*(b.vy-a.vy)>0;
+        if(d2>=(minDist+2)*(minDist+2)||!separating){
           a.fragmentPairReleased=true;
           b.fragmentPairReleased=true;
         }else return false;
@@ -75,7 +79,13 @@
     }
 
     if(d2>=minDist*minDist)return false;
-    const d=Math.sqrt(d2)||.0001,nx=dx/d,ny=dy/d;
+    const d=Math.sqrt(d2);
+    let nx,ny;
+    if(d>1e-8){nx=dx/d;ny=dy/d;}
+    else{
+      const rvx=(Number(b.vx)||0)-(Number(a.vx)||0),rvy=(Number(b.vy)||0)-(Number(a.vy)||0),speed=Math.hypot(rvx,rvy);
+      nx=speed>1e-8?-rvx/speed:1;ny=speed>1e-8?-rvy/speed:0;
+    }
     const overlap=minDist-d;
     const massA=Math.max(1,ra*ra),massB=Math.max(1,rb*rb);
     const invA=1/massA,invB=1/massB,invSum=invA+invB;
@@ -103,7 +113,13 @@
     const ar=Number(a.r)||defaultRadius;
     const dx=a.x-g.x,dy=a.y-g.y,minDist=giantRadius+ar,d2=dx*dx+dy*dy;
     if(d2>=minDist*minDist)return false;
-    const d=Math.sqrt(d2)||.0001,nx=dx/d,ny=dy/d;
+    const d=Math.sqrt(d2);
+    let nx,ny;
+    if(d>1e-8){nx=dx/d;ny=dy/d;}
+    else{
+      const rvx=(Number(a.vx)||0)-(Number(g.vx)||0),rvy=(Number(a.vy)||0)-(Number(g.vy)||0),speed=Math.hypot(rvx,rvy);
+      nx=speed>1e-8?-rvx/speed:1;ny=speed>1e-8?-rvy/speed:0;
+    }
     const overlap=minDist-d;
 
     a.x+=nx*(overlap+1.2);a.y+=ny*(overlap+1.2);
@@ -117,6 +133,18 @@
 
     limitRockSpeed(a,maxSpeed);
     return true;
+  }
+
+  function resolveMeteorCollisions(meteors,asteroids,meteorRadius=14,asteroidMaxSpeed=190,meteorMaxSpeed=240){
+    // Call after every meteor has moved, so both sides use the same tick.
+    // A second pass settles contacts involving more than two rocks.
+    for(let pass=0;pass<2;pass++)for(let i=0;i<meteors.length;i++){
+      const m=meteors[i];
+      for(let j=i+1;j<meteors.length;j++)resolveAsteroidPairCollision(m,meteors[j],meteorRadius,meteorMaxSpeed);
+      for(const a of asteroids){
+        if(resolveAsteroidPairCollision(m,a,meteorRadius,meteorMaxSpeed)&&!a.exiting)limitRockSpeed(a,asteroidMaxSpeed);
+      }
+    }
   }
 
   function guidedTargetFor(p,players,dirFromRot,minAlign=TARGET_MIN_ALIGN){
@@ -522,6 +550,7 @@
     TARGET_MIN_ALIGN,
     resolveAsteroidPairCollision,
     resolveGiantAsteroidCollision,
+    resolveMeteorCollisions,
     guidedTargetFor,
     reloadTimeFor,
     bulletSpeedFor,
