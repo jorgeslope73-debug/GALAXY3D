@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.37
+V23.38
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -23,8 +23,8 @@ LUCES Y ESTADO DEL DISPARO
 - Solo el panel delantero se apaga o enciende con el disparo disponible.
   Es verde en azul/fucsia/roja y rojo en la nave verde; se apaga en negro.
 - El resto de luces y colores se conserva tal como está en la textura.
-- Las variantes antiguas *-sin-balas.png se conservan como referencia,
-  pero ya no se descargan ni se usan para cambiar la pintura.
+- Los estados de disparo se resuelven con la máscara; la carpeta activa
+  contiene solo las cuatro pinturas usadas por las naves.
 - La nave grande de la portada usa naveazul-cupula-oscura.png; la pequeña, navefuxia.jpg.
 - Tras sustituir estas imágenes en GitHub, recarga la página; se revalidan
   frente a la red aunque el nombre del archivo no cambie. Sin conexión

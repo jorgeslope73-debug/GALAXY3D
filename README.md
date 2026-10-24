@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.37: instala exactamente la textura azul adjunta por el usuario en docs/assets/models/naveazul-cupula-oscura.png. El único indicador de disparo que se enciende o apaga es el panel delantero; las luces de las alas, laterales y motores conservan los colores pintados en la imagen. La portada y las partidas usan la misma pintura. Se mantiene la actualización de texturas y la disponibilidad real de disparo.
+Versión V23.38: elimina de docs/assets/models/ las cuatro pinturas antiguas -sin-balas.png, que ya no se cargan. Las naves usan únicamente su pintura principal y la máscara del panel delantero. Se conservan los cuatro colores activos, los modelos 3D y el comportamiento de disponibilidad de disparo.
 
 Solo el panel delantero indica que el disparo está listo. Permanece negro durante la recarga o sin munición; se enciende cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 
