@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.38
+V23.39
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -15,16 +15,17 @@ TEXTURAS ACTIVAS DE LAS NAVES
 - Azul: docs/assets/models/naveazul-cupula-oscura.png
 - Fucsia: docs/assets/models/navefuxia.jpg
 - Verde: docs/assets/models/naveverde-luces-rojas.png
-- Roja: docs/assets/models/naveroja.png
+- Amarilla (jugador 4, conserva el nombre): docs/assets/models/naveroja.png
 
 LUCES Y ESTADO DEL DISPARO
 - Se usa siempre la misma pintura principal, también durante la recarga.
 - Máscara del único panel delantero que cambia: docs/assets/models/nave-luces-mask.svg
 - Solo el panel delantero se apaga o enciende con el disparo disponible.
-  Es verde en azul/fucsia/roja y rojo en la nave verde; se apaga en negro.
+  Es verde en azul/fucsia/amarilla y rojo en la nave verde; se apaga en negro.
 - El resto de luces y colores se conserva tal como está en la textura.
 - Los estados de disparo se resuelven con la máscara; la carpeta activa
-  contiene solo las cuatro pinturas usadas por las naves.
+  carga las cuatro pinturas principales de las naves.
+  naveroja-sin-balas.png es una variante subida como referencia; no se carga.
 - La nave grande de la portada usa naveazul-cupula-oscura.png; la pequeña, navefuxia.jpg.
 - Tras sustituir estas imágenes en GitHub, recarga la página; se revalidan
   frente a la red aunque el nombre del archivo no cambie. Sin conexión

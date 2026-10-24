@@ -48,7 +48,7 @@ const bodyColours=painted.map(visual=>new T.Vector3().fromBufferAttribute(visual
 assert.ok(bodyColours[0].z>bodyColours[0].x&&bodyColours[0].y>bodyColours[0].x,'Player 1 rocket is blue');
 assert.ok(bodyColours[1].x>bodyColours[1].y&&bodyColours[1].z>bodyColours[1].y,'Player 2 rocket is fuchsia');
 assert.ok(bodyColours[2].y>bodyColours[2].x&&bodyColours[2].y>bodyColours[2].z,'Player 3 rocket is green');
-assert.ok(bodyColours[3].x>bodyColours[3].y*3&&bodyColours[3].x>bodyColours[3].z*3,'Player 4 rocket is red');
+assert.ok(bodyColours[3].x>bodyColours[3].z*3&&bodyColours[3].y>bodyColours[3].z*3,'Player 4 rocket is yellow');
 for(const [index,visual] of painted.entries()){
   const coloured=visual.children[0].geometry;
   assert.equal(coloured,factory(index).children[0].geometry,'Repeated rockets share the team geometry');
@@ -63,4 +63,4 @@ for(const [index,visual] of painted.entries()){
 }
 assert.deepEqual(mesh.geometry.attributes.color.array,authoredColours,'Team colours never mutate the authored template');
 console.log(`Rocket GLB OK: ${sourceMeshes} parts -> 1 mesh; ${triangles} triangles; nose +Y; stable roll axis; colours and geometry shared safely`);
-console.log('Rocket colours OK: blue, fuchsia, green and red; lights and metal preserved; team buffers cached independently');
+console.log('Rocket colours OK: blue, fuchsia, green and yellow; lights and metal preserved; team buffers cached independently');

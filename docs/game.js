@@ -63,8 +63,8 @@
   const roomTypeDialog=document.getElementById('roomTypeDialog'),publicRoomsDialog=document.getElementById('publicRoomsDialog'),publicRoomsList=document.getElementById('publicRoomsList'),joinCodeDialog=document.getElementById('joinCodeDialog');
   const cpuSetupDialog=document.getElementById('cpuSetupDialog'),mobileDifficulty=document.getElementById('mobileDifficulty'),mobileCpuCount=document.getElementById('mobileCpuCount'),cpuSetupPlay=document.getElementById('cpuSetupPlay'),cpuSetupClose=document.getElementById('cpuSetupClose');
   const W=1920,H=1080;
-  const playerColors=['#5ae1ff','#ff50a5','#5aff78','#ff5d5d'];
-  const playerRgb=[[90,225,255],[255,80,165],[90,255,120],[255,93,93]];
+  const playerColors=['#5ae1ff','#ff50a5','#5aff78','#ffe14a'];
+  const playerRgb=[[90,225,255],[255,80,165],[90,255,120],[255,225,74]];
   const images={},sounds={};
   let state=null,previousState=null,myIndex=null,hostIndex=0,hostEpoch=1,isHost=false,roomCode='',playerToken='',inGame=false,lastStateTime=0,previousStateTime=0;
   let onlineSeriesId='',onlineSeriesPhase='lobby',onlineEventContext='';

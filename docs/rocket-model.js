@@ -4,7 +4,7 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
 export const ROCKET_LENGTH=40;
-const teamPaints=[0x28bce8,0xf232a3,0x47df3f,0xf14450].map(hex=>new T.Color(hex));
+const teamPaints=[0x28bce8,0xf232a3,0x47df3f,0xffd83d].map(hex=>new T.Color(hex));
 
 export function prepareRocketTemplate(source){
   // The supplied model points along +Z. Align its nose with the game's +Y.

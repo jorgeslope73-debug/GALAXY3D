@@ -4,6 +4,7 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 const authoredPaints=new WeakMap();
 const lightStates=new WeakMap(),lampMasks=new WeakMap();
+// Player 4 uses the yellow artwork uploaded under the existing naveroja.png name.
 const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde-luces-rojas.png','naveroja.png'];
 
 function assetURL(name){
@@ -54,7 +55,7 @@ export async function loadShipTemplate({strict=false}={}){
   const template=prepareShipTemplate(gltf.scene);
   authoredPaints.set(template,paints);
   if(mask){mask.name='nave-luces-mask.svg';mask.colorSpace=T.NoColorSpace;lampMasks.set(template,mask);}
-  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-fucsia-verde-roja':paints.some(Boolean)?'partial':'embedded';
+  document.documentElement.dataset.galaxyShipTextures=paints.every(Boolean)?'azul-fucsia-verde-amarilla':paints.some(Boolean)?'partial':'embedded';
   document.documentElement.dataset.galaxyShipAmmoTextures='shared';
   document.documentElement.dataset.galaxyShipAmmoMask=mask?'loaded':'fallback';
   return template;
