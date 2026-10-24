@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.34: utiliza meteorrit.obj convertido a GLB con sus UV, normales y textura luna.jpg integrados, conservando el morado aplicado al material. El nuevo modelo tiene una sola pieza de 5846 triángulos y ocupa 885240 bytes. Mantiene las colisiones corregidas. Los originales OBJ/MTL/JPG están en mas/final/ y la copia utilizada por el juego en docs/assets/models/meteor.glb.
+Versión V23.35: retira 16 archivos obsoletos o duplicados (4033935 bytes): pinturas antiguas, variantes de sprites sin uso, una copia del OVNI, el cargador del asteroide azul y el prototipo naveF duplicado en la raíz. La precarga deja de descargar naveverde.png; siguen activos los cuatro colores y estados de disparo, las vistas 2D/3D, el manual y los recursos de móvil. Los originales de trabajo se conservan en mas/. Las rutas activas están en RUTAS_OBJETOS_Y_TEXTURAS.txt.
 
 Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 
@@ -30,7 +30,7 @@ El original se conserva en `mas/final/cohete_galaxy_combat.glb` y se publica una
 
 Las cuatro naves conservan sus texturas azul, fucsia, verde y roja, asignadas en ese orden a los jugadores 1–4. Las variantes verde y roja se crearon con Adobe Photoshop a partir de la azul con cúpula oscura y la fucsia, respectivamente.
 
-Las nuevas texturas se guardan como `mas/final/naveverde.png` y `mas/final/naveroja.png`, con copias idénticas en `docs/assets/models/`. Se conservan los originales `mas/final/naveazul.jpg`, `mas/final/navefuxia.jpg` y la variante `naveazul-cupula-oscura.png`. El color del HUD y los accesorios del cuarto jugador pasa a rojo para corresponder con su nave.
+Las pinturas originales se guardan en `mas/final/`. Las variantes activas de la web figuran en `RUTAS_OBJETOS_Y_TEXTURAS.txt`. Se conservan los originales `mas/final/naveazul.jpg`, `mas/final/navefuxia.jpg` y la variante `naveazul-cupula-oscura.png`. El color del HUD y los accesorios del cuarto jugador pasa a rojo para corresponder con su nave.
 
 Se conserva la inclinación progresiva de hasta 60 grados en los giros más cerrados y el retorno suave a la vista plana. La curva depende de la velocidad de giro (15 grados a media velocidad), con entrada gradual. La inclinación se calcula localmente para cada nave y se reinicia al cambiar de ronda o reaparecer. Se respeta la preferencia de movimiento reducido.
 

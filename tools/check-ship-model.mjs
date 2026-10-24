@@ -4,13 +4,13 @@ import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareShipTemplate} from '../docs/ship-model.js';
 
-for(const file of ['naveazul.jpg','navefuxia.jpg']){
+for(const file of ['navefuxia.jpg']){
   const image=await readFile(new URL('../docs/assets/models/'+file,import.meta.url));
   assert.equal(image.readUInt16BE(0),0xffd8,file+' must be a JPEG');
   assert.equal(image.readUInt16BE(image.length-2),0xffd9,file+' must be complete');
 }
 
-for(const file of ['naveazul-cupula-oscura.png','naveverde.png','naveverde-luces-rojas.png','naveroja.png','naveazul-sin-balas.png','navefuxia-sin-balas.png','naveverde-sin-balas.png','naveroja-sin-balas.png']){
+for(const file of ['naveazul-cupula-oscura.png','naveverde-luces-rojas.png','naveroja.png','naveazul-sin-balas.png','navefuxia-sin-balas.png','naveverde-sin-balas.png','naveroja-sin-balas.png']){
   const paint=await readFile(new URL('../docs/assets/models/'+file,import.meta.url));
   assert.equal(paint.subarray(0,8).toString('hex'),'89504e470d0a1a0a',file+' must be a PNG');
   assert.equal(paint.readUInt32BE(16),1014,file+' UV atlas width must stay unchanged');

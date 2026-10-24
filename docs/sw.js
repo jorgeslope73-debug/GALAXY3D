@@ -24,7 +24,6 @@ const SHELL_FILES = [
   './assets/models/cohete_galaxy_combat.glb',
   './assets/models/naveazul-cupula-oscura.png',
   './assets/models/navefuxia.jpg',
-  './assets/models/naveverde.png',
   './assets/models/naveverde-luces-rojas.png',
   './assets/models/naveroja.png',
   './assets/models/naveazul-sin-balas.png',

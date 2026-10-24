@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.34
+V23.35
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -54,9 +54,9 @@ ARCHIVOS QUE CARGAN Y PREPARAN LOS MODELOS
 ORIGINALES Y RECURSOS ANTERIORES
 - Carpeta de originales: mas/final/
 - Carpeta que usa la web: docs/assets/models/
-- difuse.jpg, naveazul.jpg, naveverde.png y asteroideAzul.png, si se conservan
-  en docs/assets/models/, son recursos anteriores y no son las pinturas
-  seleccionadas actualmente por los cargadores.
+- Se han retirado de la web las pinturas anteriores y los sprites sin uso.
+- Los prototipos y pinturas originales se conservan en mas/ y mas/final/.
+- Las imágenes del manual y los recursos activos 2D/3D permanecen en docs/assets/.
 
 ENLACES
 Modelos/texturas activos:
