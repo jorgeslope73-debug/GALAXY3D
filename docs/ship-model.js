@@ -68,7 +68,7 @@ function mappedPaint(original,paint){
 }
 
 function prepareAmmoLamps(material,mask,player){
-  // The shared vector mask follows the model UVs, including the white lamp cores.
+  // The shared vector mask follows only the front panel in the model UVs.
   // It changes only their final light output, after the hull's normal lighting.
   const power={value:1};
   const colour={value:new T.Color(player===2?0xff0802:0x03ff12)};
@@ -85,7 +85,7 @@ function prepareAmmoLamps(material,mask,player){
       #endif
     `);
   };
-  material.customProgramCacheKey=()=> 'galaxy-ammo-lamps-v2';
+  material.customProgramCacheKey=()=> 'galaxy-ammo-front-light-v3';
   return power;
 }
 

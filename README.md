@@ -1,14 +1,14 @@
 # GALAXY3D
 
-Versión V23.36: las naves de la portada y las partidas usan siempre la pintura principal de cada color. La recarga solo cambia las luces con la máscara UV, sin alternar imágenes antiguas. Las pinturas se revalidan al cargar aunque se sustituyan en GitHub con el mismo nombre; sin conexión se conserva la última copia válida. Los modelos GLB mantienen su caché. Se admiten atlas cuadrados de 1014 y 1024 píxeles, entre otras resoluciones dentro del límite de textura.
+Versión V23.37: instala exactamente la textura azul adjunta por el usuario en docs/assets/models/naveazul-cupula-oscura.png. El único indicador de disparo que se enciende o apaga es el panel delantero; las luces de las alas, laterales y motores conservan los colores pintados en la imagen. La portada y las partidas usan la misma pintura. Se mantiene la actualización de texturas y la disponibilidad real de disparo.
 
-Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
+Solo el panel delantero indica que el disparo está listo. Permanece negro durante la recarga o sin munición; se enciende cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 
 El inicio en 3D espera a los modelos definitivos, las cuatro pinturas de las naves, su máscara y el modelo del meteorito con su textura integrada. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
 
 El escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
 
-Las luces quedan negras sin balas o mientras se recarga y se encienden con un color intenso al estar listo el disparo: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
+El panel delantero queda negro sin balas o mientras se recarga y se enciende con un color intenso al estar listo el disparo: rojo en la nave verde y verde en las otras tres. Una máscara vectorial común sigue las luces del atlas UV, incluidos sus centros blancos, y limita el ajuste a esas zonas; no añade geometría ni modifica las imágenes originales. El color encendido se mantiene visible con independencia de la iluminación del fuselaje.
 
 La cabecera muestra GALAXY COMBAT sin la insignia 3D ni el subtítulo 2.5D · MULTIPLAYER.
 
