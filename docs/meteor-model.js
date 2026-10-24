@@ -33,8 +33,6 @@ export function prepareMeteorTemplate(source,kind='medium'){
   geometry.scale(1/radius,1/radius,1/radius);
   geometry.computeBoundingBox();geometry.computeBoundingSphere();
   const material=authoredMaterial.clone();
-  // A soft purple tint keeps the embedded rock texture and its detail.
-  material.color.multiply(new T.Color(0xc5a4e8));
   const template=new T.Group();template.name='meteor-'+kind+'-glb';
   template.userData.galaxyMeteorKind=kind;
   template.scale.setScalar((METEOR_MODELS[kind]||METEOR_MODELS.medium).scale);

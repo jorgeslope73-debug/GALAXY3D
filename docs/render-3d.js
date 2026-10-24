@@ -243,7 +243,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.53';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.54';
     const modelLoads=[];
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();
@@ -489,7 +489,7 @@
         this.rock('menu1',(mobile?240:410)+Math.sin(t*.00012)*35,mobile?260:340,mobile?72:125,1,0,'large');
         this.rock('menu2',(mobile?1690:1490)+Math.cos(t*.0001)*25,245,mobile?60:88,3);
         if(!mobile)this.rock('menu3',1240,465+Math.sin(t*.0002)*18,46,4);
-        this.ship(0,mobile?430:960,398+Math.sin(t*.001)*6,-28+Math.sin(t*.00035)*12,mobile?125:194,1,true,true,false,false,false,false,0,true);
+        this.ship(0,mobile?430:960,398+Math.sin(t*.001)*6,-28+Math.sin(t*.00035)*12,mobile?175:270,1,true,true,false,false,false,false,0,true);
         this.ship(1,mobile?1500:1430,435,32,mobile?80:98,1,true,false,false,false,false,false,0,true);
         this.flush(ctx);
       }
