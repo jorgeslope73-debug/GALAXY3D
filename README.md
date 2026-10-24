@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.33: sustituye meteor.glb por el archivo actualizado del usuario, con su textura integrada y el tono morado del material. Conserva el ajuste visual y las colisiones corregidas de V23.32. Las rutas de modelos y texturas activos se detallan en RUTAS_OBJETOS_Y_TEXTURAS.txt.
+Versión V23.34: utiliza meteorrit.obj convertido a GLB con sus UV, normales y textura luna.jpg integrados, conservando el morado aplicado al material. El nuevo modelo tiene una sola pieza de 5846 triángulos y ocupa 885240 bytes. Mantiene las colisiones corregidas. Los originales OBJ/MTL/JPG están en mas/final/ y la copia utilizada por el juego en docs/assets/models/meteor.glb.
 
 Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 

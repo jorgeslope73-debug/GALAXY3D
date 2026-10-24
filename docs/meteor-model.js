@@ -14,7 +14,7 @@ export function prepareMeteorTemplate(source){
     if(!object.isMesh)return;
     if(object.isSkinnedMesh||Array.isArray(object.material))throw new Error('El meteorito debe ser un modelo estático');
     parts.push(object.geometry.clone().applyMatrix4(object.matrixWorld));
-    // Both pieces of this GLB use the same embedded image and PBR settings.
+    // All surfaces in this GLB use the same embedded image and PBR settings.
     if(!authoredMaterial)authoredMaterial=object.material;
   });
   if(!parts.length)throw new Error('El meteorito no contiene geometría');
