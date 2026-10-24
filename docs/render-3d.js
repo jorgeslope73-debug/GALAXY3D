@@ -82,7 +82,7 @@
     document.documentElement.dataset.galaxyModels='ready';
     updateUI();
     resolveAssetsReady({ok:true});
-    for(const event of ['galaxy3d-ready','galaxy3d-rocketready','galaxy3d-rockready','galaxy3d-modelready'])window.dispatchEvent(new Event(event));
+    for(const event of ['galaxy3d-ready','galaxy3d-rocketready','galaxy3d-rockready','galaxy3d-modelready','galaxy3d-ufoready'])window.dispatchEvent(new Event(event));
   }).catch(fallback);
 
   function createWorld(T){
@@ -101,10 +101,11 @@
     const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffe14a];
     const records=new Map(),spares=new Map();
-    let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,createImportedMeteor=null;
+    let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
+    document.documentElement.dataset.galaxyUfo='loading';
     const matrix=new T.Matrix4(),position=new T.Vector3(),scale=new T.Vector3(),quaternion=new T.Quaternion(),euler=new T.Euler();
     const metal=(color,extra={})=>new T.MeshStandardMaterial({color,metalness:.48,roughness:.36,...extra});
     const glow=color=>new T.MeshBasicMaterial({color,toneMapped:false});
@@ -241,8 +242,17 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.45';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.46';
     const modelLoads=[];
+    modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+      const template=await assets.loadUfoTemplate();
+      createImportedUfo=assets.createUfoFactory(template);setImportedUfoPose=assets.setUfoPose;
+      document.documentElement.dataset.galaxyUfo='ovni-glb';
+    }).catch(error=>{
+      document.documentElement.dataset.galaxyUfo='error';
+      console.warn('[GALAXY3D] No se ha podido cargar ovni.glb:',error?.message||error);
+      throw error;
+    }));
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
       createImportedRocket=assets.createRocketFactory(template);
@@ -288,9 +298,7 @@
         return {root,roll,procedural,trim,paint,rocketVariants:new Map()};
       }
       if(kind==='ufo'){
-        add(root,sphere,metal(0xabb8ca),0,0,0,31,26,7);
-        add(root,sphere,metal(0x6cf0c2,{emissive:0x164a3a,emissiveIntensity:.75}),0,0,5,14,13,10);
-        for(let i=0;i<8;i++)add(root,sphere,glow(i%2?0x9b87ff:0x80f6ff),Math.cos(i*TAU/8)*25,Math.sin(i*TAU/8)*21,4,2.2);
+        root.add(createImportedUfo());
         return {root};
       }
       if(kind==='pickup'){
@@ -420,7 +428,7 @@
       },
       ufo(id,x,y,angle){
         const record=take('ufo',id);place(record.root,x,y,13);
-        record.root.rotation.set(.22,Math.sin(now*.001)*.12,angle*Math.PI/180);
+        setImportedUfoPose(record.root,angle,now,(Number(id)||0)*.7);
       },
       rocket(id,x,y,rotation,owner){
         const record=take('rocket',id);place(record.root,x,y,18);
@@ -463,6 +471,7 @@
         ctx.canvas.dataset.rockMaterial=createImportedMeteor?'meteor-glb':'loading';
         ctx.canvas.dataset.rockModel=createImportedMeteor?'meteor-glb':'loading';
         ctx.canvas.dataset.rocketModel=createImportedRocket?'cohete-glb':'procedural';
+        ctx.canvas.dataset.ufoModel=createImportedUfo?'ovni-glb':'loading';
       },
       menu(ctx,time){
         const t=reducedMotion?0:time;
@@ -487,6 +496,7 @@
           api.rocket('warm-rocket-'+team,240+team*480,800,0,team);
         }
         api.rock('warm-rock',960,230,100,1,0);
+        api.ufo('warm-ufo',960,420,pass*30);
         api.flush(ctx);
       }
       // Leave the pool in its normal menu state before exposing the first frame.

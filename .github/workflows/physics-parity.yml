@@ -13,12 +13,14 @@ on:
       - 'docs/ship-model.js'
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
+      - 'docs/ufo-model.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
       - 'tools/check-ship-model.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
+      - 'tools/check-ufo-model.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -54,12 +56,14 @@ on:
       - 'docs/ship-model.js'
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
+      - 'docs/ufo-model.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
       - 'tools/check-ship-model.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
+      - 'tools/check-ufo-model.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -122,6 +126,8 @@ jobs:
         run: node tools/check-rocket-model.mjs
       - name: Check meteor GLB resources, scale and shared geometry
         run: node tools/check-meteor-model.mjs
+      - name: Check UFO GLB resources, orientation, size and animation
+        run: node tools/check-ufo-model.mjs
       - name: Check network resilience
         run: node tools/check-network-resilience.js
       - name: Check scoring and spawn behaviour

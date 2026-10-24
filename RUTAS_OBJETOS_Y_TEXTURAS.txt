@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.39
+V23.46
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -7,6 +7,7 @@ La web publicada carga docs/assets/. Cambiar un original en mas/ por sí solo
 no actualiza la copia utilizada por el juego.
 
 MODELOS 3D ACTIVOS
+- OVNI con giro continuo y balanceo suave: docs/assets/models/ovni.glb
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
 - Meteoritos, asteroides, fragmentos y gigante: docs/assets/models/meteor.glb
 - Cohete equipado en las alas y disparado: docs/assets/models/cohete_galaxy_combat.glb
@@ -39,13 +40,17 @@ TEXTURA DEL METEORITO
 - GLB convertido para la web: docs/assets/models/meteor.glb.
 - Copia del GLB convertido: mas/final/meteor.glb.
 
+TEXTURAS DEL OVNI
+- Color, normales y metal/rugosidad incluidos en docs/assets/models/ovni.glb.
+- Copia web optimizada a 1024 px; el original del usuario se conserva sin modificar.
+
 COLORES DEL COHETE
 - Están incorporados en el modelo como colores por vértice, sin JPG externo.
 - docs/rocket-model.js adapta el color al equipo de la nave.
 
 OTROS OBJETOS Y GRÁFICOS
 - Fondos, sprites 2D e iconos de mejoras: docs/assets/sprites/
-- Escudo, OVNI 3D, disparos normales, anillos y restos de explosión:
+- Escudo, disparos normales, anillos y restos de explosión:
   se generan por código en docs/render-3d.js; no tienen GLB independiente.
 - Partículas del motor, del cohete y bengalas: docs/game.js.
 - El uso concreto de los sprites se define en docs/game.js.
@@ -54,6 +59,7 @@ ARCHIVOS QUE CARGAN Y PREPARAN LOS MODELOS
 - Naves y pinturas: docs/ship-model.js
 - Meteorito y morado: docs/meteor-model.js
 - Cohete y color de equipo: docs/rocket-model.js
+- OVNI, orientacion y balanceo: docs/ufo-model.js
 - Iluminación, tamaños y dibujo de la escena: docs/render-3d.js
 
 ORIGINALES Y RECURSOS ANTERIORES
