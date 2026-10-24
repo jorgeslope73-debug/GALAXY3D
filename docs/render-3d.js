@@ -243,7 +243,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.52';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.53';
     const modelLoads=[];
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();
@@ -264,12 +264,12 @@
       throw error;
     }));
     modelLoads.push(import('./meteor-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
-      const template=await assets.loadMeteorTemplate();
-      createImportedMeteor=assets.createMeteorFactory(template);
+      const templates=await assets.loadMeteorTemplates();
+      createImportedMeteor=assets.createMeteorFactory(templates);
       document.documentElement.dataset.galaxyRock='meteor-glb';
     }).catch(error=>{
       document.documentElement.dataset.galaxyRock='error';
-      console.warn('[GALAXY3D] No se ha podido cargar meteor.glb:',error?.message||error);
+      console.warn('[GALAXY3D] No se han podido cargar los meteoritos:',error?.message||error);
       throw error;
     }));
     modelLoads.push(import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
@@ -285,8 +285,8 @@
     function model(kind){
       if(kind.startsWith('ship:'))return shipModel(Number(kind.split(':')[1])||0);
       const root=new T.Group();
-      if(kind==='rock'){
-        const rock=createImportedMeteor();root.add(rock);
+      if(kind.startsWith('rock:')){
+        const rock=createImportedMeteor(kind.slice(5));root.add(rock);
         return {root,rock};
       }
       if(kind==='rocket'){
@@ -390,8 +390,9 @@
         for(const record of records.values()){record.used=false;record.root.visible=false;}
         collectEffects(snapshot,localIndex);
       },
-      rock(id,x,y,size,type=1,angle=0){
-        const record=take('rock',id),variant=Math.abs(Number(type)||0)%6;
+      rock(id,x,y,size,type=1,angle=0,role){
+        const modelRole=role||(size<=56?'fragment':size>=180?'large':'medium');
+        const record=take('rock:'+modelRole,id),variant=Math.abs(Number(type)||0)%6;
         record.root.scale.setScalar(size*.5);
         place(record.root,x,y,-8);
         const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
@@ -485,7 +486,7 @@
       menu(ctx,time){
         const t=reducedMotion?0:time;
         this.begin(ctx,time,null,-1);
-        this.rock('menu1',(mobile?240:410)+Math.sin(t*.00012)*35,mobile?260:340,mobile?72:125,1);
+        this.rock('menu1',(mobile?240:410)+Math.sin(t*.00012)*35,mobile?260:340,mobile?72:125,1,0,'large');
         this.rock('menu2',(mobile?1690:1490)+Math.cos(t*.0001)*25,245,mobile?60:88,3);
         if(!mobile)this.rock('menu3',1240,465+Math.sin(t*.0002)*18,46,4);
         this.ship(0,mobile?430:960,398+Math.sin(t*.001)*6,-28+Math.sin(t*.00035)*12,mobile?125:194,1,true,true,false,false,false,false,0,true);
@@ -504,7 +505,7 @@
           api.ship(team,240+team*480,540,0,100,pass===2?.4:1,false,true,1,true,true,true,0,false,2,pass!==1);
           api.rocket('warm-rocket-'+team,240+team*480,800,0,team);
         }
-        api.rock('warm-rock',960,230,100,1,0);
+        for(const role of ['fragment','medium','large'])api.rock('warm-rock-'+role,960,230,100,1,0,role);
         api.ufo('warm-ufo',960,420,pass*30);
         api.flush(ctx);
       }

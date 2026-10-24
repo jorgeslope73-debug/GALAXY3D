@@ -6608,7 +6608,7 @@
       const x=old?lerp(old.x,a.x,blend):a.x;
       const y=old?lerp(old.y,a.y,blend):a.y;
       const size=a.fragment===true?56:Math.max(56,Math.round((Number(a.r)||45)*2));
-      if(scene3D)scene3D.rock('a'+a.id,x,y,size,a.type);
+      if(scene3D)scene3D.rock('a'+a.id,x,y,size,a.type,0,a.fragment===true?'fragment':'medium');
       else drawImageCentered(images[ASTEROID_IMAGE_KEYS[a.type]]||images.asteroid1,x,y,size);
     }
     for(const pk of state.pickups){
@@ -6627,7 +6627,7 @@
       const x=old?lerp(old.x,m.x,blend):m.x;
       const y=old?lerp(old.y,m.y,blend):m.y;
       const angle=old?lerpAngle(old.a,m.a,blend):m.a;
-      if(scene3D)scene3D.rock('m'+m.id,x,y,METEOR_3D_DIAMETER,m.type,angle);
+      if(scene3D)scene3D.rock('m'+m.id,x,y,METEOR_3D_DIAMETER,m.type,angle,'fragment');
       else drawImageCentered(images[ASTEROID_IMAGE_KEYS[m.type]]||images.asteroid1,x,y,METEOR_DRAW_SIZES[m.type]||25,angle);
     }
     if(state.giant){
@@ -6635,7 +6635,7 @@
       const giantX=old?lerp(old.x,state.giant.x,blend):state.giant.x;
       const giantY=old?lerp(old.y,state.giant.y,blend):state.giant.y;
       drawGiantEntryWarning({x:giantX,y:giantY},now);
-      if(scene3D)scene3D.rock('giant',giantX,giantY,270,3);
+      if(scene3D)scene3D.rock('giant',giantX,giantY,270,3,0,'large');
       else drawImageCentered(images.giant,giantX,giantY,270,0,1);
     }
     {

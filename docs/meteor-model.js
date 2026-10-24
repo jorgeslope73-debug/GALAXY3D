@@ -3,11 +3,15 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
-// The uploaded cratered model averages 92.3% of its enclosing sphere in projection.
-// Match that visible outline to the existing circular gameplay radius.
-export const METEOR_VISUAL_SCALE=1.083;
+// Each authored outline is calibrated to the existing circular gameplay radius.
+export const METEOR_MODELS=Object.freeze({
+  fragment:Object.freeze({file:'meteorito3.glb',scale:1.066}),
+  medium:Object.freeze({file:'meteorito1.glb',scale:1.082}),
+  large:Object.freeze({file:'meteorito2.glb',scale:1.136})
+});
+export const METEOR_VISUAL_SCALE=METEOR_MODELS.medium.scale;
 
-export function prepareMeteorTemplate(source){
+export function prepareMeteorTemplate(source,kind='medium'){
   source.updateMatrixWorld(true);
   const parts=[];let authoredMaterial=null;
   source.traverse(object=>{
@@ -31,20 +35,28 @@ export function prepareMeteorTemplate(source){
   const material=authoredMaterial.clone();
   // A soft purple tint keeps the embedded rock texture and its detail.
   material.color.multiply(new T.Color(0xc5a4e8));
-  const template=new T.Group();template.name='meteor-glb';
-  template.scale.setScalar(METEOR_VISUAL_SCALE);
+  const template=new T.Group();template.name='meteor-'+kind+'-glb';
+  template.userData.galaxyMeteorKind=kind;
+  template.scale.setScalar((METEOR_MODELS[kind]||METEOR_MODELS.medium).scale);
   template.add(new T.Mesh(geometry,material));
   return template;
 }
 
-export async function loadMeteorTemplate(){
-  const asset=new URL('./assets/models/meteor.glb',import.meta.url);
+export async function loadMeteorTemplate(kind='medium'){
+  const definition=METEOR_MODELS[kind]||METEOR_MODELS.medium;
+  const asset=new URL('./assets/models/'+definition.file,import.meta.url);
   asset.search=new URL(import.meta.url).search;
   const gltf=await new GLTFLoader().loadAsync(asset.href);
-  return prepareMeteorTemplate(gltf.scene);
+  return prepareMeteorTemplate(gltf.scene,kind);
 }
 
-export function createMeteorFactory(template){
-  // Geometry, materials and the embedded texture are immutable and shared.
-  return ()=>template.clone(true);
+export async function loadMeteorTemplates(){
+  const entries=await Promise.all(Object.keys(METEOR_MODELS).map(async kind=>[kind,await loadMeteorTemplate(kind)]));
+  return Object.fromEntries(entries);
+}
+
+export function createMeteorFactory(templates){
+  // Share resources within each role; the three supplied artworks stay distinct.
+  if(templates.isObject3D)return ()=>templates.clone(true);
+  return (kind='medium')=>(templates[kind]||templates.medium).clone(true);
 }
