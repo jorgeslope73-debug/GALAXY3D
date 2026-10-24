@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.54
+V23.55
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -10,7 +10,7 @@ MODELOS 3D ACTIVOS
 - OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
 - Asteroide mediano: docs/assets/models/meteorito1.glb
-- Meteorito grande/gigante: docs/assets/models/meteorito2.glb
+- Meteorito grande/gigante: docs/assets/models/meteorito1.glb (ampliado)
 - Fragmentos al romperse y pequenos de lluvia: docs/assets/models/meteorito3.glb
 - Cohete equipado en las alas y disparado: docs/assets/models/cohete_galaxy_combat.glb
 
@@ -36,10 +36,11 @@ LUCES Y ESTADO DEL DISPARO
 
 TEXTURAS DE LOS METEORITOS
 - Color, normales y metal/rugosidad incluidos dentro de cada GLB activo.
-- meteorito1.glb: mediano, 416.216 bytes, 6.000 triangulos, mapas JPEG de 1024 px.
-- meteorito2.glb: grande/gigante, 443.264 bytes, 10.000 triangulos, mapas JPEG de 1024 px.
+- meteorito1.glb: mediano y grande/gigante, 416.216 bytes, 6.000 triangulos, mapas JPEG de 1024 px.
+- meteorito2.glb se conserva como recurso anterior; no se carga ni se precarga.
 - meteorito3.glb: fragmentos, 192.564 bytes, 3.000 triangulos, mapas JPEG de 512 px.
-- La seleccion depende de la funcion del objeto, no del tipo aleatorio del asteroide.
+- El mediano y el gigante comparten modelo y texturas, con tamaños de juego distintos.
+- El mismo GLB se carga y prepara una sola vez para ambos tamaños.
 - El material utiliza los colores y mapas originales de cada GLB.
 - Cada modelo ajusta su escala visual al radio circular del juego; la fisica conserva sus dimensiones.
 - Los tres originales proporcionados por el usuario se conservan sin modificar.

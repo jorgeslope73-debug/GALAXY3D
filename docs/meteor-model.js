@@ -7,7 +7,7 @@ import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 export const METEOR_MODELS=Object.freeze({
   fragment:Object.freeze({file:'meteorito3.glb',scale:1.066}),
   medium:Object.freeze({file:'meteorito1.glb',scale:1.082}),
-  large:Object.freeze({file:'meteorito2.glb',scale:1.136})
+  large:Object.freeze({file:'meteorito1.glb',scale:1.082})
 });
 export const METEOR_VISUAL_SCALE=METEOR_MODELS.medium.scale;
 
@@ -49,12 +49,19 @@ export async function loadMeteorTemplate(kind='medium'){
 }
 
 export async function loadMeteorTemplates(){
-  const entries=await Promise.all(Object.keys(METEOR_MODELS).map(async kind=>[kind,await loadMeteorTemplate(kind)]));
+  const loaded=new Map();
+  const entries=await Promise.all(Object.entries(METEOR_MODELS).map(async ([kind,definition])=>{
+    if(!loaded.has(definition.file))loaded.set(definition.file,loadMeteorTemplate(kind));
+    const template=(await loaded.get(definition.file)).clone(true);
+    template.name='meteor-'+kind+'-glb';template.userData.galaxyMeteorKind=kind;
+    template.scale.setScalar(definition.scale);
+    return [kind,template];
+  }));
   return Object.fromEntries(entries);
 }
 
 export function createMeteorFactory(templates){
-  // Share resources within each role; the three supplied artworks stay distinct.
+  // Instances reuse each loaded artwork, including the medium/large shared model.
   if(templates.isObject3D)return ()=>templates.clone(true);
   return (kind='medium')=>(templates[kind]||templates.medium).clone(true);
 }

@@ -4,8 +4,8 @@ import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareMeteorTemplate,createMeteorFactory,METEOR_MODELS} from '../docs/meteor-model.js';
-const budgets={fragment:{triangles:3000,mapSize:512},medium:{triangles:6000,mapSize:1024},large:{triangles:10000,mapSize:1024}};
-assert.deepEqual(Object.fromEntries(Object.entries(METEOR_MODELS).map(([kind,model])=>[kind,model.file])),{fragment:'meteorito3.glb',medium:'meteorito1.glb',large:'meteorito2.glb'});
+const budgets={fragment:{triangles:3000,mapSize:512},medium:{triangles:6000,mapSize:1024},large:{triangles:6000,mapSize:1024}};
+assert.deepEqual(Object.fromEntries(Object.entries(METEOR_MODELS).map(([kind,model])=>[kind,model.file])),{fragment:'meteorito3.glb',medium:'meteorito1.glb',large:'meteorito1.glb'});
 function jpegSize(bytes){let at=2;assert.equal(bytes.readUInt16BE(0),0xffd8);while(at<bytes.length){assert.equal(bytes[at],255);const marker=bytes[at+1],length=bytes.readUInt16BE(at+2);if([0xc0,0xc1,0xc2].includes(marker))return [bytes.readUInt16BE(at+7),bytes.readUInt16BE(at+5)];at+=length+2;}throw Error('Missing JPEG dimensions');}
 const templates={};let totalBytes=0;
 for(const [kind,definition] of Object.entries(METEOR_MODELS)){
@@ -39,4 +39,4 @@ const start=game.indexOf('    for(const a of state.asteroids){',game.indexOf('dr
 const drawn=[];vm.runInNewContext(game.slice(start,end),{state:{asteroids:[{id:1,x:10,y:10,r:45,type:1},{id:2,x:20,y:10,r:28,type:1,fragment:true}],pickups:[],flares:[],meteors:[{id:3,x:30,y:10,a:45,type:1}],giant:{x:400,y:400}},prev:{giant:null},previousLookup:{asteroids:new Map(),pickups:new Map(),flares:new Map(),meteors:new Map()},blend:1,now:1000,nowSec:1,METEOR_3D_DIAMETER:28,scene3D:{rock:(...args)=>drawn.push(args)},drawGiantEntryWarning:()=>{},Math,Number});
 assert.deepEqual(Array.from(drawn,args=>[args[0],args[3],args[6]]),[['a1',90,'medium'],['a2',56,'fragment'],['m3',28,'fragment'],['giant',270,'large']]);
 const sw=await readFile(new URL('../docs/sw.js',import.meta.url),'utf8');for(const definition of Object.values(METEOR_MODELS))assert.ok(sw.includes('./assets/models/'+definition.file),'offline startup includes every role');assert.ok(!sw.includes('./assets/models/meteor.glb'));
-console.log('Meteor set OK: 3 authored models; actual game routes medium/fragments/rain/giant; independent role pools, shared resources, embedded PBR maps and offline startup.');
+console.log('Meteor set OK: 3 roles with meteorito1 shared for medium/large; actual game routes medium/fragments/rain/giant; independent role pools, shared resources, embedded PBR maps and offline startup.');

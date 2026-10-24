@@ -21,7 +21,6 @@ const SHELL_FILES = [
   './vendor/BufferGeometryUtils.js',
   './assets/models/nave.glb',
   './assets/models/meteorito1.glb',
-  './assets/models/meteorito2.glb',
   './assets/models/meteorito3.glb',
   './assets/models/ovni.glb',
   './assets/models/nave-luces-mask.svg',
