@@ -37,6 +37,7 @@ on:
       - 'tools/check-online-protocol.js'
       - 'tools/check-game-invariants.js'
       - 'tools/check-startup-graphics.js'
+      - 'tools/check-model-texture-cache.js'
       - 'tools/stress-game.js'
       - '.github/workflows/physics-parity.yml'
   pull_request:
@@ -75,6 +76,7 @@ on:
       - 'tools/check-online-protocol.js'
       - 'tools/check-game-invariants.js'
       - 'tools/check-startup-graphics.js'
+      - 'tools/check-model-texture-cache.js'
       - 'tools/stress-game.js'
       - '.github/workflows/physics-parity.yml'
   workflow_dispatch:
@@ -120,6 +122,8 @@ jobs:
         run: node tools/check-session-regressions.js
       - name: Check complete graphics startup
         run: node tools/check-startup-graphics.js
+      - name: Check edited model textures and offline cache
+        run: node tools/check-model-texture-cache.js
       - name: Check existing gameplay invariants
         run: node tools/check-game-invariants.js
       - name: Run 5-minute simulated gameplay stress

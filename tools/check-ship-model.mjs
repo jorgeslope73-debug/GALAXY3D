@@ -10,11 +10,12 @@ for(const file of ['navefuxia.jpg']){
   assert.equal(image.readUInt16BE(image.length-2),0xffd9,file+' must be complete');
 }
 
-for(const file of ['naveazul-cupula-oscura.png','naveverde-luces-rojas.png','naveroja.png','naveazul-sin-balas.png','navefuxia-sin-balas.png','naveverde-sin-balas.png','naveroja-sin-balas.png']){
+for(const file of ['naveazul-cupula-oscura.png','naveverde-luces-rojas.png','naveroja.png']){
   const paint=await readFile(new URL('../docs/assets/models/'+file,import.meta.url));
   assert.equal(paint.subarray(0,8).toString('hex'),'89504e470d0a1a0a',file+' must be a PNG');
-  assert.equal(paint.readUInt32BE(16),1014,file+' UV atlas width must stay unchanged');
-  assert.equal(paint.readUInt32BE(20),1014,file+' UV atlas height must stay unchanged');
+  const width=paint.readUInt32BE(16),height=paint.readUInt32BE(20);
+  assert.equal(width,height,file+' must preserve the square UV atlas');
+  assert.ok(width>=512&&width<=2048,file+' must keep a supported texture resolution');
 }
 
 const bytes=await readFile(new URL('../docs/assets/models/nave.glb',import.meta.url));

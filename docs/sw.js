@@ -26,10 +26,6 @@ const SHELL_FILES = [
   './assets/models/navefuxia.jpg',
   './assets/models/naveverde-luces-rojas.png',
   './assets/models/naveroja.png',
-  './assets/models/naveazul-sin-balas.png',
-  './assets/models/navefuxia-sin-balas.png',
-  './assets/models/naveverde-sin-balas.png',
-  './assets/models/naveroja-sin-balas.png',
   './menu-portada.css',
   './menu-decor.js',
   './menu-loader.js',
@@ -144,6 +140,22 @@ async function cacheFirst(request) {
   return response;
 }
 
+async function refreshModelTexture(request) {
+  const cache=await caches.open(ASSET_CACHE);
+  try{
+    // Revalidate edited paints even when their filename and game version match.
+    const response=await fetch(request,{cache:'no-cache'});
+    if(!response||!response.ok)throw new Error('Textura no disponible');
+    await cache.put(request,response.clone());
+    return response;
+  }catch(error){
+    const shell=await caches.open(SHELL_CACHE);
+    const cached=await cache.match(request)||await shell.match(request,{ignoreSearch:true});
+    if(cached)return cached;
+    throw error;
+  }
+}
+
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -152,6 +164,10 @@ self.addEventListener('fetch', event => {
 
   if (isCodeRequest(request, url)) {
     event.respondWith(networkFirst(request));
+    return;
+  }
+  if(url.pathname.includes('/assets/models/')&&/\.(?:png|jpe?g|webp|svg)$/i.test(url.pathname)){
+    event.respondWith(refreshModelTexture(request));
     return;
   }
   if (isStaticAsset(request, url)) {
