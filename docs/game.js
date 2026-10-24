@@ -6652,7 +6652,7 @@
         // V21.61: cada OVNI gira de forma visual e independiente.
         // La fase depende de su id; no toca trayectoria, IA ni colisiones.
         const ufoAngle=ufoSpinAngle(now,ufo.id);
-        if(scene3D)scene3D.ufo(ufo.id,ufoX,ufoY,ufoAngle);
+        if(scene3D)scene3D.ufo(ufo.id,ufoX,ufoY,ufoAngle,ufo.vx,ufo.vy);
         else drawImageCentered(images.ufo,ufoX,ufoY,56,ufoAngle,1);
       }
     }

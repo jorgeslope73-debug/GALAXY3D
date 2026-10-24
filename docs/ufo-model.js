@@ -3,9 +3,10 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
 export const UFO_DIAMETER=60;
-export const UFO_ROCK_LIMIT=Math.PI/4,UFO_ROCK_PERIOD_MS=8000;
+export const UFO_LEAN_LIMIT=Math.PI/4,UFO_LEAN_FULL_SPEED=310,UFO_LEAN_RESPONSE_MS=220;
 export const UFO_LIGHT_PERIOD_MS=2600;
 const lampStates=new WeakMap();
+const leanStates=new WeakMap();
 
 function prepareLampMaterial(original,geometry,power){
   const material=original.clone();geometry.computeBoundingBox();
@@ -66,7 +67,22 @@ export function setUfoLights(root,time,phase=0){
   const power=lampStates.get(root)||lampStates.get(root.children[0]);
   if(power)power.value=.1+.9*(.5-.5*Math.cos(time*Math.PI*2/UFO_LIGHT_PERIOD_MS+phase));
 }
-export function setUfoPose(root,angle,time,phase=0){
-  root.rotation.set(.035*Math.sin(time*.0011+phase*.7),UFO_ROCK_LIMIT*Math.sin(time*Math.PI*2/UFO_ROCK_PERIOD_MS+phase),angle*Math.PI/180);
+export function setUfoPose(root,angle,time,phase=0,vx=0,vy=0,reset=false){
+  const dx=Number.isFinite(vx)?vx:0,dy=Number.isFinite(vy)?vy:0;
+  const speed=Math.hypot(dx,dy);
+  const slope=speed>0?Math.tan(UFO_LEAN_LIMIT*Math.min(1,speed/UFO_LEAN_FULL_SPEED))/speed:0;
+  // Arena Y points down; these slopes point towards travel in world X/Y.
+  const targetX=dx*slope,targetY=-dy*slope;
+  let state=leanStates.get(root);
+  const elapsed=state?time-state.time:0;
+  if(!state||reset||elapsed<0||elapsed>250){
+    state={x:targetX,y:targetY,time};leanStates.set(root,state);
+  }else{
+    const response=1-Math.exp(-elapsed/UFO_LEAN_RESPONSE_MS);
+    state.x+=(targetX-state.x)*response;state.y+=(targetY-state.y)*response;state.time=time;
+  }
+  // XYZ keeps the bank in arena coordinates while the disc spins locally.
+  // Interpolating the slopes also bounds diagonal motion to the same 45-degree limit.
+  root.rotation.set(-Math.atan(state.y),Math.atan2(state.x,Math.hypot(1,state.y)),angle*Math.PI/180,'XYZ');
   setUfoLights(root,time,phase);
 }

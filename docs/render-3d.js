@@ -243,7 +243,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.51';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.52';
     const modelLoads=[];
     modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadUfoTemplate();
@@ -314,7 +314,7 @@
       let record=records.get(key);
       if(!record){
         record=spares.get(kind)?.pop()||model(kind);
-        record.kind=kind;record.turnPose=null;record.launchAt=now;record.launchContext=poseContext;
+        record.kind=kind;record.turnPose=null;record.ufoMotion=null;record.launchAt=now;record.launchContext=poseContext;
         if(!record.root.parent)scene.add(record.root);
         records.set(key,record);
       }
@@ -429,9 +429,15 @@
         record.shieldMaterial.uniforms.shieldOpacity.value=alpha*(Number(shield)||0);
         record.canopyMaterial.emissiveIntensity=hit>0?2:.75;
       },
-      ufo(id,x,y,angle){
+      ufo(id,x,y,angle,vx,vy){
         const record=take('ufo',id);place(record.root,x,y,13);
-        setImportedUfoPose(record.root,angle,now,(Number(id)||0)*.7);
+        const previous=record.ufoMotion,elapsed=previous?now-previous.time:0;
+        const reset=!previous||previous.context!==poseContext||elapsed<0||elapsed>250;
+        const canMeasure=!reset&&elapsed>0;
+        const motionX=Number.isFinite(vx)?vx:canMeasure?(x-previous.x)*1000/elapsed:0;
+        const motionY=Number.isFinite(vy)?vy:canMeasure?(y-previous.y)*1000/elapsed:0;
+        setImportedUfoPose(record.root,angle,now,(Number(id)||0)*.7,motionX,motionY,reset);
+        record.ufoMotion={x,y,time:now,context:poseContext};
       },
       rocket(id,x,y,rotation,owner){
         const record=take('rocket',id);place(record.root,x,y,18);

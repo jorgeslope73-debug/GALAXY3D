@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.51
+V23.52
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -7,7 +7,7 @@ La web publicada carga docs/assets/. Cambiar un original en mas/ por sí solo
 no actualiza la copia utilizada por el juego.
 
 MODELOS 3D ACTIVOS
-- OVNI con giro continuo y balanceo suave: docs/assets/models/ovni.glb
+- OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
 - Meteoritos, asteroides, fragmentos y gigante: docs/assets/models/meteor.glb
 - Cohete equipado en las alas y disparado: docs/assets/models/cohete_galaxy_combat.glb
@@ -61,7 +61,7 @@ ARCHIVOS QUE CARGAN Y PREPARAN LOS MODELOS
 - Naves y pinturas: docs/ship-model.js
 - Meteorito y morado: docs/meteor-model.js
 - Cohete y color de equipo: docs/rocket-model.js
-- OVNI, orientacion y balanceo: docs/ufo-model.js
+- OVNI, orientacion e inclinación según velocidad: docs/ufo-model.js
 - Iluminación, tamaños y dibujo de la escena: docs/render-3d.js
 
 ORIGINALES Y RECURSOS ANTERIORES

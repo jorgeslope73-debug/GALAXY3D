@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareUfoTemplate,createUfoFactory,setUfoPose,setUfoLights,UFO_DIAMETER,UFO_ROCK_LIMIT,UFO_ROCK_PERIOD_MS,UFO_LIGHT_PERIOD_MS} from '../docs/ufo-model.js';
+import {prepareUfoTemplate,createUfoFactory,setUfoPose,setUfoLights,UFO_DIAMETER,UFO_LEAN_LIMIT,UFO_LEAN_FULL_SPEED,UFO_LIGHT_PERIOD_MS} from '../docs/ufo-model.js';
 
 const bytes=await readFile(new URL('../docs/assets/models/ovni.glb',import.meta.url));
 const gameSource=await readFile(new URL('../docs/game.js',import.meta.url),'utf8');
@@ -84,18 +84,43 @@ for(let time=0;time<=UFO_LIGHT_PERIOD_MS*2;time+=16){
   previousPower=power;
 }
 const root=new T.Group();root.position.set(100,200,13);root.add(a);const origin=root.position.clone();
-assert.ok(Math.abs(UFO_ROCK_LIMIT-Math.PI/4)<1e-9);
-let previousRoll=null,minRoll=Infinity,maxRoll=-Infinity;
-for(let ms=0;ms<=UFO_ROCK_PERIOD_MS*2;ms+=16){
-  setUfoPose(root,ms*.072,ms,.7);
-  assert.ok(Math.abs(root.rotation.x)<=.035001&&Math.abs(root.rotation.y)<=UFO_ROCK_LIMIT+1e-9);
-  if(previousRoll!==null)assert.ok(Math.abs(root.rotation.y-previousRoll)<.011,'Rocking stays smooth at 60 Hz, including direction changes');
-  previousRoll=root.rotation.y;minRoll=Math.min(minRoll,previousRoll);maxRoll=Math.max(maxRoll,previousRoll);
-  assert.ok(root.position.distanceTo(origin)===0,'Visual rocking never shifts the collision centre');
+assert.ok(Math.abs(UFO_LEAN_LIMIT-Math.PI/4)<1e-9);
+const up=new T.Vector3(0,0,1),normal=()=>up.clone().applyQuaternion(root.quaternion);
+for(let ms=0;ms<=16000;ms+=16){
+  setUfoPose(root,spin(ms,1),ms,.7,0,0);
+  assert.ok(normal().distanceTo(up)<1e-9,'A stationary UFO stays level without automatic rocking');
 }
-assert.ok(minRoll<-.78&&maxRoll>.78,'Reach 45 degrees on both sides');
+for(const [vx,vy] of [[145,0],[-145,0],[0,-145],[0,145],[120,-80],[-120,80],[310,310],[10000,10000]]){
+  setUfoPose(root,37,0,.7,vx,vy,true);
+  const n=normal(),direction=new T.Vector3(vx,-vy,0).normalize(),projected=new T.Vector3(n.x,n.y,0).normalize();
+  assert.ok(projected.distanceTo(direction)<1e-8,'The bank follows world travel even while the disc rotates');
+  const lean=Math.acos(n.z),expected=UFO_LEAN_LIMIT*Math.min(1,Math.hypot(vx,vy)/UFO_LEAN_FULL_SPEED);
+  assert.ok(Math.abs(lean-expected)<1e-8&&lean<=UFO_LEAN_LIMIT+1e-9,'Total tilt follows speed and stays within 45 degrees on diagonals');
+  for(const angle of [0,90,180,270,359]){
+    setUfoPose(root,angle,0,.7,vx,vy);
+    assert.ok(normal().distanceTo(n)<1e-8,'Spinning never turns the bank away from the direction of travel');
+  }
+  assert.equal(root.position.distanceTo(origin),0,'Visual leaning never moves the collision centre');
+}
+setUfoPose(root,0,0,0,145,0,true);
+let previousNormal=normal();
+for(let ms=16;ms<=1600;ms+=16){
+  setUfoPose(root,spin(ms),ms,0,-145,0);
+  const n=normal();assert.ok(n.angleTo(previousNormal)<.06,'Direction reversal eases smoothly without a bank jump');previousNormal=n;
+}
+assert.ok(normal().x<-.35,'The bank reverses to the left with leftward motion');
+for(let ms=1616;ms<=4000;ms+=16)setUfoPose(root,spin(ms),ms,0,0,0);
+assert.ok(normal().angleTo(up)<.0001,'Stopping eases back to level');
+const settled=[];
+for(const step of [10,40]){
+  setUfoPose(root,0,0,0,145,0,true);
+  for(let ms=step;ms<=1000;ms+=step)setUfoPose(root,0,ms,0,-145,80);
+  settled.push(normal());
+}
+assert.ok(settled[0].distanceTo(settled[1])<1e-9,'Bank smoothing is independent of frame rate');
+setUfoPose(root,0,1016,0,0,0,true);assert.ok(normal().distanceTo(up)<1e-9,'A reused UFO or new round clears the old bank');
 setUfoPose(root,72,1000);assert.ok(Math.abs(root.rotation.z-72*Math.PI/180)<1e-9);
 setUfoPose(root,0,0);assert.ok(Math.abs(shaderA.uniforms.ufoLampPower.value-.1)<1e-9);
 setUfoPose(root,0,UFO_LIGHT_PERIOD_MS/2);assert.equal(shaderA.uniforms.ufoLampPower.value,1,'The game pose update also animates the lights');
 assert.ok(b.rotation.x===0&&b.rotation.y===0&&b.rotation.z===0,'One UFO pose never rotates another instance');
-console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, shared geometry/textures, independent soft lamp pulses, smooth variable-speed spin and +/-45 degree rocking.`);
+console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, shared geometry/textures, independent soft lamp pulses, smooth variable-speed spin and travel-directed bank up to 45 degrees.`);
