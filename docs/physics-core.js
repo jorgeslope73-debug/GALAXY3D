@@ -1,6 +1,50 @@
 'use strict';
 (() => {
   const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
+  // Unbanked silhouette of nave.glb, normalized by ship-model.js and drawn at 1.5x.
+  // Model blob 260239810997421b964a1613d7b58d88461b3170; outline tolerance <1 unit.
+  const SHIP_DRAW_SIZE=72,SHIP_PROJECTILE_RADIUS=49;
+  const SHIP_PROJECTILE_HULL=Object.freeze([
+    [-.5,-46.5],[.5,-46.5],[1.5,-45.25],[4,-39],[6.75,-27.25],
+    [10.75,-15],[11,-12],[14.25,-3.5],[16.5,5.75],[28.25,11.5],
+    [36.5,13.75],[37.75,14.5],[38.5,16],[37.75,22],[36.5,23.25],
+    [31.75,25.25],[23.75,27.25],[17.25,30],[16,31.5],[15,31.75],
+    [15,37.5],[14.75,38.5],[13.25,39.25],[13.75,45.5],[13.25,46.25],
+    [11.5,46.5],[7.25,46],[-13.25,46.25],[-14,44.5],[-13.25,39.25],
+    [-14.75,38.5],[-15.25,31.5],[-17.5,29.75],[-23.25,27.5],[-35.25,24],
+    [-37.25,22.75],[-38.5,19.5],[-38.5,17],[-37.5,14.25],[-28,11.25],
+    [-16.75,6],[-14.25,-3.25],[-11,-11.75],[-10.25,-16.5],[-7.5,-24.25],[-3.75,-39.75]
+  ].map(Object.freeze));
+  function pointSegmentDistance2(x,y,ax,ay,bx,by){
+    const dx=bx-ax,dy=by-ay,length2=dx*dx+dy*dy;
+    const t=length2>1e-12?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/length2)):0;
+    const qx=x-ax-dx*t,qy=y-ay-dy*t;return qx*qx+qy*qy;
+  }
+  function projectileHitsShipHull(projectile,ship,radius=4){
+    const px=Number.isFinite(projectile.px)?projectile.px:projectile.x,py=Number.isFinite(projectile.py)?projectile.py:projectile.y;
+    const sx=Number.isFinite(ship.px)?ship.px:ship.x,sy=Number.isFinite(ship.py)?ship.py:ship.y;
+    const angle=(Number(ship.rot)||0)*Math.PI/180,oldAngle=(Number.isFinite(ship.pr)?ship.pr:Number(ship.rot)||0)*Math.PI/180;
+    const c=Math.cos(angle),s=Math.sin(angle),oc=Math.cos(oldAngle),os=Math.sin(oldAngle);
+    const dx=projectile.x-ship.x,dy=projectile.y-ship.y;
+    const x1=dx*c-dy*s,y1=dx*s+dy*c;
+    let x0=(px-sx)*oc-(py-sy)*os,y0=(px-sx)*os+(py-sy)*oc;
+    // A wrap is a teleport at the visible edge, not a shot through the whole arena.
+    if(Math.abs(projectile.x-px)>960||Math.abs(projectile.y-py)>540||Math.abs(ship.x-sx)>960||Math.abs(ship.y-sy)>540){x0=x1;y0=y1;}
+    const ux=x1-x0,uy=y1-y0,r2=radius*radius;
+    let inside=false;
+    for(let i=0,j=SHIP_PROJECTILE_HULL.length-1;i<SHIP_PROJECTILE_HULL.length;j=i++){
+      const a=SHIP_PROJECTILE_HULL[j],b=SHIP_PROJECTILE_HULL[i],ax=a[0],ay=a[1],bx=b[0],by=b[1];
+      if((ay>y1)!==(by>y1)&&x1<(bx-ax)*(y1-ay)/(by-ay)+ax)inside=!inside;
+      const vx=bx-ax,vy=by-ay,denominator=ux*vy-uy*vx;
+      if(Math.abs(denominator)>1e-12){
+        const qx=ax-x0,qy=ay-y0,t=(qx*vy-qy*vx)/denominator,u=(qx*uy-qy*ux)/denominator;
+        if(t>=0&&t<=1&&u>=0&&u<=1)return true;
+      }
+      if(pointSegmentDistance2(x0,y0,ax,ay,bx,by)<=r2||pointSegmentDistance2(x1,y1,ax,ay,bx,by)<=r2||
+        pointSegmentDistance2(ax,ay,x0,y0,x1,y1)<=r2||pointSegmentDistance2(bx,by,x0,y0,x1,y1)<=r2)return true;
+    }
+    return inside;
+  }
   function chooseSpawnSector(player,players,width=1920,height=1080){
     const occupied=new Set();
     for(const other of players){
@@ -258,6 +302,7 @@
       vx:d.x*projectileSpeed,vy:d.y*projectileSpeed,
       age:0,travel:0,guided,
       leavingOwnerShield:guided&&Number(p.shield)>0,
+      leavingOwnerShip:guided,
       target:guided?p.guidedTarget:-1,
       flareTarget:-1,decoyed:false,
       baseSpeed:projectileSpeed
@@ -468,17 +513,17 @@
     for(const target of players){
       if(!target)continue;
 
-      if(Number(target.index)===owner&&projectile.leavingOwnerShield){
-        const dx=projectile.x-target.x,dy=projectile.y-target.y,r=shipCollisionRadius(target,shipRadius)+projectileRadius;
-        if(dx*dx+dy*dy>r*r)projectile.leavingOwnerShield=false;
-        // Let a new missile leave its own field; a later return can still hit it.
+      if(Number(target.index)===owner&&(projectile.leavingOwnerShield||projectile.leavingOwnerShip)){
+        const dx=projectile.x-target.x,dy=projectile.y-target.y,r=(Number(target.shield)>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS)+projectileRadius;
+        if(dx*dx+dy*dy>r*r){projectile.leavingOwnerShield=false;projectile.leavingOwnerShip=false;}
+        // Let a new missile leave its own hull/field; a later return can still hit it.
         continue;
       }
       // Bala normal: nunca hiere al tirador. Misil: sí puede regresar y dañarlo.
       if((Number(target.index)===owner&&!guided)||target.dead||Number(target.protection)>0)continue;
-      if(!sweptCircles(projectile,projectileRadius,target,shipCollisionRadius(target,shipRadius),false))continue;
-
       const shielded=Number(target.shield)>0;
+      if(!sweptCircles(projectile,projectileRadius,target,shielded?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS,false))continue;
+      if(!shielded&&!projectileHitsShipHull(projectile,target,projectileRadius))continue;
       const enemyHit=!!attacker&&attacker!==target;
       const longShot=enemyHit&&travel>=brutalDistance;
       const pointBlank=enemyHit&&!guided&&travel<=pointBlankDistance;
@@ -602,6 +647,7 @@
   }
 
   window.GalaxyPhysicsCore=Object.freeze({
+    SHIP_DRAW_SIZE,SHIP_PROJECTILE_HULL,SHIP_PROJECTILE_RADIUS,projectileHitsShipHull,
     chooseSpawnSector,
     SHIELD_RADIUS,shipCollisionRadius,shipImpactPoint,separateShipContact,
     MOVEMENT_DT,stepShipMovement,createMotionStream,acceptMotionFrames,consumeMotionFrame,

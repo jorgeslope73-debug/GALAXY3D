@@ -491,8 +491,8 @@
   let joystickVoiceHeld=false;
   const serverButtons=['create','join'].map(id=>document.getElementById(id));
   if(cpuButton)cpuButton.disabled=false;
-  // Tamano visual de las naves. Solo cambia el dibujo: fisica, colisiones y red quedan iguales.
-  const SHIP_DRAW_SIZE=isMobile?86:72;
+  // Same world-space hull on every device, matching the projectile silhouette.
+  const SHIP_DRAW_SIZE=window.GalaxyPhysicsCore.SHIP_DRAW_SIZE;
   const SHIELD_DRAW_RADIUS=window.GalaxyPhysicsCore.SHIELD_RADIUS;
   const HUD_SCALE=isMobile?1.60:1.12;
   const HUD_PANEL_W=128*HUD_SCALE;

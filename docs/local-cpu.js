@@ -1518,7 +1518,7 @@
         if(score>bestScore){best=candidate;bestScore=score;}
         if(clearance>=0&&!tooSimilar){best=candidate;break;}
       }
-      p.x=best.x;p.y=best.y;p.px=p.x;p.py=p.y;p.rot=rand(0,360);p.vx=0;p.vy=0;p.lastSpawn={x:p.x,y:p.y};p.spawnAnchorX=p.x;p.spawnAnchorY=p.y;
+      p.x=best.x;p.y=best.y;p.px=p.x;p.py=p.y;p.rot=rand(0,360);p.pr=p.rot;p.vx=0;p.vy=0;p.lastSpawn={x:p.x,y:p.y};p.spawnAnchorX=p.x;p.spawnAnchorY=p.y;
       p.openingFleeUntil=p.cpu&&Math.random()<.45?(Number(this.fxClock)||0)+SPAWN_MATERIALIZE_SECONDS+rand(1.5,3.5):0;
       p.aiControl=null;p.easyControl=null;
     }
@@ -2397,7 +2397,7 @@
           if(p.bullets>0&&p.reload<=0)p.cpuFireDelay=Math.max(0,(Number(p.cpuFireDelay)||0)-dt);
           else p.cpuFireDelay=CPU_ARMED_WARNING_SECONDS;
         }
-        p.px=p.x;p.py=p.y;
+        p.px=p.x;p.py=p.y;p.pr=p.rot;
         const stored=this.controls.get(p.index)||IDLE_CONTROL;
         let c;
         if(p.cpu){
