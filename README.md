@@ -1,6 +1,6 @@
 # GALAXY3D
 
-Versión V23.30: ajusta la escala visual del meteorito un 11 % para acercar su contorno irregular al radio de choque. Los meteoritos pequeños usan en 3D el diámetro de colisión de 28 unidades, común a todos los tipos. Conserva la física local y online, los sprites 2D y el matiz morado suave de la textura. El modelo meteor.glb mantiene sus 21978 triángulos en una malla compartida y se carga por completo antes de mostrar el juego.
+Versión V23.31: refuerza el tono morado del meteorito manteniendo los detalles de su textura. Conserva el ajuste de contacto: aumenta la escala visual del meteorito un 11 % para acercar su contorno irregular al radio de choque. Los meteoritos pequeños usan en 3D el diámetro de colisión de 28 unidades, común a todos los tipos. Conserva la física local y online, los sprites 2D y el matiz morado suave de la textura. El modelo meteor.glb mantiene sus 21978 triángulos en una malla compartida y se carga por completo antes de mostrar el juego.
 
 Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 

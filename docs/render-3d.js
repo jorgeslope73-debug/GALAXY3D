@@ -233,7 +233,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.30';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.31';
     const modelLoads=[];
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
