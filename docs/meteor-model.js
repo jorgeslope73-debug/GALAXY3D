@@ -3,6 +3,10 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
+// The irregular outline averages 90% of its enclosing sphere in projection.
+// Match that visible outline to the existing circular gameplay radius.
+export const METEOR_VISUAL_SCALE=1.11;
+
 export function prepareMeteorTemplate(source){
   source.updateMatrixWorld(true);
   const parts=[];let authoredMaterial=null;
@@ -28,6 +32,7 @@ export function prepareMeteorTemplate(source){
   // A pale lavender tint keeps the embedded rock texture and its detail.
   material.color.multiply(new T.Color(0xeadff8));
   const template=new T.Group();template.name='meteor-glb';
+  template.scale.setScalar(METEOR_VISUAL_SCALE);
   template.add(new T.Mesh(geometry,material));
   return template;
 }

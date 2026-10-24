@@ -507,6 +507,8 @@
   const NAVEMIRA_IMAGE_KEYS=['navemiraA','navemiraB','navemiraC','navemiraD'];
   const ASTEROID_IMAGE_KEYS=['','asteroid1','asteroid2','asteroid3','asteroid4','asteroid5','asteroid6'];
   const METEOR_DRAW_SIZES=[0,22,27,31];
+  // 3D uses the collision diameter: SMALL_METEOR_RADIUS=14 in both engines.
+  const METEOR_3D_DIAMETER=28;
 
   // V20.1 LocalFX: particulas de propulsion 100% locales.
   // No forman parte del estado, fisicas, colisiones ni mensajes P2P.
@@ -6604,7 +6606,7 @@
       const x=old?lerp(old.x,m.x,blend):m.x;
       const y=old?lerp(old.y,m.y,blend):m.y;
       const angle=old?lerpAngle(old.a,m.a,blend):m.a;
-      if(scene3D)scene3D.rock('m'+m.id,x,y,METEOR_DRAW_SIZES[m.type]||25,m.type,angle);
+      if(scene3D)scene3D.rock('m'+m.id,x,y,METEOR_3D_DIAMETER,m.type,angle);
       else drawImageCentered(images[ASTEROID_IMAGE_KEYS[m.type]]||images.asteroid1,x,y,METEOR_DRAW_SIZES[m.type]||25,angle);
     }
     if(state.giant){

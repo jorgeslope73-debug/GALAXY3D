@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareMeteorTemplate,createMeteorFactory} from '../docs/meteor-model.js';
+import {prepareMeteorTemplate,createMeteorFactory,METEOR_VISUAL_SCALE} from '../docs/meteor-model.js';
 
 const bytes=await readFile(new URL('../docs/assets/models/meteor.glb',import.meta.url));
 assert.equal(bytes.toString('ascii',0,4),'glTF');
@@ -34,5 +34,20 @@ assert.equal(mesh.geometry,other.geometry,'instances must reuse geometry');
 assert.equal(mesh.material,other.material,'instances must reuse their immutable material');
 assert.notEqual(first,second,'each meteor needs an independent pose');
 first.rotation.set(.3,.7,1);first.scale.setScalar(135);
-assert.ok(Math.abs(second.rotation.z)<1e-8);assert.equal(second.scale.x,1);
+assert.ok(Math.abs(second.rotation.z)<1e-8);assert.equal(second.scale.x,METEOR_VISUAL_SCALE);
+// Compare the projected silhouette with the gameplay circle across many poses.
+const vertex=new T.Vector3(),pose=new T.Quaternion(),rotation=new T.Euler(),radii=[];
+for(let frame=0;frame<16;frame++){
+  pose.setFromEuler(rotation.set(frame*.31,frame*.47,frame*.23));
+  const support=Array(24).fill(-Infinity);
+  for(let i=0;i<geometry.attributes.position.count;i++){
+    vertex.fromBufferAttribute(geometry.attributes.position,i).applyQuaternion(pose).multiplyScalar(second.scale.x);
+    for(let d=0;d<24;d++){const angle=d*Math.PI/12;support[d]=Math.max(support[d],vertex.x*Math.cos(angle)+vertex.y*Math.sin(angle));}
+  }
+  radii.push(...support);
+}
+const meanRadius=radii.reduce((sum,r)=>sum+r,0)/radii.length;
+assert.ok(Math.abs(meanRadius-1)<.03,'the visible outline should match the collision radius on average');
+assert.ok(Math.min(...radii)>.90&&Math.max(...radii)<1.12,'rotation must not open a large gap or cause excessive overlap');
+console.log('Projected radius / collision radius:',meanRadius.toFixed(3));
 console.log(`Meteor GLB OK: 2 parts -> 1 mesh, ${triangles} triangles, embedded texture, radius 1, shared geometry/material and independent poses`);
