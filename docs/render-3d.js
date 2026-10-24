@@ -180,6 +180,7 @@
       shield.renderOrder=5;
       const shock=add(tilt,ringGeometry,glow(0xc5efff),0,22,10,8);
       const flare=new T.Group();flare.name='flare-indicator';
+      flare.scale.setScalar(.75);
       flare.position.set(0,-27,8);flare.renderOrder=6;tilt.add(flare);
       const flareMaterial=glow(0xffb55a);
       flareMaterial.depthTest=false;flareMaterial.depthWrite=false;
@@ -240,7 +241,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.43';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.44';
     const modelLoads=[];
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
