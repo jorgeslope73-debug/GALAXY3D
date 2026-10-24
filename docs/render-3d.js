@@ -101,7 +101,7 @@
     const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xff5d5d];
     const records=new Map(),spares=new Map();
-    let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,rockTexture=null;
+    let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,createImportedMeteor=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -122,26 +122,8 @@
     shardMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);shardMesh.frustumCulled=false;shardMesh.count=0;
     scene.add(shardMesh);
     const effects=new Map(),seenEffects=new Set();
-    const rockGeometries=Array.from({length:6},(_,variant)=>makeRockGeometry(variant));
     let now=0,contextKey='',poseContext='',lastSequence=-1,bolts=0;
 
-    function makeRockGeometry(variant){
-      const geometry=new T.IcosahedronGeometry(1,mobile?1:2);
-      const vertices=geometry.attributes.position;
-      const vertexColors=[];
-      for(let i=0;i<vertices.count;i++){
-        const x=vertices.getX(i),y=vertices.getY(i),z=vertices.getZ(i);
-        const noise=Math.sin(x*13+variant*2)*Math.cos(y*11-variant)*Math.sin(z*9+variant);
-        const crater=Math.max(0,1-Math.hypot(x-.2,y-.35,z-.91)/.38);
-        const radius=.94+noise*.055-crater*.14;
-        vertices.setXYZ(i,x*radius,y*radius,z*radius);
-        const shade=.64+.3*(noise*.5+.5)-crater*.22;
-        vertexColors.push(shade,shade,shade);
-      }
-      geometry.setAttribute('color',new T.Float32BufferAttribute(vertexColors,3));
-      geometry.computeVertexNormals();geometry.computeBoundingSphere();
-      return geometry;
-    }
     function add(group,geometry,material,x,y,z,sx=1,sy=sx,sz=sx){
       const mesh=new T.Mesh(geometry,material);
       mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;
@@ -251,7 +233,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.27';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.28';
     const modelLoads=[];
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
       const template=await assets.loadRocketTemplate();
@@ -262,12 +244,13 @@
       console.warn('[GALAXY3D] Se conserva el cohete de respaldo:',error?.message||error);
       throw error;
     }));
-    modelLoads.push(import('./rock-material.js?v='+encodeURIComponent(assetVersion)).then(assets=>assets.loadRockTexture()).then(texture=>{
-      rockTexture=texture;
-      document.documentElement.dataset.galaxyRock='asteroide-azul';
+    modelLoads.push(import('./meteor-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+      const template=await assets.loadMeteorTemplate();
+      createImportedMeteor=assets.createMeteorFactory(template);
+      document.documentElement.dataset.galaxyRock='meteor-glb';
     }).catch(error=>{
-      document.documentElement.dataset.galaxyRock='fallback';
-      console.warn('[GALAXY3D] Se conserva el material de respaldo del asteroide:',error?.message||error);
+      document.documentElement.dataset.galaxyRock='error';
+      console.warn('[GALAXY3D] No se ha podido cargar meteor.glb:',error?.message||error);
       throw error;
     }));
     modelLoads.push(import('./ship-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
@@ -284,9 +267,8 @@
       if(kind.startsWith('ship:'))return shipModel(Number(kind.split(':')[1])||0);
       const root=new T.Group();
       if(kind==='rock'){
-        const material=metal(0x8d83aa,{metalness:.13,roughness:.95,flatShading:true,vertexColors:true});
-        const rock=add(root,rockGeometries[0],material,0,0,0);
-        return {root,rock,material};
+        const rock=createImportedMeteor();root.add(rock);
+        return {root,rock};
       }
       if(kind==='rocket'){
         const roll=new T.Group(),procedural=new T.Group();root.add(roll);roll.add(procedural);
@@ -393,13 +375,6 @@
       },
       rock(id,x,y,size,type=1,angle=0){
         const record=take('rock',id),variant=Math.abs(Number(type)||0)%6;
-        record.rock.geometry=rockGeometries[variant];
-        if(rockTexture){
-          if(record.material.map!==rockTexture){
-            record.material.map=rockTexture;record.material.vertexColors=false;record.material.needsUpdate=true;
-          }
-          record.material.color.setHex(0xffffff);
-        }else record.material.color.setHex([0x9086ad,0xb29ab8,0x779fa8,0xc2a58a,0x7c91b0,0x879a83][variant]);
         record.root.scale.setScalar(size*.5);
         place(record.root,x,y,-8);
         const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
@@ -475,7 +450,8 @@
         ctx.canvas.dataset.triangles=String(renderer.info.render.triangles);
         ctx.canvas.dataset.geometries=String(renderer.info.memory.geometries);
         ctx.canvas.dataset.shipModel=createImportedShip?'nave-glb':'procedural';
-        ctx.canvas.dataset.rockMaterial=rockTexture?'asteroide-azul':'procedural';
+        ctx.canvas.dataset.rockMaterial=createImportedMeteor?'meteor-glb':'loading';
+        ctx.canvas.dataset.rockModel=createImportedMeteor?'meteor-glb':'loading';
         ctx.canvas.dataset.rocketModel=createImportedRocket?'cohete-glb':'procedural';
       },
       menu(ctx,time){

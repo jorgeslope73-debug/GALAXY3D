@@ -1,8 +1,10 @@
 # GALAXY3D
 
-Versión V23.27: las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
+Versión V23.28: usa meteor.glb para los meteoritos y asteroides, incluido el gigante y los del menú. Conserva la textura y los materiales propios del archivo. Sus dos piezas se agrupan en una malla de 21978 triángulos con geometría y material compartidos entre instancias; se centra y normaliza el radio para conservar el tamaño y giro existentes. El cargador espera al nuevo modelo antes de mostrar el juego.
 
-El inicio en 3D espera a los modelos definitivos, las ocho pinturas de las naves, su máscara y la textura del asteroide. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
+Las luces indican que el disparo está listo. Permanecen negras durante la recarga o sin munición; solo se encienden cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
+
+El inicio en 3D espera a los modelos definitivos, las ocho pinturas de las naves, su máscara y el modelo del meteorito con su textura integrada. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
 
 El escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
 
@@ -34,7 +36,7 @@ Se conserva la inclinación progresiva de hasta 60 grados en los giros más cerr
 
 Se retiran las llamas geométricas de naves y misiles; la propulsión conserva las partículas existentes del juego. La iluminación es blanca y equilibrada para mostrar el color y el relieve del modelo. Las naves conservan el aumento visual del 50 % y la vista cenital cuando no giran, con morro arriba en giro cero. Se mantienen las reglas y los tamaños de colisión.
 
-Las rocas 3D conservan la textura original `mas/asteroideAzul.png`, incluidos los asteroides y sus fragmentos. La copia en `docs/assets/models/asteroideAzul.png` conserva exactamente el archivo original.
+Las rocas 3D usan el modelo y la textura integrada de `mas/final/meteor.glb`, incluidos los asteroides y sus fragmentos. La copia de publicación en `docs/assets/models/meteor.glb` es idéntica al archivo aportado.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
 - Se ajustan visualmente el centro, el tamaño y la orientación. Las cuatro texturas conservan los UV y el mapa de normales del GLB. Se usan los archivos preparados en Adobe sin recolorearlos durante el juego.

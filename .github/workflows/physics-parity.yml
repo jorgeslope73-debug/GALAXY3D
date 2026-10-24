@@ -13,11 +13,13 @@ on:
       - 'docs/ship-model.js'
       - 'docs/rocket-model.js'
       - 'docs/rock-material.js'
+      - 'docs/meteor-model.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
       - 'tools/check-ship-model.mjs'
       - 'tools/check-rocket-model.mjs'
+      - 'tools/check-meteor-model.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -49,11 +51,13 @@ on:
       - 'docs/ship-model.js'
       - 'docs/rocket-model.js'
       - 'docs/rock-material.js'
+      - 'docs/meteor-model.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
       - 'tools/check-ship-model.mjs'
       - 'tools/check-rocket-model.mjs'
+      - 'tools/check-meteor-model.mjs'
       - 'docs/view-3d.css'
       - 'docs/menu-loader.js'
       - 'docs/pwa.js'
@@ -99,11 +103,13 @@ jobs:
       - name: Check host/local shared physics parity
         run: node tools/check-physics-parity.js
       - name: Check 3D presentation syntax
-        run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/rock-material.js && node --check docs/menu-decor.js
+        run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/rock-material.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js
       - name: Check ship GLB orientation and embedded resources
         run: node tools/check-ship-model.mjs
       - name: Check rocket GLB orientation, roll axis and shared geometry
         run: node tools/check-rocket-model.mjs
+      - name: Check meteor GLB resources, scale and shared geometry
+        run: node tools/check-meteor-model.mjs
       - name: Check network resilience
         run: node tools/check-network-resilience.js
       - name: Check scoring and spawn behaviour
