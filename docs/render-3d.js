@@ -6,26 +6,12 @@
   const SHIP_BANK_LIMIT=60*Math.PI/180;
   const mobile=document.documentElement.classList.contains('handheld-device')||matchMedia('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const preferenceKey='galaxy3d-view-v1';
-  const requested=new URLSearchParams(location.search).get('view');
-  let enabled=true,world=null,failed=false,button=null,assetsComplete=false;
+  let world=null,failed=false,assetsComplete=false;
   let resolveAssetsReady;
   const assetsReady=new Promise(resolve=>{resolveAssetsReady=resolve;});
-  try{enabled=(requested||localStorage.getItem(preferenceKey))!=='2d';}catch(_){enabled=requested!=='2d';}
 
-  const labels={es:['VISTA 3D','VISTA 2D','Cambiar entre vista 3D y 2D'],en:['3D VIEW','2D VIEW','Switch between 3D and 2D'],fr:['VUE 3D','VUE 2D','Changer entre la vue 3D et 2D'],it:['VISTA 3D','VISTA 2D','Cambia tra vista 3D e 2D'],de:['3D ANSICHT','2D ANSICHT','Zwischen 3D und 2D wechseln'],zh:['3D 视图','2D 视图','切换 3D 和 2D 视图']};
   function updateUI(){
-    const active=enabled&&assetsComplete&&world&&!world.lost;
-    document.documentElement.dataset.galaxyView=active?'3d':'2d';
-    if(!button)return;
-    const language=window.GalaxyI18n?.getLanguage?.()||'es';
-    const text=labels[language]||labels.es;
-    button.textContent=active?text[0]:text[1];
-    button.title=failed?'Vista 2D disponible en este dispositivo':text[2];
-    button.setAttribute('aria-label',button.title);
-    button.setAttribute('aria-pressed',active?'true':'false');
-    button.disabled=!assetsComplete||failed;
-    button.classList.toggle('active',!!active);
+    document.documentElement.dataset.galaxyView='3d';
   }
   function fallback(error){
     failed=true;
@@ -33,30 +19,15 @@
     document.documentElement.dataset.galaxyModels='error';
     resolveAssetsReady({ok:false});
     updateUI();
-    console.warn('[GALAXY3D] Se mantiene la vista 2D:',error?.message||error);
+    window.dispatchEvent(new Event('galaxy3d-error'));
+    console.warn('[GALAXY3D] Error de vista 3D:',error?.message||error);
   }
-  function setupUI(){
-    const audio=document.getElementById('enableAudio');
-    if(audio&&!document.getElementById('viewMode')){
-      button=document.createElement('button');
-      button.id='viewMode';button.type='button';
-      audio.insertAdjacentElement('afterend',button);
-      button.addEventListener('click',()=>{
-        enabled=!enabled;
-        try{localStorage.setItem(preferenceKey,enabled?'3d':'2d');}catch(_){}
-        updateUI();
-      });
-    }
-    updateUI();
-  }
-  window.addEventListener('galaxy-languagechange',updateUI);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupUI,{once:true});
-  else setupUI();
+  updateUI();
 
   window.Galaxy3D={
     ready:assetsReady,
-    get requested(){return enabled;},
-    get active(){return !!(enabled&&assetsComplete&&world&&!world.lost&&!failed);},
+    get requested(){return true;},
+    get active(){return !!(assetsComplete&&world&&!world.lost&&!failed);},
     get rocketTailOffset(){return world?.rocketTailOffset||10;},
     begin(ctx,now,snapshot,localIndex){
       if(!this.active)return null;
@@ -244,7 +215,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.80';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.81';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
@@ -551,8 +522,8 @@
       // Leave the pool in its normal menu state before exposing the first frame.
       api.menu(ctx,0);
     });
-    surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();});
-    surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();});
+    surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
+    surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
     window.addEventListener('beforeunload',()=>renderer.dispose(),{once:true});
     return api;
   }

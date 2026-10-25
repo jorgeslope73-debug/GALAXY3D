@@ -1,10 +1,12 @@
 # GALAXY3D
 
+V23.81: este proyecto utiliza siempre la vista 3D. Se retiran el selector de presentacion y la opcion de abrir en 2D; las preferencias antiguas no cambian la vista.
+
 Versión V23.38: elimina de docs/assets/models/ las cuatro pinturas antiguas -sin-balas.png, que ya no se cargan. Las naves usan únicamente su pintura principal y la máscara del panel delantero. Se conservan los cuatro colores activos, los modelos 3D y el comportamiento de disponibilidad de disparo.
 
 Solo el panel delantero indica que el disparo está listo. Permanece negro durante la recarga o sin munición; se enciende cuando el estado `armed` recibido permite disparar y quedan balas. Conservan verde intenso en azul, fucsia y roja, y rojo intenso en la nave verde. No cambia la cadencia ni el cálculo de la recarga.
 
-El inicio en 3D espera a los modelos definitivos, las cuatro pinturas de las naves, su máscara y el modelo del meteorito con su textura integrada. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador permite reintentar o elegir 2D; no muestra modelos provisionales.
+El inicio en 3D espera a los modelos definitivos, las cuatro pinturas de las naves, su máscara y el modelo del meteorito con su textura integrada. Prepara texturas y materiales en una escena oculta antes de mostrar el menú. Los temporizadores móviles y el respaldo de arranque ya no pueden saltarse esa espera. Si falla un recurso, el cargador muestra el aviso para reintentar; no muestra modelos provisionales.
 
 El escudo protector es una esfera translúcida de color cian, con centro más transparente y borde más visible. Una única superficie sustituye la malla de líneas y el aro anterior; la opacidad sigue el camuflaje y el aviso final ya existente. La geometría se comparte entre las naves.
 
@@ -47,16 +49,16 @@ Las rocas 3D usan el modelo y la textura integrada de `mas/final/meteor.glb`, in
 - Comprobación del cohete, eje de giro, orientación y reutilización de geometría: `node tools/check-rocket-model.mjs`.
 
 - Jugar: https://jorgeslope73-debug.github.io/GALAXY3D/
-- Vista 3D por defecto: naves con fuselaje, alas, cabina y propulsores; asteroides con relieve y rotación; OVNIs, misiles, disparos y fragmentos de impacto.
+- Vista 3D permanente: naves con fuselaje, alas, cabina y propulsores; asteroides con relieve y rotación; OVNIs, misiles, disparos y fragmentos de impacto.
 - Cámara superior ortográfica: conserva posiciones, radios de colisión, controles, reglas y puntuación.
-- El selector VISTA 3D / VISTA 2D permite comparar ambas presentaciones. Si WebGL 2 no está disponible se conserva el juego 2D.
+- Se espera siempre la carga de los modelos 3D. Los errores mantienen el aviso y permiten reintentar; una perdida temporal del contexto grafico permite recuperacion automatica.
 - Three.js r180 y su licencia MIT se incluyen en docs/vendor/. No se descarga una biblioteca desde un CDN al jugar.
 - Menús, HUD, voz y textos siguen compartidos con el cliente original.
 - Backend existente: https://galaxy-combat-web.onrender.com (docs/config.js sin cambios).
 - No se ha modificado ni desplegado server/, render.yaml, la configuración de Render ni el esquema de la base de datos.
 - Publicación: GitHub Pages, main y /docs. La entrada de la raíz también redirige a docs/ cuando Pages está configurado en /(root).
 
-Validación: partidas CPU en navegador, alternativa 2D y sin WebGL, visibilidad del camuflaje, caducidad de efectos, reutilización de geometrías y compatibilidad de protocolo. Pruebas de física, predicción, sesiones, red y simulación de 300 segundos conservadas. El rendimiento y el tacto en móviles físicos deben validarse en esos dispositivos.
+Validación: partidas CPU en navegador, espera de modelos 3D, error/reintento y recuperacion del contexto, visibilidad del camuflaje, caducidad de efectos, reutilización de geometrías y compatibilidad de protocolo. Pruebas de física, predicción, sesiones, red y simulación de 300 segundos conservadas. El rendimiento y el tacto en móviles físicos deben validarse en esos dispositivos.
 
 La documentación histórica de GALAXY COMBAT se conserva debajo; sus referencias antiguas de versión y despliegue no describen esta publicación.
 

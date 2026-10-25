@@ -1,4 +1,4 @@
-/* The original layout and controls remain shared by both visual modes. */
+/* Layout for the permanent 3D presentation. */
 .galaxy3d-brand{display:none}
 html[data-galaxy-view="3d"] #menu.menu-cover{background:#030814!important}
 html[data-galaxy-view="3d"] #menu .menu-scene{background:radial-gradient(ellipse at 50% 29%,rgba(18,55,80,.2),rgba(2,6,17,.5) 72%),url('assets/sprites/fondo02_1280.jpg') center/cover}
@@ -10,8 +10,6 @@ html[data-galaxy-view="3d"] #menu .galaxy3d-brand{display:flex;position:absolute
 .galaxy3d-brand .galaxy3d-subtitle{font:600 clamp(10px,1vw,15px)/1.6 Arial,sans-serif;letter-spacing:.2em;color:#94a8bc;margin-top:10px}
 html[data-galaxy-view="3d"] #menu .mode-card{border-color:rgba(90,190,224,.35);background:linear-gradient(150deg,rgba(13,32,50,.94),rgba(7,13,29,.95))}
 html[data-galaxy-view="3d"] #menu .mode-card button{background:linear-gradient(135deg,#1e5970,#173b59);border-color:#62c6e4}
-#menu #viewMode{width:auto!important;flex:0 0 auto;min-width:100px;max-width:max-content;height:30px;min-height:30px;margin:0;padding:0 10px;border-radius:4px;font:700 11px/1 Arial,sans-serif;letter-spacing:.04em;white-space:nowrap}
-html[data-galaxy-view="3d"] #menu #viewMode{color:#a1f0ff;border-color:#6bd5f5;background:rgba(10,52,73,.9)}
 @media(max-height:500px){
   html[data-galaxy-view="3d"] #menu .galaxy3d-brand{top:18%!important}
   .galaxy3d-brand .galaxy3d-wordmark{font-size:clamp(25px,4vw,48px)}
@@ -22,10 +20,6 @@ html[data-galaxy-view="3d"] #menu #viewMode{color:#a1f0ff;border-color:#6bd5f5;b
   html[data-galaxy-view="3d"] #menu .galaxy3d-brand{top:10%;}
   .galaxy3d-brand .galaxy3d-eyebrow,.galaxy3d-brand .galaxy3d-subtitle{display:none}
   .galaxy3d-brand .galaxy3d-wordmark{font-size:clamp(28px,5.5vw,60px)}
-  #menu #viewMode{min-width:84px;font-size:11px}
-}
-@media(pointer:coarse),(max-width:900px){
-  #menu #viewMode{height:28px!important;min-height:28px!important;min-width:90px;padding:0 9px!important;border-radius:999px;font-size:10px}
 }
 @media(orientation:landscape) and (max-height:560px){
   html.handheld-device[data-galaxy-view="3d"] #menu .menu-scene{width:100%;min-height:100svh;aspect-ratio:auto;margin:0}

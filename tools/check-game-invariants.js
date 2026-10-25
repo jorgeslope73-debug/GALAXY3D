@@ -211,7 +211,6 @@ if(!trainingPage.includes("window.GalaxyLocalCpu"))fail(errors,'training: falta 
 if(!menuLoader.includes('decodeWithTimeout'))fail(errors,'mobile loader: falta timeout seguro para Image.decode');
 if(!menuLoader.includes('watchdogTimer'))fail(errors,'mobile loader: falta watchdog anti-bloqueo');
 if(!menuLoader.includes('isMobile?6000:18000'))fail(errors,'mobile loader: falta watchdog específico para móvil');
-if(!menuLoader.includes('},2500):0;'))fail(errors,'mobile loader: falta liberación rápida en móvil');
 if(!menuLoader.includes('if(isMobile)done();else decodeWithTimeout'))fail(errors,'mobile loader: iOS vuelve a esperar Image.decode');
 if(!game.includes('function decodeImageSafely'))fail(errors,'mobile loader: game.js no blinda Image.decode');
 if(!game.includes("reportImageFailure(im,'load timeout')"))fail(errors,'mobile loader: game.js no limita la espera de imágenes');

@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.80
+V23.81
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -248,3 +248,8 @@ RETIRADA DE METEORITOS SIN REBOTE FICTICIO - V23.80
 - Al reducir la poblacion se conserva el rumbo del meteorito al retirarse; ya no se cambia de golpe hacia un borde aleatorio.
 - La velocidad de salida se ajusta progresivamente, tambien si parte del reposo. Se conservan los contactos reales y la retirada fuera de pantalla.
 - CPU local y anfitrion comparten el mismo paso de salida. Sin nuevos campos ni cambios de frecuencia en la red.
+
+VISTA 3D PERMANENTE - V23.81
+- Se retira el boton de cambio de vista y la opcion de abrir el proyecto en 2D.
+- Las preferencias antiguas y el parámetro view=2d ya no cambian la presentacion. El arranque espera siempre los modelos 3D.
+- Si falla la carga se muestra el aviso para reintentar. Una perdida temporal de contexto conserva la recuperacion automatica en3D.

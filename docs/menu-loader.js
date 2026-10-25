@@ -7,9 +7,8 @@
   const labelEl=document.getElementById('menuFirstLoaderLabel');
   const app=document.getElementById('app');
   const actions=document.getElementById('menuFirstLoaderActions');
-  const needsModels=window.Galaxy3D?.requested===true;
-  let modelsState=needsModels?'loading':'ready';
-  let total=0,done=0,registrationComplete=false,finished=false;
+  let modelsState='loading';
+  let total=0,done=0,registrationComplete=false,finished=false,releaseTimer=0;
   const isMobile=document.documentElement.classList.contains('handheld-device')||
     matchMedia('(pointer:coarse)').matches||/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   document.documentElement.classList.add('menu-first-loading');
@@ -26,36 +25,28 @@
     if(barEl)barEl.style.transform='scaleX('+(pct/100)+')';
   }
   const slowTimer=window.setTimeout(()=>{
-    if(!finished&&modelsState!=='error'&&labelEl)labelEl.textContent='CARGANDO GRAFICOS... ESPERA UN MOMENTO';
+    if(!finished&&modelsState!=='error'&&labelEl&&actions?.hidden!==false)labelEl.textContent='CARGANDO GRAFICOS... ESPERA UN MOMENTO';
   },8000);
-  // V22.19: Safari/iOS puede dejar Image.decode() o una petición de imagen
-  // pendiente indefinidamente. El cargador nunca debe bloquear el menú por eso.
+  // A slow download offers a retry without exposing incomplete graphics.
+  // Sprite/decode requests retain their own bounded waits below.
   const watchdogTimer=window.setTimeout(()=>{
-    if(finished)return;
-    // The 3D models are required: a timer must never reveal temporary artwork.
-    if(needsModels)return;
-    registrationComplete=true;
-    done=Math.max(done,total);
-    if(labelEl)labelEl.textContent='INICIANDO...';
-    finishIfReady();
+    if(finished||modelsState==='error')return;
+    if(labelEl)labelEl.textContent='LA CARGA SIGUE EN CURSO. PUEDES REINTENTAR';
+    if(actions)actions.hidden=false;
   },isMobile?6000:18000);
-  const mobileReleaseTimer=isMobile&&!needsModels?window.setTimeout(()=>{
-    if(finished)return;
-    registrationComplete=true;
-    done=Math.max(done,total);
-    if(labelEl)labelEl.textContent='INICIANDO...';
-    finishIfReady();
-  },2500):0;
   function finishIfReady(){
     if(finished||modelsState!=='ready'||!registrationComplete||done<total)return;
+    if(window.Galaxy3D?.active!==true){modelFailure();return;}
     finished=true;
     window.clearTimeout(slowTimer);
     window.clearTimeout(watchdogTimer);
-    if(mobileReleaseTimer)window.clearTimeout(mobileReleaseTimer);
     updateProgress();
     loader.classList.add('is-ready');
     loader.dataset.state='ready';
-    window.setTimeout(()=>{
+    if(actions)actions.hidden=true;
+    releaseTimer=window.setTimeout(()=>{
+      releaseTimer=0;
+      if(modelsState!=='ready'||window.Galaxy3D?.active!==true){modelFailure();return;}
       loader.hidden=true;
       if(app)app.inert=false;
       document.documentElement.classList.remove('menu-first-loading');
@@ -70,24 +61,32 @@
   }
   // game.js registra sus texturas y la preparacion final de fuentes y caches.
   window.GalaxyGraphicsLoader={track};
-  if(needsModels){
-    const modelFailure=()=>{
-      modelsState='error';loader.dataset.state='error';
-      window.clearTimeout(slowTimer);window.clearTimeout(watchdogTimer);
-      if(labelEl)labelEl.textContent='NO SE HAN PODIDO CARGAR LOS OBJETOS 3D';
-      if(actions)actions.hidden=false;
-      updateProgress();
-    };
-    track(Promise.resolve(window.Galaxy3D.ready).then(result=>{
-      if(!result?.ok){modelFailure();return;}
+  function modelFailure(){
+    finished=false;modelsState='error';loader.dataset.state='error';
+    window.clearTimeout(slowTimer);window.clearTimeout(watchdogTimer);
+    if(releaseTimer)window.clearTimeout(releaseTimer);releaseTimer=0;
+    loader.hidden=false;loader.classList.remove('is-ready');
+    document.documentElement.classList.add('menu-first-loading');
+    if(app)app.inert=true;
+    if(labelEl)labelEl.textContent='NO SE HAN PODIDO CARGAR LOS OBJETOS 3D';
+    if(actions)actions.hidden=false;
+    updateProgress();
+  }
+  window.addEventListener('galaxy3d-error',modelFailure);
+  window.addEventListener('galaxy3d-ready',()=>{
+    if(window.Galaxy3D?.active!==true)return;
+    modelsState='ready';finishIfReady();
+  });
+  try{
+    const readiness=window.Galaxy3D?.ready;
+    if(!readiness||typeof readiness.then!=='function')modelFailure();
+    else track(Promise.resolve(readiness).then(result=>{
+      if(modelsState==='error')return;
+      if(!result?.ok||window.Galaxy3D?.active!==true){modelFailure();return;}
       modelsState='ready';finishIfReady();
     },modelFailure));
-  }
+  }catch(_){modelFailure();}
   document.getElementById('menuFirstLoaderRetry')?.addEventListener('click',()=>window.location.reload());
-  document.getElementById('menuFirstLoader2D')?.addEventListener('click',()=>{
-    const target=new URL(window.location.href);target.searchParams.set('view','2d');
-    window.location.assign(target.href);
-  });
   const assets=[
     isMobile?'assets/sprites/INTRO_MOBILE.png':'assets/sprites/INTRO.png',
     'assets/sprites/asteroide1.png','assets/sprites/asteroide2.png',
