@@ -47,6 +47,24 @@ function bothEngines(label,state,frames,step,verify){
   }
   assert.deepEqual(results[0],results[1],label+': CPU local y autoridad online no coinciden');
 }
+function giantChain(count){
+  const giant=rock(900,500,45,0,core.GIANT_RADIUS,{id:9,entered:true});
+  const asteroids=[
+    rock(1059.5,500,-60,0,51.75,{id:1,spin:1.1,pspin:1.1,exitDelay:-1}),
+    rock(1143.4687408106652,509.4604739136755,-60,0,51.75,{id:2,spin:1.7,pspin:1.7,exitDelay:-1})
+  ];
+  const dx=asteroids[1].x-asteroids[0].x,dy=asteroids[1].y-asteroids[0].y,length=Math.hypot(dx,dy);
+  while(asteroids.length<count){
+    const previous=asteroids.at(-1),id=asteroids.length+1;let next;
+    for(let gap=60;gap<125;gap+=.25){
+      const x=previous.x+dx/length*gap,y=previous.y+dy/length*gap;
+      const candidate=rock(x,y,-60,0,51.75,{id,spin:id*.6+.5,pspin:id*.6+.5,exitDelay:-1});
+      if(asteroids.every(a=>!core.rockContact(a,candidate,a.r,candidate.r))&&!core.rockContact(giant,candidate,giant.r,candidate.r,'giant')){next=candidate;break;}
+    }
+    assert.ok(next,'la fila oblicua empieza sin solapes entre vecinos');asteroids.push(next);
+  }
+  return {giant,asteroids};
+}
 
 const checks=[
   ['lluvia contra lluvia: impulso y separacion completa',()=>{
@@ -167,6 +185,101 @@ const checks=[
       assert.ok(Math.abs(g.x-(500+50*DT*(frame+1)))<EPS,'el gigante no cambia de recorrido');
       assert.ok(m.vx>0,'el meteorito recibe el impulso despues del movimiento del gigante');
     });
+  }],
+  ['ambos motores: mediano en retirada sigue siendo solido frente al gigante',()=>{
+    bothEngines('retirada contra gigante',{
+      giant:rock(900,500,45,0,core.GIANT_RADIUS,{id:9,entered:true}),
+      asteroids:[rock(1200,500,-90,0,51.75,{id:1,spin:1.1,pspin:1.1,exitDelay:-1,exiting:true})]
+    },360,engine=>{engine.updateAsteroids(DT);engine.updateGiant(DT);},(engine,frame)=>{
+      const g=engine.giant,a=engine.asteroids[0];
+      assert.ok(a,'el contacto no elimina el mediano en retirada');
+      assert.equal(core.rockContact(g,a,core.GIANT_RADIUS,a.r,'giant'),null,'la retirada no permite atravesar la silueta del gigante en tick '+frame);
+      assert.equal(a.exiting,true,'se conserva la retirada de poblacion despues del rebote');
+      assert.ok(Math.abs(g.x-(900+45*DT*(frame+1)))<EPS,'el gigante conserva su recorrido');
+      if(frame===359)assert.ok(a.vx!==-90||a.vy!==0,'el contacto debe cambiar la trayectoria del mediano que salia');
+    });
+  }],
+  ['ambos motores: empuje gigante-mediano-mediano termina en el mismo tick',()=>{
+    bothEngines('cadena contra gigante',{
+      giant:rock(900,500,45,0,core.GIANT_RADIUS,{id:9,entered:true}),
+      asteroids:[
+        rock(1059.5,500,0,0,51.75,{id:1,spin:1.1,pspin:1.1,exitDelay:-1}),
+        rock(1143.4687408106652,509.4604739136755,0,0,51.75,{id:2,spin:1.7,pspin:1.7,exitDelay:-1})
+      ]
+    },120,engine=>{engine.updateAsteroids(DT);engine.updateGiant(DT);},(engine,frame)=>{
+      const g=engine.giant,[a,b]=engine.asteroids;
+      assert.equal(core.rockContact(a,b,a.r,b.r),null,'el empuje no deja medianos incrustados hasta otro tick: '+frame);
+      for(const m of [a,b])assert.equal(core.rockContact(g,m,core.GIANT_RADIUS,m.r,'giant'),null,'resolver la cadena tampoco deja un mediano dentro del gigante');
+      assert.ok(Math.abs(g.x-(900+45*DT*(frame+1)))<EPS,'resolver la cadena no integra ni mueve dos veces al gigante');
+    });
+  }],
+  ['ambos motores: el apoyo se propaga por tres a cinco medianos en cualquier orden',()=>{
+    for(const count of [3,4,5])for(const reversed of [false,true]){
+      const state=giantChain(count);if(reversed)state.asteroids.reverse();
+      bothEngines('fila oblicua '+count+' invertida '+reversed,state,120,engine=>{engine.updateAsteroids(DT);engine.updateGiant(DT);},(engine,frame)=>{
+        for(let i=0;i<count;i++){
+          const a=engine.asteroids[i];
+          assert.equal(core.rockContact(engine.giant,a,core.GIANT_RADIUS,a.r,'giant'),null,'la fila queda fuera del gigante desde el tick '+frame);
+          for(let j=i+1;j<count;j++)assert.equal(core.rockContact(a,engine.asteroids[j],a.r,engine.asteroids[j].r),null,'la propagacion no deja vecinos solapados en tick '+frame);
+        }
+        assert.ok(Math.abs(engine.giant.x-(900+45*DT*(frame+1)))<EPS,'propagar apoyo no integra de nuevo al gigante');
+      });
+    }
+  }],
+  ['el sesgo de separacion no convierte el mediano apoyado en masa infinita',()=>{
+    const state=giantChain(2);for(const a of state.asteroids){a.vx=0;a.vy=0;}
+    const reference=clone(state);
+    for(const a of reference.asteroids)core.resolveGiantAsteroidCollision(reference.giant,a,core.GIANT_RADIUS,a.r);
+    const momentum=items=>items.reduce((sum,a)=>[sum[0]+a.r*a.r*a.vx,sum[1]+a.r*a.r*a.vy],[0,0]);
+    const expected=momentum(reference.asteroids),giant=clone(state.giant);
+    assert.equal(core.resolveGiantAsteroidContacts(state.giant,state.asteroids),true);
+    const actual=momentum(state.asteroids);
+    assert.ok(Math.hypot(actual[0]-expected[0],actual[1]-expected[1])<1e-6,'el impulso entre los dos medianos conserva su momento con las masas originales');
+    assert.deepEqual(state.giant,giant,'solo el gigante tiene masa fija durante el impulso');
+  }],
+  ['ambos motores: un vecino en retirada no bloquea el apoyo del gigante',()=>{
+    for(const exitingIndex of [0,1]){
+      const state=giantChain(2);state.asteroids[exitingIndex].exiting=true;
+      bothEngines('cadena con retirada '+exitingIndex,state,60,engine=>{engine.updateAsteroids(DT);engine.updateGiant(DT);},engine=>{
+        const [a,b]=engine.asteroids;
+        assert.equal(core.rockContact(a,b,a.r,b.r),null,'el vecino de trayectoria fija tampoco deja una pareja incrustada');
+        for(const m of [a,b])assert.equal(core.rockContact(engine.giant,m,core.GIANT_RADIUS,m.r,'giant'),null,'el gigante permanece solido al resolver la retirada');
+        assert.equal(engine.asteroids[exitingIndex].exiting,true,'se conserva la retirada durante toda la cadena');
+      });
+    }
+  }],
+  ['dos medianos apoyados en el gigante se separan incluso con una retirada',()=>{
+    for(const exiting of [false,true])for(const reversed of [false,true]){
+      const giant=rock(900,500,45,0,core.GIANT_RADIUS),before=clone(giant);
+      const bodies=[rock(1059.5,500,-60,0,51.75,{id:1,spin:1.1}),rock(1029.5,450,-60,0,51.75,{id:2,spin:1.7,exiting})];
+      for(const a of bodies)assert.ok(core.rockContact(giant,a,giant.r,a.r,'giant'),'ambos cuerpos empiezan realmente apoyados');
+      if(reversed)bodies.reverse();
+      assert.equal(core.resolveGiantAsteroidContacts(giant,bodies),true);
+      assert.equal(core.rockContact(bodies[0],bodies[1],51.75,51.75),null,'los dos apoyos no quedan bloqueados entre si');
+      for(const a of bodies){assert.equal(core.rockContact(giant,a,giant.r,a.r,'giant'),null);finite(a,'doble apoyo',190);}
+      assert.deepEqual(giant,before,'el ajuste de apoyos mantiene fijo el gigante');
+    }
+  }],
+  ['separar un mediano que ya se aleja no le da patadas extra',()=>{
+    const g=rock(900,500,0,0,core.GIANT_RADIUS),a=rock(1059.5,500,0,0,51.75,{id:1,spin:1.1});
+    const hit=core.rockContact(g,a,g.r,a.r,'giant');assert.ok(hit);
+    a.vx=hit.nx*60;a.vy=hit.ny*60;
+    const velocity=[a.vx,a.vy];
+    assert.equal(core.resolveGiantAsteroidContacts(g,[a],g.r,a.r),true);
+    assert.equal(core.rockContact(g,a,g.r,a.r,'giant'),null);
+    assert.deepEqual([a.vx,a.vy],velocity,'la correccion de posicion no inyecta velocidad si el cuerpo ya se aleja');
+    const settled=clone(a);
+    assert.equal(core.resolveGiantAsteroidContacts(g,[a],g.r,a.r),false);
+    assert.deepEqual(a,settled,'una comprobacion repetida sin contacto no cambia el cuerpo');
+  }],
+  ['sin contacto gigante no se repiten los pares y las otras retiradas se conservan',()=>{
+    const g=rock(500,500,45,0,core.GIANT_RADIUS),a=rock(1300,500,0,0,51.75,{id:1,spin:1.1}),b=rock(1310,500,0,0,51.75,{id:2,spin:1.7});
+    const before=clone([a,b]);
+    assert.equal(core.resolveGiantAsteroidContacts(g,[a,b],g.r,a.r),false);
+    assert.deepEqual([a,b],before,'la pasada extra solo se activa despues de un impacto con el gigante');
+    const fragment=rock(g.x,g.y,30,0,17,{fragment:true,exiting:true}),original=clone(fragment);
+    assert.equal(core.resolveGiantAsteroidCollision(g,fragment,g.r,17),false);
+    assert.deepEqual(fragment,original,'la correccion de medianos no cambia las retiradas de fragmentos');
   }],
   ['ambos motores: choque de roce y paso cercano sin contacto',()=>{
     for(const offset of [24,31]){

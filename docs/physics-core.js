@@ -566,16 +566,22 @@
     const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
     return d<ra+rb?{depth:ra+rb-d,nx:d?dx/d:1,ny:d?dy/d:0,x:(a.x+b.x)/2,y:(a.y+b.y)/2}:null;
   }
-  function resolveShapePair(a,b,ra,rb,maxSpeed,fixedA=false,aKind){
+  function resolveShapePair(a,b,ra,rb,maxSpeed,fixedA=false,aKind,positionAnchor=0){
     let contact=rockContact(a,b,ra,rb,aKind);if(!contact)return false;
-    const invA=fixedA||a.exiting?0:1/Math.max(1,ra*ra),invB=b.exiting?0:1/Math.max(1,rb*rb),sum=invA+invB;
+    const invA=fixedA||a.exiting?0:1/Math.max(1,ra*ra),invB=b.exiting&&!(fixedA&&aKind==='giant')?0:1/Math.max(1,rb*rb),sum=invA+invB;
     if(!sum)return false;
+    // A rock supported by the giant stays put during positional correction,
+    // while the impulse below still uses the two bodies' original masses.
+    // A retiring neighbour can be displaced to clear that support while its
+    // existing fixed-path velocity/impulse rule remains unchanged.
+    const posA=positionAnchor===1?0:positionAnchor===-1?1/Math.max(1,ra*ra):invA;
+    const posB=positionAnchor===-1?0:positionAnchor===1?1/Math.max(1,rb*rb):invB,posSum=posA+posB;
     beginRockCorrection(a);beginRockCorrection(b);
     let nx=contact.nx,ny=contact.ny,totalX=0,totalY=0;
     for(let pass=0;pass<10&&contact;pass++){
-      const correction=(contact.depth+.15)/sum;
-      a.x-=contact.nx*correction*invA;a.y-=contact.ny*correction*invA;
-      b.x+=contact.nx*correction*invB;b.y+=contact.ny*correction*invB;
+      const correction=(contact.depth+.15)/posSum;
+      a.x-=contact.nx*correction*posA;a.y-=contact.ny*correction*posA;
+      b.x+=contact.nx*correction*posB;b.y+=contact.ny*correction*posB;
       totalX+=contact.nx*contact.depth;totalY+=contact.ny*contact.depth;
       contact=rockContact(a,b,ra,rb,aKind);
     }
@@ -584,8 +590,8 @@
       // projection settles the whole outline without leaving a trapped body.
       const sa=rockShape(a,ra,aKind),sb=rockShape(b,rb),full=sa&&sb?convexContact(sa.full,sb.full):null;
       const d=Math.hypot(b.x-a.x,b.y-a.y),hit=full||{depth:ra+rb-d+.5,nx:d?(b.x-a.x)/d:1,ny:d?(b.y-a.y)/d:0};
-      const correction=(Math.max(0,hit.depth)+.5)/sum;
-      a.x-=hit.nx*correction*invA;a.y-=hit.ny*correction*invA;b.x+=hit.nx*correction*invB;b.y+=hit.ny*correction*invB;
+      const correction=(Math.max(0,hit.depth)+.5)/posSum;
+      a.x-=hit.nx*correction*posA;a.y-=hit.ny*correction*posA;b.x+=hit.nx*correction*posB;b.y+=hit.ny*correction*posB;
       totalX+=hit.nx*hit.depth;totalY+=hit.ny*hit.depth;
       contact=rockContact(a,b,ra,rb,aKind);
     }
@@ -593,14 +599,13 @@
       // Last resort for an initially trapped body: the bounding circles also
       // contain every silhouette after any rotation caused by the separation.
       const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),nx=d?dx/d:1,ny=d?dy/d:0;
-      const depth=Math.max(0,ra+rb-d)+1,correction=depth/sum;
-      a.x-=nx*correction*invA;a.y-=ny*correction*invA;b.x+=nx*correction*invB;b.y+=ny*correction*invB;
+      const depth=Math.max(0,ra+rb-d)+1,correction=depth/posSum;
+      a.x-=nx*correction*posA;a.y-=ny*correction*posA;b.x+=nx*correction*posB;b.y+=ny*correction*posB;
       totalX+=nx*depth;totalY+=ny*depth;
     }
     const length=Math.hypot(totalX,totalY);if(length>1e-8){nx=totalX/length;ny=totalY/length;}
     const closing=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
     if(closing<0){const impulse=-(fixedA||!invA||!invB?1.58:1.84)*closing/sum;a.vx-=impulse*invA*nx;a.vy-=impulse*invA*ny;b.vx+=impulse*invB*nx;b.vy+=impulse*invB*ny;}
-    else if(fixedA&&aKind==='giant'){b.vx+=nx*12;b.vy+=ny*12;}
     if(invA)limitRockSpeed(a,maxSpeed);if(invB)limitRockSpeed(b,maxSpeed);
     finishRockCorrection(a);finishRockCorrection(b);return true;
   }
@@ -773,7 +778,10 @@
   }
 
   function resolveGiantAsteroidCollision(g,a,giantRadius=GIANT_RADIUS,defaultRadius=45,maxSpeed=190){
-    if(!g||!a||a.exiting)return false;
+    if(!g||!a)return false;
+    // Retiring medium rocks are still visible and solid against the giant.
+    // Other retiring bodies retain their existing environmental behaviour.
+    if(a.exiting&&!isMediumRock(a,defaultRadius))return false;
     const ar=Number(a.r)||defaultRadius;
     if(isMediumRock(a,defaultRadius)||(g.exiting&&isMediumRock(g,giantRadius)))return resolveShapePair(g,a,giantRadius,ar,maxSpeed,true,giantRadius===GIANT_RADIUS?'giant':undefined);
     if(giantRadius===GIANT_RADIUS&&!g.exiting){
@@ -807,6 +815,50 @@
 
     limitRockSpeed(a,maxSpeed);
     finishRockCorrection(a);
+    return true;
+  }
+
+  function resolveGiantAsteroidContacts(g,asteroids,giantRadius=GIANT_RADIUS,defaultRadius=45,maxSpeed=190){
+    if(!g||!Array.isArray(asteroids))return false;
+    let queue=null,rank=null;
+    for(let i=0;i<asteroids.length;i++)if(resolveGiantAsteroidCollision(g,asteroids[i],giantRadius,defaultRadius,maxSpeed)){
+      if(!queue){queue=[];rank=new Map();}
+      queue.push(i);rank.set(i,0);
+    }
+    if(!queue)return false;
+    // Propagate support outward instead of pushing each neighbour back into
+    // the giant and iterating the same expensive concave contacts repeatedly.
+    const visited=new Set();let fallback=false;
+    const pair=(i,j,anchor)=>{
+      const a=asteroids[i],b=asteroids[j];
+      if(isMediumRock(a,defaultRadius)&&isMediumRock(b,defaultRadius))return resolveShapePair(a,b,Number(a.r)||defaultRadius,Number(b.r)||defaultRadius,maxSpeed,false,undefined,anchor);
+      return resolveAsteroidPairCollision(a,b,defaultRadius,maxSpeed);
+    };
+    for(let head=0;head<queue.length;head++){
+      const i=queue[head],level=rank.get(i);
+      for(let j=0;j<asteroids.length;j++){
+        if(i===j)continue;
+        const key=Math.min(i,j)*asteroids.length+Math.max(i,j);if(visited.has(key))continue;
+        const other=rank.get(j),anchor=other===undefined||level<=other?1:-1;
+        if(!pair(i,j,anchor))continue;
+        visited.add(key);
+        if(other===undefined){rank.set(j,level+1);queue.push(j);}
+        else if(other===level)fallback=true;
+      }
+    }
+    for(const a of asteroids)if(resolveGiantAsteroidCollision(g,a,giantRadius,defaultRadius,maxSpeed))fallback=true;
+    // Two independently supported rocks, or a fixed retiring neighbour, may
+    // need a short final adjustment. This fallback has a fixed two-pass cap.
+    for(let pass=0;fallback&&pass<2;pass++){
+      let changed=false;
+      for(let i=0;i<asteroids.length;i++)for(let j=i+1;j<asteroids.length;j++){
+        const a=rank.get(i),b=rank.get(j);if(a===undefined&&b===undefined)continue;
+        if(pair(i,j,b===undefined||a!==undefined&&a<=b?1:-1))changed=true;
+      }
+      fallback=false;
+      for(const a of asteroids)if(resolveGiantAsteroidCollision(g,a,giantRadius,defaultRadius,maxSpeed))fallback=true;
+      if(!changed&&!fallback)break;
+    }
     return true;
   }
 
@@ -1245,6 +1297,7 @@
     TARGET_MIN_ALIGN,
     resolveAsteroidPairCollision,
     resolveGiantAsteroidCollision,
+    resolveGiantAsteroidContacts,
     resolveMeteorCollisions,
     guidedTargetFor,
     reloadTimeFor,

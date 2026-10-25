@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.75
+V23.76
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -218,3 +218,9 @@ BALANCEO LATERAL EN REPOSO - V23.75
 - La amplitud vuelve progresivamente al balanceo leve de vuelo al ganar velocidad; el giro conserva su limite de60 grados.
 - Physics-core y renderer comparten inclinacion y perfil de colision usando velocidad y reloj de partida existentes. No se anaden campos a los paquetes de red.
 - Se conservan los25 grados y la recuperacion progresiva de2 segundos al acelerar, y los5 grados de cabeceo al soltar.
+
+COLISIONES ENTRE EL GIGANTE Y LOS MEDIANOS - V23.76
+- Los medianos visibles que estan abandonando la arena siguen chocando contra la silueta irregular del gigante. Su estado de salida se conserva.
+- Despues de un choque con el gigante, el apoyo se propaga hacia las rocas cercanas sin empujar otra vez la primera roca contra el gigante. Solo la correccion de posicion usa ese apoyo; el impulso conserva las masas reales.
+- Una separacion correctiva no se convierte en un barrido ficticio contra naves o proyectiles ni anade impulsos a cuerpos que ya se alejan.
+- La trayectoria y velocidad del gigante no cambian; CPU y anfitrion online usan el mismo codigo compartido, sin nuevos campos de red.

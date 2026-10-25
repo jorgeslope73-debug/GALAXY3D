@@ -2129,7 +2129,7 @@
           p.vx=n.x*130;p.vy=n.y*130;
         }else this.destroyShip(p,null);
       }
-      for(const a of this.asteroids)this.resolveGiantAsteroidCollision(g,a);
+      PHYSICS_CORE.resolveGiantAsteroidContacts(g,this.asteroids,GIANT_RADIUS,ASTEROID_RADIUS,190);
       for(const m of this.meteors)PHYSICS_CORE.resolveGiantAsteroidCollision(g,m,GIANT_RADIUS,SMALL_METEOR_RADIUS,240);
       for(let i=this.pickups.length-1;i>=0;i--)if(PHYSICS_CORE.giantCircleContact(g,this.pickups[i],PICKUP_RADIUS))this.pickups.splice(i,1);
       if(g.entered&&(g.x<-exitMargin||g.x>W+exitMargin||g.y<-exitMargin||g.y>H+exitMargin)){
