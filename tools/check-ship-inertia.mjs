@@ -21,27 +21,24 @@ function flight(fps,speed=1,heldSeconds=30,totalSeconds=38,thrustAt=now=>now<hel
     assert.equal(JSON.stringify(pose),oldPose,'los datos de física/render entrantes son inmutables');
     assert.equal(JSON.stringify(before),oldState,'el estado anterior no cambia');
     assert.ok(Number.isFinite(state.pitch)&&Number.isFinite(state.velocity));
-    assert.ok(Math.abs(state.pitch)*DEG<=35+10*(speed-1)+.000001,'amplitud acotada según la mejora de velocidad');
+    assert.ok(state.pitch*DEG<=25.000001&&state.pitch*DEG>=-5.000001,'morro acotado a 25 grados arriba y 5 abajo, también con mejoras');
     samples.push({now,pitch:state.pitch,velocity:state.velocity,speed:Math.hypot(player.vx,player.vy),thrust});
   }
   return samples;
 }
 const flights=new Map([30,60,120].map(fps=>[fps,flight(fps)]));
 function checkHeldFlight(samples,speed){
-  const amplitude=35+10*(speed-1),held=samples.filter(s=>s.now>=12000&&s.now<30000);
-  const braking=samples.filter(s=>s.now>=30000&&s.now<32000);
-  assert.ok(Math.max(...samples.filter(s=>s.now<2000).map(s=>s.pitch))*DEG>amplitude-.3,'la subida inicial alcanza casi toda la inclinación');
+  const held=samples.filter(s=>s.now>=1000&&s.now<30000);
+  const braking=samples.filter(s=>s.now>=30000&&s.now<31000);
+  assert.ok(Math.max(...samples.filter(s=>s.now<1000).map(s=>s.pitch))*DEG>24.7,'la subida inicial alcanza los 25 grados sin una espera larga');
   assert.ok(samples.filter(s=>s.thrust).every(s=>s.pitch>=0),'acelerando desde parado nunca cabecea hacia abajo');
-  assert.ok(held.every(s=>s.pitch*DEG>=amplitude*.799&&s.pitch*DEG<amplitude*.85),'el crucero permanece inclinado, incluso tras 12–30 s');
-  for(let i=1;i<held.length;i++)assert.ok(held[i].pitch<=held[i-1].pitch+1e-12,'la relajación mantenida es gradual y sin oscilación');
-  assert.ok((held[0].pitch-held.at(-1).pitch)*DEG>.5,'se relaja ligeramente a lo largo de varios segundos');
-  assert.ok(Math.min(...braking.map(s=>s.pitch))*DEG<-amplitude*.97,'soltar alcanza casi toda la inclinación negativa');
-  const afterTwo=samples.find(s=>s.now>=32000);
-  assert.ok(afterTwo.pitch*DEG<-5,'la recuperación no termina con un pulso corto de un segundo');
-  for(const [threshold,tolerance] of [[1,.5],[.5,.15]]){
-    const stopped=samples.find(s=>s.now>=30000&&s.speed<threshold);
-    assert.ok(stopped&&Math.abs(stopped.pitch)*DEG<tolerance,'casi nivelada al reducirse la velocidad a '+threshold);
-  }
+  assert.ok(held.every(s=>s.pitch*DEG>=24.9&&s.pitch*DEG<=25.000001),'mantener el acelerador sostiene 25 grados durante 30 segundos, incluso en crucero');
+  assert.ok(Math.min(...braking.map(s=>s.pitch))*DEG<-4.25,'soltar produce un pequeño cabeceo hacia abajo perceptible');
+  assert.ok(braking.every(s=>s.pitch*DEG>=-5.000001),'el cabeceo al soltar no supera cinco grados');
+  const afterOne=samples.find(s=>s.now>=31000);
+  assert.ok(Math.abs(afterOne.pitch)*DEG<1,'se recupera la horizontal en menos de un segundo al soltar');
+  assert.ok(afterOne.speed>50*speed,'la recuperación termina mientras la nave todavía se desplaza, sin esperar a frenarse');
+  assert.ok(samples.filter(s=>s.now>=31000).every(s=>Math.abs(s.pitch)*DEG<1),'la nave sigue nivelada durante el deslizamiento posterior, sin otro cabeceo');
   assert.ok(Math.abs(samples.at(-1).pitch)*DEG<.00001,'se nivela al quedar parada');
 }
 for(const samples of flights.values())checkHeldFlight(samples,1);
@@ -54,20 +51,20 @@ for(const fps of [30,120]){
   }
 }
 assert.ok(maxFrameDifference*DEG<.25,'el movimiento no depende materialmente de 30/60/120 Hz');
-const normal=flights.get(60),boosted=[flight(60,1.5),flight(60,2)];
-for(const [i,samples] of boosted.entries()){
-  checkHeldFlight(samples,1.5+i*.5);
-  const before=i?boosted[i-1]:normal;
-  assert.ok(Math.max(...samples.map(s=>s.pitch))*DEG>Math.max(...before.map(s=>s.pitch))*DEG+4,'cada mejora aumenta el cabeceo al acelerar');
-  assert.ok(Math.min(...samples.map(s=>s.pitch))*DEG<Math.min(...before.map(s=>s.pitch))*DEG-4,'cada mejora aumenta el cabeceo al frenar');
+for(const fps of [30,60,120])for(const speed of [1.5,2]){
+  const samples=flight(fps,speed),normal=flights.get(fps);
+  checkHeldFlight(samples,speed);
+  const peak=list=>Math.max(...list.map(s=>s.pitch))*DEG,dip=list=>Math.min(...list.map(s=>s.pitch))*DEG;
+  assert.ok(Math.abs(peak(samples)-peak(normal))<.05,'las mejoras de velocidad mantienen la misma elevación máxima de 25 grados');
+  assert.ok(Math.abs(dip(samples)-dip(normal))<.05,'las mejoras de velocidad conservan el pequeño cabeceo de cinco grados');
 }
 
 const tap=flight(60,1,.08,7),repress=flight(60,1,2,12,now=>now<2000||(now>=2400&&now<6000));
-assert.ok(tap.every(s=>Math.abs(s.pitch)*DEG<=35.000001),'un toque corto permanece acotado');
+assert.ok(tap.every(s=>s.pitch*DEG<=25.000001&&s.pitch*DEG>=-5.000001),'un toque corto permanece acotado');
 assert.ok(Math.abs(tap.at(-1).pitch)*DEG<.00001,'el toque corto no deja inclinación residual');
 const ramp=repress.filter(s=>s.now>=2400&&s.now<3000);
 for(let i=1;i<ramp.length;i++)assert.ok(ramp[i].pitch>=ramp[i-1].pitch,'reactivar durante la bajada empieza a levantar sin otro cabeceo hacia abajo');
-assert.ok(repress.find(s=>s.now>=4000).pitch*DEG>25,'reactivar recupera la postura elevada');
+assert.ok(repress.find(s=>s.now>=4000).pitch*DEG>24.9,'reactivar recupera la postura mantenida de 25 grados');
 assert.ok(Math.abs(repress.at(-1).pitch)*DEG<.15,'la segunda frenada vuelve a nivelarse');
 
 let brakingState=null;
@@ -110,11 +107,18 @@ model.traverse(object=>{
 const front=Math.max(...vertices.map(v=>v.y)),nose=vertices.filter(v=>v.y>front-1);
 assert.ok(front>20&&nose.length,'el modelo preparado apunta hacia +Y');
 const initial=nose.reduce((total,v)=>total+v.z,0)/nose.length;
-tilt.rotation.x=35/DEG;tilt.updateMatrixWorld(true);
+tilt.rotation.x=25/DEG;tilt.updateMatrixWorld(true);
 const lifted=nose.reduce((total,v)=>total+v.clone().applyEuler(tilt.rotation).z,0)/nose.length;
-assert.ok(lifted>initial+15,'el pitch pronunciado levanta el morro real hacia la cámara +Z');
+assert.ok(lifted>initial+10,'los 25 grados levantan el morro real hacia la cámara +Z');
+const dip=Math.min(...flights.get(60).map(s=>s.pitch));
+tilt.rotation.x=dip;tilt.updateMatrixWorld(true);
+const lowered=nose.reduce((total,v)=>total+v.clone().applyEuler(tilt.rotation).z,0)/nose.length;
+assert.ok(lowered<initial-2,'el pequeño cabeceo real al soltar baja el morro sin invertir su orientación');
 const mount=new T.Object3D();mount.position.set(10,14,4);tilt.add(mount);tilt.updateMatrixWorld(true);
-const worldMount=mount.getWorldPosition(new T.Vector3()),expected=mount.position.clone().applyEuler(tilt.rotation);
-assert.ok(worldMount.distanceTo(expected)<1e-10,'las armas montadas heredan el mismo cabeceo');
+for(const pitch of [25/DEG,dip,0]){
+  tilt.rotation.x=pitch;tilt.updateMatrixWorld(true);
+  const worldMount=mount.getWorldPosition(new T.Vector3()),expected=mount.position.clone().applyEuler(tilt.rotation);
+  assert.ok(worldMount.distanceTo(expected)<1e-10,'las armas montadas siguen la elevación, el cabeceo y la vuelta a horizontal');
+}
 for(const [fps,samples] of flights)console.log(fps+' Hz: impulso '+(Math.max(...samples.map(s=>s.pitch))*DEG).toFixed(3)+'°, mantenida30s '+(samples.find(s=>s.now>=29900).pitch*DEG).toFixed(3)+'°, frenado '+(Math.min(...samples.map(s=>s.pitch))*DEG).toFixed(3)+'°.');
-console.log('Inercia visual OK: postura mantenida, recuperación por velocidad, 35/40/45°, 30/60/120 Hz (diferencia máxima '+(maxFrameDifference*DEG).toFixed(4)+'°), pulsos/reactivación continua, resets, aislamiento, inmutabilidad y signo del GLB real.');
+console.log('Inercia visual OK: 25° mantenidos con acelerador y mejoras, cabeceo de hasta 5° al soltar y horizontal <1° en un segundo mientras desliza; 30/60/120 Hz (diferencia máxima '+(maxFrameDifference*DEG).toFixed(4)+'°), pulsos/reactivación continua, resets, aislamiento, inmutabilidad, morro GLB y armas.');

@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.72
+V23.73
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -200,3 +200,9 @@ METEORITO GIGANTE UN 40 POR CIENTO MAYOR — V23.72
 - En las partidas, el diámetro de referencia pasa de 270 a 378 y el radio de 135 a 189, tanto contra CPU como en red.
 - El perfil irregular, las colisiones de naves, balas, escudos y otros meteoritos usan la misma escala compartida de GalaxyPhysicsCore. No se sustituye la silueta por un círculo.
 - Se mantiene el GLB Rocky_Asteroid_5.glb y sus texturas; no se añade escala duplicada en el modelo ni nuevos campos de red.
+
+INCLINACION VISUAL DE LAS NAVES - V23.73
+- docs/ship-model.js: stepShipInertia, morro arriba mantenido hasta 25 grados con el acelerador pulsado.
+- Al soltar: cabeceo hacia abajo limitado a 5 grados y recuperacion de la horizontal en menos de un segundo.
+- Los limites son los mismos con y sin mejoras de velocidad.
+- Efecto local de cada render: no cambia fisica, perfiles de colision ni paquetes de red.

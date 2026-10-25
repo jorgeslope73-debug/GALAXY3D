@@ -11,8 +11,8 @@ const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde-luces-
 // pose or the previous frame, and never use a network/simulation clock here.
 export function stepShipInertia(previous,{now,context='',thrust=false,vx,vy,speed=1,active=true}={}){
   const valid=active&&Number.isFinite(now)&&Number.isFinite(vx)&&Number.isFinite(vy)&&Number.isFinite(speed)&&speed>0;
-  const limit=Math.max(35,Math.min(45,35+10*(speed-1)))*Math.PI/180;
-  const neutral=()=>({pitch:0,velocity:0,time:Number.isFinite(now)?now:null,context,thrust:!!thrust,heldAt:thrust?now:null,releaseAt:null,releaseSpeed:0,target:valid&&thrust?limit:0,active:!!valid});
+  const liftLimit=25*Math.PI/180,dipLimit=5*Math.PI/180;
+  const neutral=()=>({pitch:0,velocity:0,time:Number.isFinite(now)?now:null,context,thrust:!!thrust,heldAt:thrust?now:null,releaseAt:null,releaseSpeed:0,target:valid&&thrust?liftLimit:0,active:!!valid});
   const elapsed=previous?now-previous.time:0;
   if(!valid||!previous||!previous.active||previous.context!==context||!Number.isFinite(previous.time)||elapsed<0||elapsed>250)return neutral();
   if(elapsed===0)return {...previous};
@@ -27,31 +27,31 @@ export function stepShipInertia(previous,{now,context='',thrust=false,vx,vy,spee
       // position jump or another downward swing inherited from braking.
     }
     releaseAt=null;releaseSpeed=0;
-    // Hold the initial lift, then relax only a little over several seconds.
-    // Cruising with the accelerator held never makes the ship horizontal.
-    const age=Math.max(0,(now-heldAt)*.001-.8);
-    target=limit*(.8+.2*Math.exp(-age/6));
+    // Keep the nose at 25 degrees while accelerating, including at cruise
+    // speed and with speed pickups. The downward dip has its own smaller cap.
+    target=liftLimit;
   }else{
     heldAt=null;
     if(previous.thrust){releaseAt=now;releaseSpeed=motionSpeed;}
     if(releaseAt!==null&&releaseSpeed>0&&motionSpeed>.5){
-      // Give the nose time to lower fully. Recovery then follows the actual
-      // remaining coasting speed, rather than ending after a short timer.
-      const hold=.65,age=(now-releaseAt)*.001;
-      const remaining=Math.max(0,Math.min(1,(motionSpeed-.5)/Math.max(.5,releaseSpeed*Math.pow(.35,hold)-.5)));
-      target=-limit*(age<hold?1:remaining);
+      // A brief five-degree nod, then a quick return to level even if the
+      // ship is still coasting. Timing stays entirely in local presentation.
+      const age=(now-releaseAt)*.001;
+      target=-dipLimit*Math.exp(-Math.max(0,age-.45)/.1);
+      if(age>1.5){releaseAt=null;releaseSpeed=0;target=0;}
     }else{releaseAt=null;releaseSpeed=0;}
   }
   // Integrate the old target until an input edge actually occurs. Between
   // edges, solve the critical spring with a linear target so 30/60/120 Hz do
   // not anticipate a release or acquire a different recovery delay.
   const from=Number.isFinite(previous.target)?previous.target:target,to=changed?from:target;
-  const omega=13,slope=(to-from)/dt,offset=pitch-from+2*slope/omega,relativeVelocity=velocity-slope;
+  const omega=18,slope=(to-from)/dt,offset=pitch-from+2*slope/omega,relativeVelocity=velocity-slope;
   const coefficient=relativeVelocity+omega*offset,decay=Math.exp(-omega*dt);
   pitch=to-2*slope/omega+(offset+coefficient*dt)*decay;
   velocity=slope+(relativeVelocity-omega*coefficient*dt)*decay;
   if(changed&&thrust)velocity=Math.max(0,velocity);
-  if(Math.abs(pitch)>limit){pitch=Math.sign(pitch)*limit;if(velocity*pitch>0)velocity=0;}
+  if(pitch>liftLimit){pitch=liftLimit;if(velocity>0)velocity=0;}
+  if(pitch<-dipLimit){pitch=-dipLimit;if(velocity<0)velocity=0;}
   return {pitch,velocity,time:now,context,thrust:!!thrust,heldAt,releaseAt,releaseSpeed,target,active:true};
 }
 
