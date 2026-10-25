@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const {clientFixture,engineContext}=require('./check-session-regressions.js');
+const {clientFixture,engineContext,serverFixture}=require('./check-session-regressions.js');
 const game=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n');
 function source(name){
   let start=game.indexOf('  function '+name+'(');
@@ -226,11 +226,13 @@ function resumeTrackingFixture(){
   assert.equal(ctx.ws,null);assert.equal(connection.resumeRequests.length,0,'retiring a blocked signaling socket clears local request ownership');
   assert.equal(f.calls.menu,0,'bounded recovery does not discard the game motor');
 }
-async function checkLocalCpuStartup(){
+function playableClientFixture(){
   const f=resumeTrackingFixture(),{ctx}=f,engines=engineContext(),noop=()=>{};
   const ui=()=>{const classes=new Set();return {textContent:'',classList:{add:k=>classes.add(k),remove:k=>classes.delete(k),contains:k=>classes.has(k)}};};
+  const elements=new Map();
+  const element=key=>{if(!elements.has(key))elements.set(key,{...ui(),value:key==='difficulty'?'medio':'1'});return elements.get(key);};
   Object.assign(ctx,{
-    window:engines.window,document:{getElementById:key=>({value:key==='difficulty'?'medio':'1'})},campoNombre:{value:'Local pilot'},
+    window:engines.window,document:{getElementById:element},campoNombre:{value:'Local pilot'},
     startMusic:noop,prepareMobileControls:async()=>{},updateBuildVersionLearningState:noop,postAnalyticsEvent:noop,
     cpuLearningControl:{localHardEnabled:false},activeLocalDifficulty:'',localCampaignLevel:1,
     onlineStartTimer:null,ONLINE_READY_MS:1200,ONLINE_GO_MS:700,warmOnlineStartCaches:noop,
@@ -239,9 +241,17 @@ async function checkLocalCpuStartup(){
     consumeGameFeelFx:noop,detectLocalMissileEvasion:noop,updatePickupVisualBirths:noop,updateLeaderAnnouncement:noop,
     maybeScheduleVictory:noop,selectMatchBackgroundForRound:noop,selectLocalCampaignBackground:noop,
     updateMobileControlUi:noop,scheduleCanvasResolution:noop,menu:ui(),lobby:ui(),victory:ui(),topbar:ui(),mobileControls:ui(),mobileExit:ui(),
-    p2p:{close:noop},isMobile:false
+    p2p:{close:noop},isMobile:false,onlineSeriesReturnTimer:null,victoryShowTimer:null,pendingVictoryIndex:null,
+    resetVictoryJoystickControls:noop,cancelInterstellarTravel:noop,clearSeriesChampionPresentation:noop,
+    refreshCpuLearningControl:noop,setMobileKeyboardActive:noop,resetMobileTouchControls:noop,
+    i18n:null,authToken:()=>'',roomClientId:()=>ctx.inputSessionId,testRoomPermitToken:()=>'',renderPublicRooms:noop,
+    loadLobbyChatHistory:noop,showPlayerJoinedNotice:noop
   });
-  for(const name of ['stopP2P','stopLocalCpu','startLocalCpu','resetOnlineStartCountdown','beginOnlineStartCountdown','beginGame'])vm.runInContext(source(name),ctx);
+  for(const name of ['stopP2P','stopLocalCpu','startLocalCpu','resetOnlineStartCountdown','beginOnlineStartCountdown','beginGame','returnToMainMenu','createOnlineRoom','joinRoomByCode','prepareOnlineView','flushPendingState'])vm.runInContext(source(name),ctx);
+  return {...f,engines};
+}
+async function checkLocalCpuStartup(){
+  const f=playableClientFixture(),{ctx,engines}=f;
   const connection=f.attach(),previousOnlineMotor=ctx.hostPhysics;
   await ctx.startLocalCpu();
   for(let i=0;i<6;i++)await Promise.resolve();
@@ -281,4 +291,61 @@ async function checkLocalCpuStartup(){
   const onlineState=ctx.state;replacement.onState({t:'state',players:[]});replacement.emit({t:'closed'});
   assert.equal(ctx.roomCode,'NEXT');assert.equal(ctx.state,onlineState,'retired CPU callbacks cannot alter a later online session');
 }
-checkLocalCpuStartup().then(()=>console.log('Host continuity OK: signaling/result preservation, stale resume correlation, legitimate migration, real CPU created/start/state flow and isolation from old WS/P2P/local-engine callbacks.')).catch(error=>{console.error(error);process.exitCode=1;});
+async function checkBackendMembershipFlow(){
+  const server=serverFixture(),host=playableClientFixture(),guest=playableClientFixture();
+  const drain=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
+  host.ctx.returnToMainMenu(false);
+  await guest.ctx.startLocalCpu();await drain();
+  const retiredCpu=guest.ctx.localCpu;
+  guest.ctx.returnToMainMenu();
+  assert.equal(guest.ctx.localCpuActive,false);assert.equal(guest.ctx.roomCode,'');assert.equal(guest.ctx.hostEpoch,1);
+  function link(client){
+    const backend=server.connect();client.ctx.inputSessionId=backend.inputSessionId;
+    const connection=client.attach();let cursor=backend.messages.length;
+    return {client,backend,connection,flush(){for(const m of backend.messages.slice(cursor)){client.receive(connection,m);}cursor=backend.messages.length;}};
+  }
+  const h=link(host),g=link(guest);
+  await host.ctx.createOnlineRoom(true);await server.receive(h.backend,host.wire.at(-1));h.flush();
+  const code=host.ctx.roomCode,lobbySeries=host.ctx.onlineSeriesId,lobbyEpoch=host.ctx.hostEpoch;
+  assert.ok(code&&host.ctx.PROTOCOL.validId(lobbySeries));assert.equal(lobbyEpoch,1);
+  assert.equal(host.ctx.menu.classList.contains('hidden'),true);assert.equal(host.ctx.lobby.classList.contains('hidden'),false);
+  assert.equal(host.ctx.inGame,false,'created/lobby must actually reach the room view before start');
+  await guest.ctx.joinRoomByCode(code);await server.receive(g.backend,guest.wire.at(-1));g.flush();h.flush();
+  assert.equal(guest.ctx.roomCode,code);assert.equal(guest.ctx.myIndex,1);assert.equal(guest.ctx.onlineSeriesId,lobbySeries);
+  assert.equal(guest.ctx.menu.classList.contains('hidden'),true);assert.equal(guest.ctx.lobby.classList.contains('hidden'),false);
+  assert.equal(guest.ctx.inGame,false,'a previous CPU match cannot block joined/lobby');
+  retiredCpu.onState({t:'state',players:[]});assert.equal(guest.ctx.roomCode,code,'retired CPU state cannot replace the joined room');
+  host.ctx.send({t:'start'});await server.receive(h.backend,host.wire.at(-1));
+  const start=h.backend.last('start');
+  assert.notEqual(start.seriesId,lobbySeries,'the actual backend renews the series on first start');
+  assert.ok(start.hostEpoch>lobbyEpoch);
+  for(const client of [host,guest]){
+    assert.equal(client.ctx.currentLifecyclePacket(start),true,'a real backend start may advance series and epoch from its lobby');
+    for(const patch of [
+      {code:'OTHER'},{code:undefined},{protocolVersion:0},{seriesId:lobbySeries},{seriesId:'invalid'},
+      {hostEpoch:lobbyEpoch},{hostEpoch:lobbyEpoch-1},{hostEpoch:String(start.hostEpoch)},
+      {hostEpoch:1.5},{hostEpoch:null},{hostEpoch:NaN},{hostEpoch:Infinity},{hostEpoch:undefined},
+      {rankRound:0},{rankRound:2},{hostIndex:1},{hostIndex:'0'}
+    ])assert.equal(client.ctx.currentLifecyclePacket({...start,...patch}),false,'reject stale, unrelated or malformed start '+JSON.stringify(patch));
+  }
+  h.flush();g.flush();await drain();
+  for(const client of [host,guest]){
+    assert.equal(client.ctx.onlineSeriesId,start.seriesId);assert.equal(client.ctx.hostEpoch,start.hostEpoch);
+    assert.equal(client.ctx.inGame,true,'actual WS start reaches countdown/beginGame for both host and guest');
+    assert.equal(client.ctx.lobby.classList.contains('hidden'),true);assert.equal(client.ctx.onlineStartPending,false);
+    const generation=client.ctx.onlineStartGeneration;client.receive(client.ctx.ws,start);
+    assert.equal(client.ctx.onlineStartGeneration,generation,'a repeated start cannot reset the ready countdown');
+    client.receive(client.ctx.ws,{...start,seriesId:lobbySeries,hostEpoch:lobbyEpoch});
+    assert.equal(client.ctx.onlineSeriesId,start.seriesId,'old series packets cannot restore the previous authority');
+    client.ctx.launchOnlineAfterReady();
+  }
+  assert.ok(host.ctx.hostPhysics&&host.ctx.hostPhysics.started,'the real start transition launches authoritative host physics');
+  const state=host.ctx.hostPhysics.publicState();host.ctx.handle(state);
+  guest.ctx.fallbackActive=true;guest.receive(g.connection,{t:'fallback-state',state});
+  assert.equal(guest.ctx.state.seriesId,start.seriesId);assert.equal(guest.ctx.state.players.length,4,'the guest receives the running authoritative state');
+  const live=playableClientFixture();live.ctx.returnToMainMenu(false);const l=link(live);
+  await live.ctx.joinRoomByCode(code,2);await server.receive(l.backend,live.wire.at(-1));l.flush();h.flush();g.flush();await drain();
+  assert.equal(live.ctx.roomCode,code);assert.equal(live.ctx.myIndex,2);assert.equal(live.ctx.onlineSeriesId,start.seriesId);
+  assert.equal(live.ctx.inGame,true,'joining an existing CPU slot uses joined.started without requiring another start event');
+}
+(async()=>{await checkLocalCpuStartup();await checkBackendMembershipFlow();console.log('Host continuity OK: signaling/result preservation, stale resume correlation, legitimate migration, real CPU flow/isolation and backend create/lobby/join/start/live-join with renewed series authority.');})().catch(error=>{console.error(error);process.exitCode=1;});

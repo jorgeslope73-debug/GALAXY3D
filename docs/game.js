@@ -2648,6 +2648,15 @@
     if(!m||!types.includes(m.t))return true;
     if(localCpuActive)return !!localSource&&localSource===localCpu;
     if(m.t==='created'||m.t==='joined')return !(inGame||onlineStartPending||(hostPhysics&&hostPhysics.started));
+    if(m.t==='start'){
+      // The backend renews seriesId and advances hostEpoch when the host starts
+      // a series. Accept that transition only from this room's waiting lobby.
+      return !!roomCode&&m.code===roomCode&&m.protocolVersion===PROTOCOL.VERSION&&
+        PROTOCOL.validId(m.seriesId)&&m.seriesId!==onlineSeriesId&&
+        PROTOCOL.counter(m.hostEpoch,1)&&m.hostEpoch>hostEpoch&&m.rankRound===1&&
+        Number.isInteger(m.hostIndex)&&m.hostIndex===hostIndex&&
+        !inGame&&!onlineStartPending&&!(hostPhysics&&hostPhysics.started);
+    }
     if(roomCode&&m.code&&String(m.code)!==String(roomCode))return false;
     if(PROTOCOL.validId(onlineSeriesId)&&PROTOCOL.validId(m.seriesId)&&m.seriesId!==onlineSeriesId)return false;
     if(!roomCode&&!['resumed','resume-failed'].includes(m.t))return false;

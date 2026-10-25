@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.66
+V23.67
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -162,3 +162,8 @@ RED Y CONTINUIDAD — V23.66
 - Render mantiene su política actual de cierre de salas. Si el servidor elimina la sala, la partida local continúa con aviso, pero la sala no admite nuevas entradas ni operaciones de ranking. No se han modificado servicio ni base de datos.
 - Colisiones: filtros conservadores AABB y envolventes convexas previos a los perfiles exactos; las tolerancias y la decisión final se mantienen.
 - Medida en prueba cargada de cuatro jugadores: unos 57 % menos bytes por estado P2P. No equivale a garantizar ausencia de latencia en todas las redes o móviles.
+
+
+CORRECCION DE ACCESO ONLINE — V23.67
+- Al empezar una serie, el backend renueva seriesId y hostEpoch. Se acepta esa transición legítima desde el lobby de la misma sala, conservando el rechazo de mensajes antiguos y de otras salas.
+- La regresión se comprueba con crear, unirse e iniciar usando mensajes del servidor y los controladores reales del cliente; incluye retorno desde CPU y entrada en partida en curso.
