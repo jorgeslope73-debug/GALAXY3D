@@ -15,7 +15,7 @@ export function stepShipInertia(previous,{now,context='',thrust=false,vx,vy,spee
   const elapsed=previous?now-previous.time:0;
   if(!valid||!previous||!previous.active||previous.context!==context||!Number.isFinite(previous.time)||elapsed<0||elapsed>250)return neutral();
   if(elapsed===0)return {...previous};
-  const dt=elapsed*.001,limit=8*Math.PI/180;
+  const dt=elapsed*.001,limit=20*Math.PI/180;
   // The movement integrator applies drag after acceleration. Its actual steady
   // speed is below the safety cap of 330, so a held accelerator can level out.
   const drag=Math.pow(.35,1/60),terminal=(240/60)*drag/(1-drag)*speed;

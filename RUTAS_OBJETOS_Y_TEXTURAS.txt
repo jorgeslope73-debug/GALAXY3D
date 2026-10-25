@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.69
+V23.70
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -182,3 +182,8 @@ CABECEO VISUAL LOCAL — V23.69
 - Al soltar el acelerador hace una pequeña oscilación amortiguada y se nivela durante la desaceleración.
 - Cada dispositivo calcula este gesto al dibujar, con el acelerador y las velocidades que ya tiene. No se añaden campos, mensajes ni frecuencia de envío por red.
 - No cambia el movimiento, la predicción, los perfiles de colisión ni el cálculo de impactos. Conserva la inclinación lateral al girar y el leve balanceo pasivo.
+
+
+ARRANQUE MAS PRONUNCIADO — V23.70
+- El límite visual de elevación al acelerar pasa de 8 a 20 grados; el pico natural del resorte ronda los 18 grados.
+- Se conserva el leve cabeceo de frenado, la recuperación de postura y la inclinación lateral. Sigue sin añadir datos a la red ni modificar la física.

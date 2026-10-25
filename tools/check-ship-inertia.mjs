@@ -21,13 +21,13 @@ function flight(fps,speed=1){
     assert.equal(JSON.stringify(pose),oldPose,'los datos de física/render entrantes son inmutables');
     assert.equal(JSON.stringify(before),oldState,'el estado anterior no cambia');
     assert.ok(Number.isFinite(state.pitch)&&Number.isFinite(state.velocity));
-    assert.ok(Math.abs(state.pitch)*DEG<=8.000001,'amplitud acotada a ocho grados');
+    assert.ok(Math.abs(state.pitch)*DEG<=20.000001,'amplitud acotada a veinte grados');
     samples.push({now,pitch:state.pitch,velocity:state.velocity,speed:Math.hypot(player.vx,player.vy)});
   }
   const acceleration=samples.filter(s=>s.now<3000),cruise=samples.filter(s=>s.now>=6000&&s.now<7000);
   const braking=samples.filter(s=>s.now>=7000&&s.now<8500),recovered=samples.filter(s=>s.now>=10000);
-  assert.ok(Math.max(...acceleration.map(s=>s.pitch))*DEG>3,'el primer impulso levanta el morro');
-  assert.ok(Math.max(...cruise.map(s=>Math.abs(s.pitch)))*DEG<.04,'se nivela a la velocidad terminal real con acelerador mantenido');
+  assert.ok(Math.max(...acceleration.map(s=>s.pitch))*DEG>15,'el primer impulso levanta el morro de forma pronunciada');
+  assert.ok(Math.max(...cruise.map(s=>Math.abs(s.pitch)))*DEG<.05,'se nivela a la velocidad terminal real con acelerador mantenido');
   assert.ok(Math.min(...braking.map(s=>s.pitch))*DEG<-.8,'soltar el acelerador baja el morro');
   assert.ok(Math.max(...braking.filter(s=>s.now>7500).map(s=>s.pitch))*DEG>.03,'el frenado deja un pequeño rebote amortiguado');
   assert.ok(Math.max(...recovered.map(s=>Math.abs(s.pitch)))*DEG<.001,'el cabeceo se amortigua completamente');
@@ -80,9 +80,9 @@ model.traverse(object=>{
 const front=Math.max(...vertices.map(v=>v.y)),nose=vertices.filter(v=>v.y>front-1);
 assert.ok(front>20&&nose.length,'el modelo preparado apunta hacia +Y');
 const initial=nose.reduce((total,v)=>total+v.z,0)/nose.length;
-tilt.rotation.x=6/DEG;tilt.updateMatrixWorld(true);
+tilt.rotation.x=20/DEG;tilt.updateMatrixWorld(true);
 const lifted=nose.reduce((total,v)=>total+v.clone().applyEuler(tilt.rotation).z,0)/nose.length;
-assert.ok(lifted>initial+2,'pitch X positivo levanta el morro real hacia la cámara +Z');
+assert.ok(lifted>initial+8,'el pitch pronunciado levanta el morro real hacia la cámara +Z');
 const mount=new T.Object3D();mount.position.set(10,14,4);tilt.add(mount);tilt.updateMatrixWorld(true);
 const worldMount=mount.getWorldPosition(new T.Vector3()),expected=mount.position.clone().applyEuler(tilt.rotation);
 assert.ok(worldMount.distanceTo(expected)<1e-10,'las armas montadas heredan el mismo cabeceo');
