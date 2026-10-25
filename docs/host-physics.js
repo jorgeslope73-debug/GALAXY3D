@@ -1237,7 +1237,7 @@
         // Los pequenos de lluvia se destruyen en updateMeteors().
         let hitAsteroid=false;
         for(const a of this.asteroids){
-          if(!a||!sweptCircles(f,FLARE_RADIUS,a,a.r,false))continue;
+          if(!a||!PHYSICS_CORE.asteroidHitsCircle(a,f,FLARE_RADIUS,sweptCircles))continue;
           const radius=Number(a.r)||ASTEROID_RADIUS;
           if(a.fragment!==true){
             PHYSICS_CORE.bounceBodyFromFlare(a,f,radius,FLARE_RADIUS,190,105);
@@ -1725,7 +1725,7 @@
       }
       for(let i=this.pickups.length-1;i>=0;i--){
         const pk=this.pickups[i];
-        for(const a of this.asteroids)if(!a.exiting&&circles(a,a.r,pk,PICKUP_RADIUS)){this.pickups.splice(i,1);break;}
+        for(const a of this.asteroids)if(!a.exiting&&PHYSICS_CORE.asteroidCircleContact(a,pk,PICKUP_RADIUS)){this.pickups.splice(i,1);break;}
       }
     }
     updateBullets(dt){
@@ -2254,8 +2254,8 @@
 
       const bounceFrom=(h,radius,retention=.88)=>{
         if(!h||this.fxClock<Number(u.bounceUntil||0))return false;
-        const contact=h===this.giant?PHYSICS_CORE.giantCircleContact(h,u,UFO_RADIUS):null;
-        if(h===this.giant?!contact:!circles(u,UFO_RADIUS,h,radius))return false;
+        const contact=h===this.giant?PHYSICS_CORE.giantCircleContact(h,u,UFO_RADIUS):this.asteroids.includes(h)?PHYSICS_CORE.asteroidCircleContact(h,u,UFO_RADIUS):null;
+        if(h===this.giant||this.asteroids.includes(h)){if(!contact)return false;}else if(!circles(u,UFO_RADIUS,h,radius))return false;
         const n=contact?{x:contact.nx,y:contact.ny}:normalize(u.x-h.x,u.y-h.y);
         const dot=u.vx*n.x+u.vy*n.y;
         if(dot<0){
@@ -2336,9 +2336,10 @@
         }
         if(p.dead)continue;
 
-        for(const a of this.asteroids)if(sweptCircles(p,shipCollisionRadius(p),a,a.r,false)){
+        for(const a of this.asteroids){
+          const contact=PHYSICS_CORE.asteroidHitsCircle(a,p,shipCollisionRadius(p),sweptCircles);if(!contact)continue;
           if(p.shield>0){
-            this.emitShipImpact(p,a,false);const n=PHYSICS_CORE.separateShipContact(p,a,a.r);
+            this.emitShipImpact(p,{x:contact.x,y:contact.y},false);const n=PHYSICS_CORE.separateAsteroidShipContact(p,a,contact);
             const dot=(p.vx-a.vx)*n.x+(p.vy-a.vy)*n.y;
             if(dot<0){p.vx-=1.85*dot*n.x;p.vy-=1.85*dot*n.y;}
           }else this.destroyShip(p,null);

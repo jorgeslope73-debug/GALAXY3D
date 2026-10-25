@@ -95,8 +95,9 @@ const checks=[
   ['asteroides y fragmentos chocan con la esfera',()=>{
     for(const r of [45,17])both('roca '+r,({engine,players:[p]})=>{
       p.vx=120;const a=rock(500+R+r-.5,500,r);engine.asteroids=[a];
+      if(r===45){const edge=core.mediumSurface(a,300,500);p.x=p.px=edge.x+edge.nx*(R-.5);p.y=p.py=edge.y+edge.ny*(R-.5);p.vx=-edge.nx*120;p.vy=-edge.ny*120;}
       engine.shipCollisions();assert.equal(p.dead,false);assert.ok(p.vx<0);
-      assert.ok(distance(p,a)>=R+r,'no debe quedar dentro del escudo');
+      assert.ok(r===45?core.mediumSurface(a,p.x,p.y).distance>=R-.001:distance(p,a)>=R+r,'no debe quedar dentro del escudo');
     });
   }],
   ['meteorito de lluvia rebota desde el perimetro',()=>both('lluvia',({engine,players:[p]})=>{
@@ -133,7 +134,7 @@ const checks=[
   })],
   ['contacto con centros coincidentes siempre queda finito',()=>both('centros',({engine,players:[p]})=>{
     const a=rock(p.x,p.y,45);engine.asteroids=[a];engine.shipCollisions();
-    assert.equal(p.dead,false);assert.ok(distance(p,a)>=R+45);
+    assert.equal(p.dead,false);assert.ok(core.mediumSurface(a,p.x,p.y).distance>=R-.001);
   })]
 ];
 let failed=0;

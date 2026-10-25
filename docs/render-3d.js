@@ -244,7 +244,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.58';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.59';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
@@ -406,6 +406,7 @@
         place(record.root,x,y,-8);
         const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
         if(modelRole==='large'&&String(id)==='giant')record.rock.rotation.set(0,0,window.GalaxyPhysicsCore.giantRotation(x,y));
+        else if(modelRole==='medium'&&/^a\d/.test(String(id)))record.rock.rotation.set(0,0,window.GalaxyPhysicsCore.mediumRotation(x,y,Number(String(id).slice(1))||0));
         else record.rock.rotation.set(now*.00013+phase,now*.00017+phase,angle*Math.PI/180+phase);
       },
       ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false,missileCount=missile?1:0,hasAmmo=armed){

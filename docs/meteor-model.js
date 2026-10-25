@@ -3,10 +3,10 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
-// Medium/fragment artwork is calibrated to circular contacts; the giant uses its real contour.
+// Medium/giant use their XY silhouettes; fragments retain the circular calibration.
 export const METEOR_MODELS=Object.freeze({
   fragment:Object.freeze({file:'meteorito3.glb',scale:1.066}),
-  medium:Object.freeze({file:'meteorito1.glb',scale:1.082}),
+  medium:Object.freeze({file:'asteroidemediano.glb',scale:1}),
   large:Object.freeze({file:'Rocky_Asteroid_5.glb',scale:1})
 });
 export const METEOR_VISUAL_SCALE=METEOR_MODELS.medium.scale;

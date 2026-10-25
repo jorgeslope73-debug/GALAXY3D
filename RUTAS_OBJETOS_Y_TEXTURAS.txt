@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.58
+V23.59
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -9,7 +9,7 @@ no actualiza la copia utilizada por el juego.
 MODELOS 3D ACTIVOS
 - OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
-- Asteroide mediano: docs/assets/models/meteorito1.glb
+- Asteroide mediano: docs/assets/models/asteroidemediano.glb
 - Meteorito grande/gigante: docs/assets/models/Rocky_Asteroid_5.glb
 - Fragmentos al romperse y pequenos de lluvia: docs/assets/models/meteorito3.glb
 - Cohete equipado en las alas y disparado: docs/assets/models/cohete_galaxy_combat.glb
@@ -41,7 +41,17 @@ COLISIONES DEL METEORITO GRANDE
 - El radio 135 se conserva para descarte rapido y planificacion; el contacto usa la silueta.
 - El giro en partida es sobre Z, compartido por posicion y sin depender del reloj de cada cliente.
 - Respaldo 2D con la misma silueta: docs/assets/sprites/asteroidegrande_270.png.
-- Medianos y fragmentos mantienen sus modelos y fisica anteriores.
+- Fragmentos y lluvia mantienen meteorito3.glb y sus contactos circulares.
+
+COLISIONES DEL METEORITO MEDIANO
+- Contorno concavo de 31 puntos extraido del GLB optimizado, con tolerancia menor de 0,8 unidades a radio 45.
+- MEDIUM_OUTLINE y mediumRotation en docs/physics-core.js; mismo giro por posicion e ID en todos los clientes.
+- Choques entre rocas mediante piezas convexas que conservan las concavidades de ambos contornos.
+- Se conserva el radio 45 para el descarte rapido y la planificacion.
+- Balas/misiles, naves/escudos, bengalas, OVNI y mejoras comprueban el borde real.
+- Respaldo 2D: docs/assets/sprites/asteroidemediano.png, misma silueta y giro.
+- Original de Downloads sin modificar; copia web de 636.932 bytes, 6.000 triangulos y mapas de 1024 px.
+- meteorito1.glb y meteorito2.glb quedan como recursos anteriores, sin carga en partida ni precache.
 
 TEXTURAS DE LOS METEORITOS
 - Color, normales y metal/rugosidad incluidos dentro de cada GLB activo.

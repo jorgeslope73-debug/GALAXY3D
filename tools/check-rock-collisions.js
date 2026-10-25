@@ -11,6 +11,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const rock=(x,y,vx=0,vy=0,r=45,extra={})=>({id:'rock',x,y,px:x,py:y,vx,vy,r,angle:0,type:1,...extra});
 const distance=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
 function separated(a,b,radius,label){
+  if(core.isMediumRock(a,Number(a.r)||14)||core.isMediumRock(b,Number(b.r)||14)){assert.equal(core.rockContact(a,b,Number(a.r)||14,Number(b.r)||14),null,label+': los contornos reales siguen solapados');return;}
   assert.ok(distance(a,b)>=radius-EPS,label+': las superficies siguen solapadas ('+distance(a,b)+' < '+radius+')');
 }
 function finite(body,label,maxSpeed){
@@ -61,6 +62,7 @@ const checks=[
     for(const radius of [45,17]){
       const a=rock(500,500,150,0,radius,{fragment:radius===17});
       const m=rock(500+radius+10,500,40,0,14);
+      if(radius===45){const hit=core.mediumSurface(a,800,500);m.x=m.px=hit.x+hit.nx*10;m.y=m.py=hit.y+hit.ny*10;}
       core.resolveMeteorCollisions([m],[a]);
       separated(a,m,radius+14,'asteroide/fragmento contra lluvia');
       separating(a,m,'asteroide/fragmento contra lluvia');
@@ -101,6 +103,7 @@ const checks=[
       assert.ok(a.vx<0,'el asteroide activo rebota contra el que sale');
     }
     const exiting=rock(550,500,-100,0,45,{exiting:true}),m=rock(500,500,140,0,14),before=clone(exiting);
+    const edge=core.mediumSurface(exiting,300,500);m.x=m.px=edge.x+edge.nx*10;m.y=m.py=edge.y+edge.ny*10;
     core.resolveMeteorCollisions([m],[exiting]);
     separated(m,exiting,59,'meteorito contra cuerpo en retirada');
     assert.deepEqual(exiting,before,'la lluvia tampoco bloquea la retirada');

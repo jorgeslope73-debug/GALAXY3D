@@ -37,7 +37,7 @@ assert.equal(core.giantHitsCircle({x:960,y:540},{px:1915,py:540,x:5,y:540},4),nu
 let contacts=0;
 for(const centre of [{x:500,y:500},{x:1200,y:250},{x:50,y:900}])for(let i=0;i<48;i++)for(const radius of [14,24,45,60]){
   const angle=i*Math.PI/24,edge=core.giantSurface(centre,centre.x+300*Math.cos(angle),centre.y+300*Math.sin(angle));
-  const body={x:edge.x+edge.nx*(radius-.5),y:edge.y+edge.ny*(radius-.5),r:radius,vx:0,vy:0};
+  const body={x:edge.x+edge.nx*(radius-.5),y:edge.y+edge.ny*(radius-.5),r:radius,fragment:true,vx:0,vy:0};
   const giant={...centre,vx:30,vy:-10};
   assert.ok(core.giantCircleContact(giant,body,radius),'surface fixtures begin in contact');
   assert.equal(core.resolveGiantAsteroidCollision(giant,body,135,radius,240),true);

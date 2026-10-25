@@ -734,7 +734,7 @@
       if(!asteroid)continue;
       const ax=Number(asteroid.x),ay=Number(asteroid.y);
       if(!Number.isFinite(ax)||!Number.isFinite(ay))continue;
-      const contact=window.GalaxyPhysicsCore.giantCircleContact(giant,asteroid,(Number(asteroid.r)||ASTEROID_LOCAL_RADIUS)+3);
+      const contact=window.GalaxyPhysicsCore.rockContact(giant,asteroid,135,(Number(asteroid.r)||ASTEROID_LOCAL_RADIUS)+3,'giant');
       if(!contact)continue;
 
       const key=String(asteroid.id);
@@ -1250,6 +1250,7 @@
     rocketA:'assets/sprites/coeteA.png',rocketB:'assets/sprites/coeteB.png',rocketC:'assets/sprites/coeteC.png',rocketD:'assets/sprites/coeteD.png',
     navemiraA:'assets/sprites/navemiraA.png',navemiraB:'assets/sprites/navemiraB.png',navemiraC:'assets/sprites/navemiraC.png',navemiraD:'assets/sprites/navemiraD.png',
     localizaA:'assets/sprites/localizaA.png',localizaB:'assets/sprites/localizaB.png',localizaC:'assets/sprites/localizaC.png',localizaD:'assets/sprites/localizaD.png',
+    asteroidMedium:'assets/sprites/asteroidemediano.png',
     asteroid1:'assets/sprites/asteroide1.png',asteroid2:'assets/sprites/asteroide2.png',asteroid3:'assets/sprites/asteroide3.png',asteroid4:'assets/sprites/asteroide5.png',asteroid5:'assets/sprites/asteroide6.png',asteroid6:'assets/sprites/dos.png'
   };
   for(let i=1;i<=4;i++){
@@ -6604,7 +6605,8 @@
       const y=old?lerp(old.y,a.y,blend):a.y;
       const size=a.fragment===true?56:Math.max(56,Math.round((Number(a.r)||45)*2));
       if(scene3D)scene3D.rock('a'+a.id,x,y,size,a.type,0,a.fragment===true?'fragment':'medium');
-      else drawImageCentered(images[ASTEROID_IMAGE_KEYS[a.type]]||images.asteroid1,x,y,size);
+      else if(a.fragment===true)drawImageCentered(images[ASTEROID_IMAGE_KEYS[a.type]]||images.asteroid1,x,y,size);
+      else drawImageCentered(images.asteroidMedium,x,y,size,-window.GalaxyPhysicsCore.mediumRotation(x,y,a.id)*180/Math.PI);
     }
     for(const pk of state.pickups){
       const old=previousLookup.pickups.get(pk.id);
