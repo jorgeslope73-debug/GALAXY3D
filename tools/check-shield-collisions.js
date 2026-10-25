@@ -108,7 +108,7 @@ const checks=[
     }
   })],
   ['gigante empuja desde la superficie y conserva su recorrido',()=>both('gigante',({engine,players:[p]})=>{
-    const g=rock(690,500,135,-40),edge=core.giantSurface(g,300,500);engine.giant=g;
+    const g=rock(690,500,core.GIANT_RADIUS,-40),edge=core.giantSurface(g,300,500);engine.giant=g;
     p.x=p.px=edge.x+edge.nx*(R-.5);p.y=p.py=edge.y+edge.ny*(R-.5);
     engine.updateGiant(DT);assert.equal(p.dead,false);assert.ok(core.giantSurface(g,p.x,p.y).distance>=R-.001);
     assert.equal(g.vx,-40);assert.ok(p.vx<0);

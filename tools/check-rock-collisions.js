@@ -76,8 +76,8 @@ const checks=[
     assert.equal(core.resolveAsteroidPairCollision(a,b),true);
     separated(a,b,90,'asteroides con centro coincidente');
     separating(a,b,'asteroides con centro coincidente');
-    const g=rock(900,500,45,0,135),m=rock(900,500,0,0,14);
-    assert.equal(core.resolveGiantAsteroidCollision(g,m,135,14,240),true);
+    const g=rock(900,500,45,0,core.GIANT_RADIUS),m=rock(900,500,0,0,14);
+    assert.equal(core.resolveGiantAsteroidCollision(g,m,core.GIANT_RADIUS,14,240),true);
     assert.ok(core.giantSurface(g,m.x,m.y).distance>=m.r,'el cuerpo sale del contorno real del gigante');
     assert.deepEqual([g.x,g.y,g.vx,g.vy],[900,500,45,0],'el gigante conserva su trayectoria');
     finite(a,'centro A',190);finite(b,'centro B',190);finite(m,'centro meteorito',240);
@@ -158,7 +158,7 @@ const checks=[
   }],
   ['ambos motores: gigante alcanza lluvia despues de moverse',()=>{
     bothEngines('gigante movil',{
-      giant:rock(500,500,50,0,135,{id:'giant',entered:true}),
+      giant:rock(500,500,50,0,core.GIANT_RADIUS,{id:'giant',entered:true}),
       meteors:[(()=>{const hit=core.giantSurface({x:500,y:500},800,500);return rock(hit.x+hit.nx*13.5,hit.y+hit.ny*13.5,0,0,14,{id:'meteor'});})()]
     },60,engine=>{engine.updateMeteors(DT);engine.updateGiant(DT);},(engine,frame)=>{
       const g=engine.giant,m=engine.meteors[0];

@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.71
+V23.72
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -52,7 +52,7 @@ COLISIONES DEL METEORITO GRANDE
 - Contorno concavo de 111 puntos extraido de la proyeccion XY del GLB normalizado.
 - docs/physics-core.js: GIANT_OUTLINE, giantRotation, giantSurface y giantHitsCircle.
 - Naves/escudos, balas/misiles, rocas, bengalas, OVNI y mejoras usan ese contorno.
-- El radio 135 se conserva para descarte rapido y planificacion; el contacto usa la silueta.
+- El radio compartido GIANT_RADIUS=189 se usa para descarte rapido y planificacion; el contacto usa la silueta.
 - El giro en partida es sobre Z, compartido por posicion y sin depender del reloj de cada cliente.
 - Respaldo 2D con la misma silueta: docs/assets/sprites/asteroidegrande_270.png.
 - Fragmentos y lluvia mantienen meteorito3.glb y sus contactos circulares.
@@ -194,3 +194,9 @@ INERCIA MANTENIDA Y MEJORAS DE VELOCIDAD — V23.71
 - Solo al soltar el acelerador cabecea hacia abajo y recupera progresivamente la postura conforme pierde velocidad, hasta detenerse.
 - Las mejoras de velocidad intensifican moderadamente ambas inercias: 35 grados normal, 40 con una mejora y 45 con dos mejoras.
 - Todo usa controles y velocidades que el cliente ya conoce. Sigue siendo exclusivamente visual, sin cambiar física, colisiones ni mensajes de red.
+
+
+METEORITO GIGANTE UN 40 POR CIENTO MAYOR — V23.72
+- En las partidas, el diámetro de referencia pasa de 270 a 378 y el radio de 135 a 189, tanto contra CPU como en red.
+- El perfil irregular, las colisiones de naves, balas, escudos y otros meteoritos usan la misma escala compartida de GalaxyPhysicsCore. No se sustituye la silueta por un círculo.
+- Se mantiene el GLB Rocky_Asteroid_5.glb y sus texturas; no se añade escala duplicada en el modelo ni nuevos campos de red.

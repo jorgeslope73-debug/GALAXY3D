@@ -35,13 +35,13 @@ const ghostShip=()=>({x:854.3244036361639,y:568.7373021739588,px:854.32440363616
   const g={x:800,y:500,px:800,py:500,vx:0,vy:0};
   const shot={x:700,y:500},ship={x:700,y:500,px:700,py:500,rot:0,pr:0,bank:0,pbank:0,shield:0};
   core.captureRockMotion(a);
-  assert.equal(core.resolveGiantAsteroidCollision(g,a,135,51.75),true);
+  assert.equal(core.resolveGiantAsteroidCollision(g,a,core.GIANT_RADIUS,51.75),true);
   assert.equal(core.asteroidShipContact(a,ship,false,false),null,'the corrected final rock is clear of the ship');
   const realBulletHit=core.asteroidHitsCircle(a,shot,radius,emptySwept),realHullHit=core.asteroidShipContact(a,ship);
   assert.ok(realBulletHit&&realBulletHit.t>0&&realBulletHit.t<1,'real rock flight before correction remains continuous against bullets');
   assert.ok(realHullHit&&realHullHit.t<1,'real rock flight before correction remains continuous against hulls');
   const firstEnd={...a};
-  assert.equal(core.resolveGiantAsteroidCollision({...g,x:a.x,y:a.y},a,135,51.75),true,'a second correction is applied in the same tick');
+  assert.equal(core.resolveGiantAsteroidCollision({...g,x:a.x,y:a.y},a,core.GIANT_RADIUS,51.75),true,'a second correction is applied in the same tick');
   assert.ok(core.asteroidHitsCircle(a,shot,radius,emptySwept),'multiple corrections preserve the original integrated path');
   const jumpOnly={x:(firstEnd.x+a.x)*.5,y:(firstEnd.y+a.y)*.5};
   assert.ok(core.mediumSurface(firstEnd,jumpOnly.x,jumpOnly.y).distance>radius);

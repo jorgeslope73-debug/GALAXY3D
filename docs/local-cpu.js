@@ -8,7 +8,7 @@
   const SCORE_TO_WIN=5;
   const CAMPAIGN=window.GalaxyCampaign||null;
   const CAMPAIGN_LEVELS=CAMPAIGN&&Number(CAMPAIGN.count)>0?Number(CAMPAIGN.count):5;
-  const SHIP_RADIUS=24,ASTEROID_RADIUS=51.75,GIANT_RADIUS=135,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
+  const SHIP_RADIUS=24,ASTEROID_RADIUS=51.75,GIANT_RADIUS=PHYSICS_CORE.GIANT_RADIUS,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
   const shipCollisionRadius=p=>PHYSICS_CORE.shipCollisionRadius(p,SHIP_RADIUS);
   const SPAWN_PROTECTION_SECONDS=3,SPAWN_MATERIALIZE_SECONDS=1.15,BRUTAL_SHOT_DISTANCE=850;
   // V22.29: memoria anti-bucle de combate. Es estado local de la CPU, no viaja por red.
@@ -2854,14 +2854,15 @@
       }
     }
     updateGiant(dt){
+      const margin=GIANT_RADIUS+45,inset=GIANT_RADIUS+25,exitMargin=Math.max(350,margin);
       if(!this.giant){
         this.nextGiant-=dt;
         if(this.nextGiant<=0){
           const side=randint(0,3),speed=rand(42,52);let x,y,tx,ty;
-          if(side===0){x=-180;y=rand(160,H-160);tx=W+180;ty=clamp(y+rand(-220,220),160,H-160);}
-          else if(side===1){x=W+180;y=rand(160,H-160);tx=-180;ty=clamp(y+rand(-220,220),160,H-160);}
-          else if(side===2){x=rand(180,W-180);y=-180;tx=clamp(x+rand(-300,300),180,W-180);ty=H+180;}
-          else{x=rand(180,W-180);y=H+180;tx=clamp(x+rand(-300,300),180,W-180);ty=-180;}
+          if(side===0){x=-margin;y=rand(inset,H-inset);tx=W+margin;ty=clamp(y+rand(-220,220),inset,H-inset);}
+          else if(side===1){x=W+margin;y=rand(inset,H-inset);tx=-margin;ty=clamp(y+rand(-220,220),inset,H-inset);}
+          else if(side===2){x=rand(margin,W-margin);y=-margin;tx=clamp(x+rand(-300,300),margin,W-margin);ty=H+margin;}
+          else{x=rand(margin,W-margin);y=H+margin;tx=clamp(x+rand(-300,300),margin,W-margin);ty=-margin;}
           const n=normalize(tx-x,ty-y);this.giant={id:uid(),x,y,vx:n.x*speed,vy:n.y*speed,r:GIANT_RADIUS,entered:false};
         }
         return;
@@ -2888,7 +2889,7 @@
       for(const a of this.asteroids)this.resolveGiantAsteroidCollision(g,a);
       for(const m of this.meteors)PHYSICS_CORE.resolveGiantAsteroidCollision(g,m,GIANT_RADIUS,SMALL_METEOR_RADIUS,240);
       for(let i=this.pickups.length-1;i>=0;i--)if(PHYSICS_CORE.giantCircleContact(g,this.pickups[i],PICKUP_RADIUS))this.pickups.splice(i,1);
-      if(g.entered&&(g.x<-350||g.x>W+350||g.y<-350||g.y>H+350)){
+      if(g.entered&&(g.x<-exitMargin||g.x>W+exitMargin||g.y<-exitMargin||g.y>H+exitMargin)){
         this.giant=null;
         const profile=this.hazardProfile();
         this.nextGiant=this.trainingMode?rand(130,190):rand(profile.giantRepeatMin,profile.giantRepeatMax);

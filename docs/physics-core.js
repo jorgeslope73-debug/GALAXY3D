@@ -1,6 +1,8 @@
 'use strict';
 (() => {
   const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
+  // Shared linear scale for the giant artwork, its concave contacts and rendering.
+  const GIANT_RADIUS=189,GIANT_DIAMETER=GIANT_RADIUS*2;
   const PROFILE_DATA=window.GalaxyCollisionProfiles;
   if(!PROFILE_DATA)throw new Error('Collision profiles not loaded');
   const profileCache={ship:[],medium:[]},SHIP_BANK_LIMIT=Math.PI/3;
@@ -283,7 +285,7 @@
   }
 
   // Rocky_Asteroid_5.glb: XY silhouette extracted from its normalized mesh.
-  // 111 concave contour points; raster/RDP tolerance <0.7 arena units at r=135.
+  // 111 concave contour points; raster/RDP tolerance <1 arena unit at GIANT_RADIUS.
   // Fixed out-of-plane pose lets authority, clients and 2D fallback share the exact outline.
   const GIANT_OUTLINE=Object.freeze([
     [0.131429,-0.62],[0.261429,-0.605714],[0.275714,-0.595714],[0.312857,-0.587143],
@@ -348,8 +350,8 @@
     if(d>1e-9){nx=(qx-px)/d*(inside?-1:1);ny=(qy-py)/d*(inside?-1:1);}
     return {x:g.x+radius*(px*c+py*s),y:g.y+radius*(-px*s+py*c),nx:nx*c+ny*s,ny:-nx*s+ny*c,distance:(inside?-d:d)*radius};
   }
-  function giantSurface(g,x,y,radius=135){return outlineSurface(g,x,y,radius,GIANT_OUTLINE,giantRotation);}
-  function giantCircleContact(g,body,bodyRadius,radius=135){
+  function giantSurface(g,x,y,radius=GIANT_RADIUS){return outlineSurface(g,x,y,radius,GIANT_OUTLINE,giantRotation);}
+  function giantCircleContact(g,body,bodyRadius,radius=GIANT_RADIUS){
     if(!g||!body)return null;
     if(Math.hypot(body.x-g.x,body.y-g.y)>radius+bodyRadius+1)return null;
     const hit=giantSurface(g,body.x,body.y,radius);
@@ -407,7 +409,7 @@
     }
     return finalContact();
   }
-  function giantHitsCircle(g,body,bodyRadius,radius=135){return outlineHitsCircle(g,body,bodyRadius,radius,GIANT_OUTLINE,giantRotation);}
+  function giantHitsCircle(g,body,bodyRadius,radius=GIANT_RADIUS){return outlineHitsCircle(g,body,bodyRadius,radius,GIANT_OUTLINE,giantRotation);}
   function separateGiantShipContact(ship,giant,contact){return separateRockShipContact(ship,giant,contact,true);}
 
   function isMediumRock(rock,defaultRadius=45){
@@ -416,7 +418,7 @@
   }
   function mediumSurface(rock,x,y,radius=Number(rock.r)||45){return outlineSurface(rock,x,y,radius,mediumProfile,mediumRotation);}
   function rockShipContactAt(rock,ship,giant=false){
-    const radius=giant?135:Number(rock.r)||45;
+    const radius=giant?GIANT_RADIUS:Number(rock.r)||45;
     if(ship.shield>0)return giant?giantCircleContact(rock,ship,SHIELD_RADIUS):asteroidCircleContact(rock,ship,SHIELD_RADIUS);
     if(Math.hypot(rock.x-ship.x,rock.y-ship.y)>radius+SHIP_PROJECTILE_RADIUS+1)return null;
     const pose=shipPose(ship),kind=giant?'giant':undefined,outer=outerRock(rock,radius,kind);
@@ -436,7 +438,7 @@
   }
   function asteroidShipContact(rock,ship,giant=false,swept=true){
     if(!rock||!ship||ship.dead)return null;
-    const m=shipMotion(ship),radius=giant?135:Number(rock.r)||45,bound=ship.shield>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS;
+    const m=shipMotion(ship),radius=giant?GIANT_RADIUS:Number(rock.r)||45,bound=ship.shield>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS;
     const current=rockShipContactAt(rock,ship,giant);if(current)return {...current,t:1};
     if(!swept)return null;
     const path=rockMotionPath(rock),rx=path.startX,ry=path.startY,ex=path.endX,ey=path.endY;
@@ -467,7 +469,7 @@
     }
     // Fully separate unusual deep concave starting overlaps, without changing the rock.
     if(rockShipContactAt(rock,ship,giant)){
-      const dx=ship.x-rock.x,dy=ship.y-rock.y,d=Math.hypot(dx,dy),bound=(giant?135:Number(rock.r)||45)+(ship.shield>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS)+1;
+      const dx=ship.x-rock.x,dy=ship.y-rock.y,d=Math.hypot(dx,dy),bound=(giant?GIANT_RADIUS:Number(rock.r)||45)+(ship.shield>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS)+1;
       nx=d?dx/d:1;ny=d?dy/d:0;ship.x=rock.x+nx*bound;ship.y=rock.y+ny*bound;
     }
     return {x:nx,y:ny};
@@ -768,11 +770,11 @@
     return true;
   }
 
-  function resolveGiantAsteroidCollision(g,a,giantRadius,defaultRadius=45,maxSpeed=190){
+  function resolveGiantAsteroidCollision(g,a,giantRadius=GIANT_RADIUS,defaultRadius=45,maxSpeed=190){
     if(!g||!a||a.exiting)return false;
     const ar=Number(a.r)||defaultRadius;
-    if(isMediumRock(a,defaultRadius)||(g.exiting&&isMediumRock(g,giantRadius)))return resolveShapePair(g,a,giantRadius,ar,maxSpeed,true,giantRadius===135?'giant':undefined);
-    if(giantRadius===135&&!g.exiting){
+    if(isMediumRock(a,defaultRadius)||(g.exiting&&isMediumRock(g,giantRadius)))return resolveShapePair(g,a,giantRadius,ar,maxSpeed,true,giantRadius===GIANT_RADIUS?'giant':undefined);
+    if(giantRadius===GIANT_RADIUS&&!g.exiting){
       const hit=giantCircleContact(g,a,ar,giantRadius);if(!hit)return false;
       beginRockCorrection(a);
       a.x+=hit.nx*(hit.depth+1.2);a.y+=hit.ny*(hit.depth+1.2);
@@ -921,7 +923,7 @@
   }
 
 
-  function projectileGiantHit(projectile,giant,sweptCircles,projectileRadius=4,giantRadius=135){
+  function projectileGiantHit(projectile,giant,sweptCircles,projectileRadius=4,giantRadius=GIANT_RADIUS){
     if(!projectile||!giant||typeof sweptCircles!=='function')return null;
     const contact=giantHitsCircle(giant,projectile,projectileRadius,giantRadius);if(!contact)return null;
     return {
@@ -1232,7 +1234,7 @@
     SHIP_DRAW_SIZE,SHIP_PROJECTILE_HULL,SHIP_PROJECTILE_RADIUS,projectileHitsShipHull,
     SHIP_CONTACT_SKIN,shipPairContact,moveShipsToContact,separateShipPair,
     shipTilt,shipHitsCircle,shipSurface,shipPose,shipProfile,mediumProfile,mediumQuaternion,advanceRockPose,captureRockMotion,asteroidShipContact,separateRockShipContact,
-    GIANT_OUTLINE,giantRotation,giantSurface,giantCircleContact,giantHitsCircle,separateGiantShipContact,
+    GIANT_RADIUS,GIANT_DIAMETER,GIANT_OUTLINE,giantRotation,giantSurface,giantCircleContact,giantHitsCircle,separateGiantShipContact,
     MEDIUM_OUTLINE,mediumRotation,mediumSurface,isMediumRock,asteroidCircleContact,asteroidHitsCircle,separateAsteroidShipContact,rockContact,
     chooseSpawnSector,
     SHIELD_RADIUS,shipCollisionRadius,shipImpactPoint,separateShipContact,

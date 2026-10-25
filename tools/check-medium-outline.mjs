@@ -62,11 +62,11 @@ for(let i=0;i<1500;i++){
     assert.equal(core.resolveAsteroidPairCollision(a,b),true);assert.equal(core.rockContact(a,b),null,'medium rocks fully separate after collision');hits++;
     for(const body of [a,b])for(const key of ['x','y','vx','vy'])assert.ok(Number.isFinite(body[key]));
   }
-  const g={x:900,y:500,r:135,vx:45,vy:-5},m={id:i+1,x:900+random()*320-160,y:500+random()*320-160,r:45,vx:0,vy:0};
-  const expectedGiant=overlap(polygon(g,core.GIANT_OUTLINE,135,core.giantRotation),polygon(m,core.MEDIUM_OUTLINE,45,core.mediumRotation));
-  assert.equal(!!core.rockContact(g,m,135,45,'giant'),expectedGiant,'giant/medium contact uses both actual outlines');
+  const g={x:900,y:500,r:core.GIANT_RADIUS,vx:45,vy:-5},range=core.GIANT_RADIUS+25,m={id:i+1,x:900+(random()*2-1)*range,y:500+(random()*2-1)*range,r:45,vx:0,vy:0};
+  const expectedGiant=overlap(polygon(g,core.GIANT_OUTLINE,core.GIANT_RADIUS,core.giantRotation),polygon(m,core.MEDIUM_OUTLINE,45,core.mediumRotation));
+  assert.equal(!!core.rockContact(g,m,core.GIANT_RADIUS,45,'giant'),expectedGiant,'giant/medium contact uses both actual outlines');
   if(expectedGiant){
-    assert.equal(core.resolveGiantAsteroidCollision(g,m,135),true);assert.equal(core.rockContact(g,m,135,45,'giant'),null,'the giant leaves no embedded medium rock');
+    assert.equal(core.resolveGiantAsteroidCollision(g,m,core.GIANT_RADIUS),true);assert.equal(core.rockContact(g,m,core.GIANT_RADIUS,45,'giant'),null,'the giant leaves no embedded medium rock');
     assert.deepEqual([g.x,g.y,g.vx,g.vy],[900,500,45,-5]);giantHits++;
   }
 }

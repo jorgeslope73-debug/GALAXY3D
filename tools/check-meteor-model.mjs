@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
 import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareMeteorTemplate,createMeteorFactory,METEOR_MODELS} from '../docs/meteor-model.js';
+const {engineContext}=createRequire(import.meta.url)('./check-session-regressions.js'),core=engineContext().window.GalaxyPhysicsCore;
 const budgets={fragment:{triangles:3000,mapSize:512},medium:{triangles:6000,mapSize:1024},large:{triangles:12852,mapSize:1024}};
 assert.deepEqual(Object.fromEntries(Object.entries(METEOR_MODELS).map(([kind,model])=>[kind,model.file])),{fragment:'meteorito3.glb',medium:'asteroidemediano.glb',large:'Rocky_Asteroid_5.glb'});
 function jpegSize(bytes){let at=2;assert.equal(bytes.readUInt16BE(0),0xffd8);while(at<bytes.length){assert.equal(bytes[at],255);const marker=bytes[at+1],length=bytes.readUInt16BE(at+2);if([0xc0,0xc1,0xc2].includes(marker))return [bytes.readUInt16BE(at+7),bytes.readUInt16BE(at+5)];at+=length+2;}throw Error('Missing JPEG dimensions');}
@@ -33,10 +35,10 @@ const renderSource=await readFile(new URL('../docs/render-3d.js',import.meta.url
 const rockMethod=renderSource.match(/      rock\([^\n]+\{[\s\S]*?\n      \},/);assert.ok(rockMethod);
 const take=(kind,id)=>{calls.push([kind,id]);return {root:new T.Group(),rock:factory(kind.slice(5))};};
 const rock=vm.runInNewContext('({'+rockMethod[0]+'}).rock',{take,place:()=>{},now:1000,Math,Number,String});
-for(const [size,role,expected] of [[28,undefined,'fragment'],[56,undefined,'fragment'],[90,undefined,'medium'],[270,undefined,'large'],[50,'large','large']]){rock('same-id',100,100,size,1,0,role);assert.equal(calls.at(-1)[0],'rock:'+expected,'pool keys must track the artwork role, including reused IDs');}
+for(const [size,role,expected] of [[28,undefined,'fragment'],[56,undefined,'fragment'],[90,undefined,'medium'],[core.GIANT_DIAMETER,undefined,'large'],[50,'large','large']]){rock('same-id',100,100,size,1,0,role);assert.equal(calls.at(-1)[0],'rock:'+expected,'pool keys must track the artwork role, including reused IDs');}
 const game=(await readFile(new URL('../docs/game.js',import.meta.url),'utf8')).replaceAll('\r\n','\n');
 const start=game.indexOf('    for(const a of renderState.asteroids){',game.indexOf('drawAsteroidDust(Math.min(')),end=game.indexOf('    {\n      const visibleUfos',start);assert.ok(start>0&&end>start);
-const drawn=[];vm.runInNewContext(game.slice(start,end),{get renderState(){return this.state;},state:{asteroids:[{id:1,x:10,y:10,r:45,type:1},{id:2,x:20,y:10,r:28,type:1,fragment:true}],pickups:[],flares:[],meteors:[{id:3,x:30,y:10,a:45,type:1}],giant:{x:400,y:400}},prev:{giant:null},previousLookup:{asteroids:new Map(),pickups:new Map(),flares:new Map(),meteors:new Map()},blend:1,now:1000,nowSec:1,METEOR_3D_DIAMETER:28,scene3D:{rock:(...args)=>drawn.push(args)},drawGiantEntryWarning:()=>{},Math,Number});
-assert.deepEqual(Array.from(drawn,args=>[args[0],args[3],args[6]]),[['a1',90,'medium'],['a2',56,'fragment'],['m3',28,'fragment'],['giant',270,'large']]);
+const drawn=[];vm.runInNewContext(game.slice(start,end),{get renderState(){return this.state;},state:{asteroids:[{id:1,x:10,y:10,r:45,type:1},{id:2,x:20,y:10,r:28,type:1,fragment:true}],pickups:[],flares:[],meteors:[{id:3,x:30,y:10,a:45,type:1}],giant:{x:400,y:400}},prev:{giant:null},previousLookup:{asteroids:new Map(),pickups:new Map(),flares:new Map(),meteors:new Map()},blend:1,now:1000,nowSec:1,METEOR_3D_DIAMETER:28,scene3D:{rock:(...args)=>drawn.push(args)},drawGiantEntryWarning:()=>{},window:{GalaxyPhysicsCore:core},Math,Number});
+assert.deepEqual(Array.from(drawn,args=>[args[0],args[3],args[6]]),[['a1',90,'medium'],['a2',56,'fragment'],['m3',28,'fragment'],['giant',core.GIANT_DIAMETER,'large']]);
 const sw=await readFile(new URL('../docs/sw.js',import.meta.url),'utf8');for(const definition of Object.values(METEOR_MODELS))assert.ok(sw.includes('./assets/models/'+definition.file),'offline startup includes every role');assert.ok(!sw.includes('./assets/models/meteor.glb'));
 console.log('Meteor set OK: 3 distinct roles: asteroidemediano, Rocky_Asteroid_5 and meteorito3; actual game routes medium/fragments/rain/giant; independent role pools, shared resources, embedded PBR maps and offline startup.');

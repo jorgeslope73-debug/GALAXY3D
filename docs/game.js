@@ -737,7 +737,7 @@
       if(!asteroid)continue;
       const ax=Number(asteroid.x),ay=Number(asteroid.y);
       if(!Number.isFinite(ax)||!Number.isFinite(ay))continue;
-      const contact=window.GalaxyPhysicsCore.rockContact(giant,asteroid,135,(Number(asteroid.r)||ASTEROID_LOCAL_RADIUS)+3,'giant');
+      const contact=window.GalaxyPhysicsCore.rockContact(giant,asteroid,window.GalaxyPhysicsCore.GIANT_RADIUS,(Number(asteroid.r)||ASTEROID_LOCAL_RADIUS)+3,'giant');
       if(!contact)continue;
 
       const key=String(asteroid.id);
@@ -6827,8 +6827,8 @@
       const giantX=old?lerp(old.x,renderState.giant.x,blend):renderState.giant.x;
       const giantY=old?lerp(old.y,renderState.giant.y,blend):renderState.giant.y;
       drawGiantEntryWarning({x:giantX,y:giantY},now);
-      if(scene3D)scene3D.rock('giant',giantX,giantY,270,3,0,'large');
-      else drawImageCentered(images.giant,giantX,giantY,270,-window.GalaxyPhysicsCore.giantRotation(giantX,giantY)*180/Math.PI,1);
+      if(scene3D)scene3D.rock('giant',giantX,giantY,window.GalaxyPhysicsCore.GIANT_DIAMETER,3,0,'large');
+      else drawImageCentered(images.giant,giantX,giantY,window.GalaxyPhysicsCore.GIANT_DIAMETER,-window.GalaxyPhysicsCore.giantRotation(giantX,giantY)*180/Math.PI,1);
     }
     {
       const visibleUfos=Array.isArray(renderState.ufos)?renderState.ufos:(renderState.ufo?[renderState.ufo]:[]);
