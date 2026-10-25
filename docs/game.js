@@ -3426,7 +3426,7 @@
     postAnalyticsEvent('cpu_match');
     const brain=difficulty==='dificil'?await loadCpuBrain():null;
     await graphicsReady;
-    localCpu=new window.GalaxyLocalCpu({onState:m=>handle(m),onEvent:m=>handle(m)});
+    localCpu=new window.GalaxyLocalCpu({onState:m=>handle(m),onEvent:m=>handle(m),renderEveryStep:true});
     if(typeof localCpu.setTrainingTestProfile==='function')localCpu.setTrainingTestProfile(privateTestProfile());
     localCpu.start(
       sinTildes(campoNombre.value),
@@ -5107,6 +5107,9 @@
     return (a+delta*t+size)%size;
   }
   function interpolationAlpha(now){
+    // CPU physics has already advanced in this RAF. Show all bodies at that
+    // same pose, including the frame that confirms a hit or destruction.
+    if(localCpuActive)return 1;
     if(!previousState||previousState===state||!lastStateTime)return 1;
     return clamp((now-lastStateTime)/smoothedStateInterval,0,1);
   }
@@ -5143,7 +5146,9 @@
   function drawShip(p,previous,blend,now){
     const local=p.i===myIndex;
     let x=p.x,y=p.y,r=p.r;
-    if(local&&typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready){
+    if(localCpuActive){
+      if(local)Object.assign(localVisual,{ready:true,index:p.i,x,y,r,vx:p.vx,vy:p.vy,lastAt:now,lastError:0});
+    }else if(local&&typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready){
       const predicted=guestMotion.sample();
       x=predicted.x;y=predicted.y;r=predicted.r;
       Object.assign(localVisual,predicted,{ready:true,index:p.i,lastAt:now,lastError:guestMotion.stats.correction});

@@ -122,9 +122,10 @@
   }
 
   class GalaxyLocalCpu{
-    constructor({onState,onEvent}={}){
+    constructor({onState,onEvent,renderEveryStep=false}={}){
       this.onState=typeof onState==='function'?onState:()=>{};
       this.onEvent=typeof onEvent==='function'?onEvent:()=>{};
+      this.renderEveryStep=!!renderEveryStep;
       this.players=[];
       this.controls=new Map();
       this.destroyedProjectileScratch=new Set();
@@ -1205,7 +1206,7 @@
       if(!Number.isFinite(elapsed)||elapsed<0)elapsed=STEP_MS;
       this.accumulator+=Math.min(100,elapsed);
       let steps=0,publishState=false;
-      while(this.accumulator>=STEP_MS&&steps<5){
+      while(this.accumulator+1e-7>=STEP_MS&&steps<5){
         const perfStart=this.perfDebug?performance.now():0;
         this.update(DT);
         if(this.perfDebug){
@@ -1213,7 +1214,7 @@
           this.perfTickMs+=tickMs;this.perfTicks++;
           if(tickMs>this.perfTickMax)this.perfTickMax=tickMs;
         }
-        this.accumulator-=STEP_MS;
+        this.accumulator=Math.max(0,this.accumulator-STEP_MS);
         this.tickCount++;
         // V20.16 PERF: publicar estado cada 3 ticks = 20 snapshots/s.
         // La simulacion sigue ejecutando todos los ticks a 60 Hz.
@@ -1229,7 +1230,9 @@
       // en esta llamada. Construir un snapshot por cada tick recuperado creaba
       // arrays/objetos temporales justo cuando el frame ya iba retrasado.
       // Publicamos solo el estado final mas reciente.
-      if(publishState)this.onState(this.publicState());
+      // Interactive CPU play renders the final physics pose of this frame.
+      // Training keeps the existing 20 Hz cadence; catch-up still emits once.
+      if(publishState||(this.renderEveryStep&&steps>0))this.onState(this.publicState());
     }
     restart(){
       if(!this.finished||this.players.length<2)return false;
@@ -2463,6 +2466,7 @@
         }
         if(PHYSICS_CORE.isMediumRock(a))PHYSICS_CORE.advanceRockPose(a,DT);
         a.px=a.x;a.py=a.y;a.x+=a.vx*DT;a.y+=a.vy*DT;
+        PHYSICS_CORE.captureRockMotion(a);
         if(a.exiting){
           if(a.x<-220||a.x>W+220||a.y<-220||a.y>H+220)this.asteroids.splice(i,1);
           continue;

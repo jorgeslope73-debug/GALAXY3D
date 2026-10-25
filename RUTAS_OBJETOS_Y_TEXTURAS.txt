@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.64
+V23.65
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -143,3 +143,9 @@ V23.64 - Perfiles y movimiento 3D
 - Paquetes de estado: players[].b (alabeo), asteroids[].s (fase 3D), simTime (reloj de simulacion).
 - Generacion: tools/profile-geometry.mjs, tools/build-collision-profiles.py (numpy/Pillow), tools/pack-collision-profiles.mjs. Si cambia un GLB, regenerar los perfiles; las texturas pueden cambiar sin regenerarlos.
 - La vista 2D sigue los mismos perfiles mediante recorte de los sprites.
+
+V23.65 - Contactos del mediano
+- El modo CPU interactivo publica el ultimo tick de cada frame; el entrenamiento conserva 20 estados/s.
+- Dibujo local CPU sin mezclar posiciones interpoladas, predicciones ni inclinaciones de otro instante.
+- Los barridos de colision conservan el movimiento real anterior a la correccion entre rocas; el ajuste de separacion no es una trayectoria que pueda hacer dano.
+- Se conservan las mallas, las texturas, los perfiles y el aumento del 15% del mediano.

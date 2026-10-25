@@ -36,6 +36,29 @@
     rock.pspin=Number.isFinite(rock.spin)?rock.spin:((Number(rock.id)||0)*.61803398875)%(Math.PI*2);
     rock.spin=(rock.pspin+.18*dt)%(Math.PI*2);
   }
+  const rockMotionPaths=new WeakMap();
+  function captureRockMotion(rock){
+    // Called once after integration. Separating overlapping bodies is an
+    // instantaneous correction, not a flight through every intervening point.
+    const path={px:rock.px,py:rock.py,pspin:rock.pspin,spin:rock.spin,
+      startX:Number.isFinite(rock.px)?rock.px:rock.x,startY:Number.isFinite(rock.py)?rock.py:rock.y,
+      endX:rock.x,endY:rock.y,finalX:rock.x,finalY:rock.y};
+    rockMotionPaths.set(rock,path);return path;
+  }
+  function rockMotionPath(rock){
+    const path=rockMotionPaths.get(rock);
+    if(path&&path.px===rock.px&&path.py===rock.py&&path.pspin===rock.pspin&&path.spin===rock.spin&&path.finalX===rock.x&&path.finalY===rock.y)return path;
+    return {startX:Number.isFinite(rock.px)?rock.px:rock.x,startY:Number.isFinite(rock.py)?rock.py:rock.y,endX:rock.x,endY:rock.y,finalX:rock.x,finalY:rock.y};
+  }
+  function beginRockCorrection(rock){
+    const path=rockMotionPath(rock);
+    if(path===rockMotionPaths.get(rock))return;
+    captureRockMotion(rock);
+  }
+  function finishRockCorrection(rock){
+    const path=rockMotionPaths.get(rock);
+    if(path){path.finalX=rock.x;path.finalY=rock.y;}
+  }
   // Unbanked silhouette of nave.glb, normalized by ship-model.js and drawn at 1.5x.
   // Model blob 260239810997421b964a1613d7b58d88461b3170; outline tolerance <1 unit.
   const SHIP_DRAW_SIZE=72,SHIP_PROJECTILE_RADIUS=49;
@@ -299,26 +322,33 @@
     if(!g||!body)return null;
     let bx=Number.isFinite(body.px)?body.px:body.x,by=Number.isFinite(body.py)?body.py:body.y;
     if(Math.abs(body.x-bx)>960||Math.abs(body.y-by)>540){bx=body.x;by=body.y;}
-    const gx=Number.isFinite(g.px)?g.px:g.x,gy=Number.isFinite(g.py)?g.py:g.y;
+    const motion=rockMotionPath(g),gx=motion.startX,gy=motion.startY,ex=motion.endX,ey=motion.endY;
+    const corrected=ex!==g.x||ey!==g.y;
+    const finalContact=()=>{
+      if(!corrected)return null;
+      const hit=outlineSurface(g,body.x,body.y,radius,outline,angleAt);
+      const skin=Number.isFinite(g.spin)?.35:0;
+      return hit.distance<=bodyRadius+skin?{...hit,t:1}:null;
+    };
     // Cheap broad phase around the relative motion segment, then concave contour sweep.
-    if(pointSegmentDistance2(0,0,bx-gx,by-gy,body.x-g.x,body.y-g.y)>(radius+bodyRadius+1)**2)return null;
-    const oldAngle=angleAt(gx,gy,g.id),angle=angleAt(g.x,g.y,g.id);
+    if(pointSegmentDistance2(0,0,bx-gx,by-gy,body.x-ex,body.y-ey)>(radius+bodyRadius+1)**2)return finalContact();
+    const oldAngle=angleAt(gx,gy,g.id),angle=angleAt(ex,ey,g.id);
     const spin=Number.isFinite(g.spin)?g.spin:undefined,oldSpin=Number.isFinite(g.pspin)?g.pspin:spin;
     const turn=Number.isFinite(spin)?Math.atan2(Math.sin(spin-oldSpin),Math.cos(spin-oldSpin)):0;
     const pieces=Math.max(1,Math.ceil((Math.abs(angle-oldAngle)+Math.abs(turn))/.008));
-    const local=t=>{const a=oldAngle+(angle-oldAngle)*t,c=Math.cos(a),s=Math.sin(a),dx=(bx+(body.x-bx)*t-gx-(g.x-gx)*t)/radius,dy=(by+(body.y-by)*t-gy-(g.y-gy)*t)/radius;return [dx*c-dy*s,dx*s+dy*c];};
+    const local=t=>{const a=oldAngle+(angle-oldAngle)*t,c=Math.cos(a),s=Math.sin(a),dx=(bx+(body.x-bx)*t-gx-(ex-gx)*t)/radius,dy=(by+(body.y-by)*t-gy-(ey-gy)*t)/radius;return [dx*c-dy*s,dx*s+dy*c];};
     let start=local(0);
     for(let i=1;i<=pieces;i++){
       const end=local(i/pieces),profilePose={...g,spin:Number.isFinite(spin)?oldSpin+turn*(i-.5)/pieces:undefined};
       const active=typeof outline==='function'?outline(profilePose).outline:outline;
       const t=outlineSegmentTime(...start,...end,(bodyRadius+(Number.isFinite(spin)?.35:0))/radius,active);
       if(Number.isFinite(t)){
-        const at=(i-1+t)/pieces,pose={x:gx+(g.x-gx)*at,y:gy+(g.y-gy)*at,id:g.id,spin:Number.isFinite(spin)?oldSpin+turn*at:undefined};
+        const at=(i-1+t)/pieces,pose={x:gx+(ex-gx)*at,y:gy+(ey-gy)*at,id:g.id,spin:Number.isFinite(spin)?oldSpin+turn*at:undefined};
         return {...outlineSurface(pose,bx+(body.x-bx)*at,by+(body.y-by)*at,radius,outline,angleAt),t:at};
       }
       start=end;
     }
-    return null;
+    return finalContact();
   }
   function giantHitsCircle(g,body,bodyRadius,radius=135){return outlineHitsCircle(g,body,bodyRadius,radius,GIANT_OUTLINE,giantRotation);}
   function separateGiantShipContact(ship,giant,contact){return separateRockShipContact(ship,giant,contact,true);}
@@ -344,15 +374,15 @@
   function asteroidShipContact(rock,ship,giant=false,swept=true){
     if(!rock||!ship||ship.dead)return null;
     const m=shipMotion(ship),radius=giant?135:Number(rock.r)||45,bound=ship.shield>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS;
-    const rx=Number.isFinite(rock.px)?rock.px:rock.x,ry=Number.isFinite(rock.py)?rock.py:rock.y;
-    if(pointSegmentDistance2(0,0,m.x-rx,m.y-ry,ship.x-rock.x,ship.y-rock.y)>(radius+bound+1)**2)return null;
     const current=rockShipContactAt(rock,ship,giant);if(current)return {...current,t:1};
     if(!swept)return null;
+    const path=rockMotionPath(rock),rx=path.startX,ry=path.startY,ex=path.endX,ey=path.endY;
+    if(pointSegmentDistance2(0,0,m.x-rx,m.y-ry,ship.x-ex,ship.y-ey)>(radius+bound+1)**2)return null;
     const spin=Number.isFinite(rock.spin)?rock.spin:undefined,oldSpin=Number.isFinite(rock.pspin)?rock.pspin:spin;
     const turn=Number.isFinite(spin)?Math.atan2(Math.sin(spin-oldSpin),Math.cos(spin-oldSpin)):0;
-    const drx=rock.x-rx,dry=rock.y-ry,yawTurn=Math.abs((giant?giantRotation:mediumRotation)(rock.x,rock.y,rock.id)-(giant?giantRotation:mediumRotation)(rx,ry,rock.id));
+    const drx=ex-rx,dry=ey-ry,yawTurn=Math.abs((giant?giantRotation:mediumRotation)(ex,ey,rock.id)-(giant?giantRotation:mediumRotation)(rx,ry,rock.id));
     const travel=Math.hypot(m.dx-drx,m.dy-dry)+bound*(Math.abs(m.turn)+Math.abs(m.dBank))+radius*(Math.abs(turn)+yawTurn);
-    const steps=Math.ceil(travel/.4),r={...rock},s={...ship};
+    const steps=Math.max(1,Math.ceil(travel/.4)),r={...rock},s={...ship};
     for(let i=0;i<steps;i++){
       const t=i/steps,pose=shipMotionPose(m,t);
       Object.assign(s,{x:pose.x,y:pose.y,rot:pose.rot*180/Math.PI,bank:pose.bank,poseTime:pose.time});
@@ -365,8 +395,8 @@
     let hit=contact||asteroidShipContact(rock,ship,giant),nx=hit?hit.nx:1,ny=hit?hit.ny:0;
     if(!hit)return {x:nx,y:ny};
     if(hit.t<1){
-      const pose=shipMotionPose(shipMotion(ship),hit.t),rx=Number.isFinite(rock.px)?rock.px:rock.x,ry=Number.isFinite(rock.py)?rock.py:rock.y;
-      ship.x=pose.x+(rock.x-rx)*(1-hit.t);ship.y=pose.y+(rock.y-ry)*(1-hit.t);
+      const pose=shipMotionPose(shipMotion(ship),hit.t),path=rockMotionPath(rock);
+      ship.x=pose.x+(path.endX-path.startX)*(1-hit.t);ship.y=pose.y+(path.endY-path.startY)*(1-hit.t);
     }
     for(let pass=0;pass<20;pass++){
       hit=rockShipContactAt(rock,ship,giant);if(!hit)break;
@@ -462,6 +492,7 @@
     let contact=rockContact(a,b,ra,rb,aKind);if(!contact)return false;
     const invA=fixedA||a.exiting?0:1/Math.max(1,ra*ra),invB=b.exiting?0:1/Math.max(1,rb*rb),sum=invA+invB;
     if(!sum)return false;
+    beginRockCorrection(a);beginRockCorrection(b);
     let nx=contact.nx,ny=contact.ny,totalX=0,totalY=0;
     for(let pass=0;pass<10&&contact;pass++){
       const correction=(contact.depth+.15)/sum;
@@ -492,7 +523,8 @@
     const closing=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
     if(closing<0){const impulse=-(fixedA||!invA||!invB?1.58:1.84)*closing/sum;a.vx-=impulse*invA*nx;a.vy-=impulse*invA*ny;b.vx+=impulse*invB*nx;b.vy+=impulse*invB*ny;}
     else if(fixedA&&aKind==='giant'){b.vx+=nx*12;b.vy+=ny*12;}
-    if(invA)limitRockSpeed(a,maxSpeed);if(invB)limitRockSpeed(b,maxSpeed);return true;
+    if(invA)limitRockSpeed(a,maxSpeed);if(invB)limitRockSpeed(b,maxSpeed);
+    finishRockCorrection(a);finishRockCorrection(b);return true;
   }
 
   function chooseSpawnSector(player,players,width=1920,height=1080){
@@ -643,6 +675,7 @@
     const invA=1/massA,invB=1/massB,invSum=invA+invB;
 
     const correction=(overlap+.6)/invSum;
+    beginRockCorrection(a);beginRockCorrection(b);
     a.x-=nx*correction*invA;a.y-=ny*correction*invA;
     b.x+=nx*correction*invB;b.y+=ny*correction*invB;
 
@@ -657,6 +690,7 @@
 
     limitRockSpeed(a,maxSpeed);
     limitRockSpeed(b,maxSpeed);
+    finishRockCorrection(a);finishRockCorrection(b);
     return true;
   }
 
@@ -666,10 +700,11 @@
     if(isMediumRock(a,defaultRadius)||(g.exiting&&isMediumRock(g,giantRadius)))return resolveShapePair(g,a,giantRadius,ar,maxSpeed,true,giantRadius===135?'giant':undefined);
     if(giantRadius===135&&!g.exiting){
       const hit=giantCircleContact(g,a,ar,giantRadius);if(!hit)return false;
+      beginRockCorrection(a);
       a.x+=hit.nx*(hit.depth+1.2);a.y+=hit.ny*(hit.depth+1.2);
       const closing=(a.vx-g.vx)*hit.nx+(a.vy-g.vy)*hit.ny;
       const impulse=closing<0?-1.58*closing:12;
-      a.vx+=hit.nx*impulse;a.vy+=hit.ny*impulse;limitRockSpeed(a,maxSpeed);return true;
+      a.vx+=hit.nx*impulse;a.vy+=hit.ny*impulse;limitRockSpeed(a,maxSpeed);finishRockCorrection(a);return true;
     }
     const dx=a.x-g.x,dy=a.y-g.y,minDist=giantRadius+ar,d2=dx*dx+dy*dy;
     if(d2>=minDist*minDist)return false;
@@ -682,6 +717,7 @@
     }
     const overlap=minDist-d;
 
+    beginRockCorrection(a);
     a.x+=nx*(overlap+1.2);a.y+=ny*(overlap+1.2);
     const rvx=a.vx-g.vx,rvy=a.vy-g.vy,closing=rvx*nx+rvy*ny;
     if(closing<0){
@@ -692,6 +728,7 @@
     }
 
     limitRockSpeed(a,maxSpeed);
+    finishRockCorrection(a);
     return true;
   }
 
@@ -912,8 +949,10 @@
 
     const overlap=surface?flareRadius-surface.distance:(Number(bodyRadius)||0)+(Number(flareRadius)||0)-distance;
     if(overlap>0){
+      beginRockCorrection(body);
       body.x=(Number(body.x)||0)+nx*(overlap+2);
       body.y=(Number(body.y)||0)+ny*(overlap+2);
+      finishRockCorrection(body);
     }
     return true;
   }
@@ -1118,7 +1157,7 @@
   window.GalaxyPhysicsCore=Object.freeze({
     SHIP_DRAW_SIZE,SHIP_PROJECTILE_HULL,SHIP_PROJECTILE_RADIUS,projectileHitsShipHull,
     SHIP_CONTACT_SKIN,shipPairContact,moveShipsToContact,separateShipPair,
-    shipTilt,shipHitsCircle,shipSurface,shipPose,shipProfile,mediumProfile,mediumQuaternion,advanceRockPose,asteroidShipContact,separateRockShipContact,
+    shipTilt,shipHitsCircle,shipSurface,shipPose,shipProfile,mediumProfile,mediumQuaternion,advanceRockPose,captureRockMotion,asteroidShipContact,separateRockShipContact,
     GIANT_OUTLINE,giantRotation,giantSurface,giantCircleContact,giantHitsCircle,separateGiantShipContact,
     MEDIUM_OUTLINE,mediumRotation,mediumSurface,isMediumRock,asteroidCircleContact,asteroidHitsCircle,separateAsteroidShipContact,rockContact,
     chooseSpawnSector,

@@ -1697,6 +1697,7 @@
         }
         if(PHYSICS_CORE.isMediumRock(a))PHYSICS_CORE.advanceRockPose(a,DT);
         a.px=a.x;a.py=a.y;a.x+=a.vx*DT;a.y+=a.vy*DT;
+        PHYSICS_CORE.captureRockMotion(a);
         if(a.exiting){
           if(a.x<-220||a.x>W+220||a.y<-220||a.y>H+220)this.asteroids.splice(i,1);
           continue;
