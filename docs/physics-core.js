@@ -92,6 +92,20 @@
     rock.pspin=Number.isFinite(rock.spin)?rock.spin:((Number(rock.id)||0)*.61803398875)%(Math.PI*2);
     rock.spin=(rock.pspin+.18*dt)%(Math.PI*2);
   }
+  function stepAsteroidExit(rock,dt,width=1920,height=1080){
+    if(!rock||!rock.exiting||!Number.isFinite(dt)||dt<=0)return;
+    const vx=Number.isFinite(rock.vx)?rock.vx:0,vy=Number.isFinite(rock.vy)?rock.vy:0,speed=Math.hypot(vx,vy);
+    let nx,ny;
+    if(speed>1e-8){nx=vx/speed;ny=vy/speed;}
+    else{
+      // A stationary rock has no heading to preserve. Choose its nearest edge
+      // deterministically and start with the same bounded acceleration.
+      const distances=[rock.x,width-rock.x,rock.y,height-rock.y],edge=distances.indexOf(Math.min(...distances));
+      nx=edge===0?-1:edge===1?1:0;ny=edge===2?-1:edge===3?1:0;
+    }
+    const change=30*dt,next=speed<90?Math.min(90,speed+change):Math.max(90,speed-change);
+    rock.vx=nx*next;rock.vy=ny*next;
+  }
   const rockMotionPaths=new WeakMap();
   function captureRockMotion(rock){
     // Called once after integration. Separating overlapping bodies is an
@@ -1292,7 +1306,7 @@
     MEDIUM_OUTLINE,mediumRotation,mediumSurface,isMediumRock,asteroidCircleContact,asteroidHitsCircle,separateAsteroidShipContact,rockContact,
     chooseSpawnSector,
     SHIELD_RADIUS,shipCollisionRadius,shipImpactPoint,separateShipContact,
-    MOVEMENT_DT,stepShipMovement,createMotionStream,acceptMotionFrames,consumeMotionFrame,
+    MOVEMENT_DT,stepShipMovement,stepAsteroidExit,createMotionStream,acceptMotionFrames,consumeMotionFrame,
     cpuSpawnEscapeControl,
     TARGET_MIN_ALIGN,
     resolveAsteroidPairCollision,

@@ -165,12 +165,18 @@ const checks=[
     }
   }],
   ['ambos motores: asteroide en retirada conserva su recorrido',()=>{
+    const freeFlights=new WeakMap(),exitBody=()=>rock(650,500,-100,0,45,{id:'exiting',exiting:true});
     bothEngines('retirada',{
-      asteroids:[rock(500,500,110,0,45,{id:'active'}),rock(650,500,-100,0,45,{id:'exiting',exiting:true})]
-    },60,engine=>engine.updateAsteroids(DT),(engine,frame)=>{
-      const [a,exit]=engine.asteroids;separated(a,exit,90,'retirada tick '+frame);
-      assert.equal(exit.vx,-100,'la retirada mantiene su velocidad');
-      assert.ok(Math.abs(exit.x-(650-100*DT*(frame+1)))<EPS,'la retirada mantiene su recorrido');
+      asteroids:[rock(500,500,110,0,45,{id:'active'}),exitBody()]
+    },60,(engine,frame)=>{
+      if(frame===0)freeFlights.set(engine,fixture(engine.constructor.name,{asteroids:[exitBody()]}));
+      freeFlights.get(engine).updateAsteroids(DT);
+      engine.updateAsteroids(DT);
+    },(engine,frame)=>{
+      const [a,exit]=engine.asteroids,free=freeFlights.get(engine).asteroids[0];
+      separated(a,exit,90,'retirada tick '+frame);
+      for(const field of ['x','y','vx','vy'])assert.ok(Math.abs(exit[field]-free[field])<EPS,'el contacto no altera la retirada respecto al vuelo libre: '+field);
+      assert.ok(exit.vx<0,'la retirada conserva su rumbo mientras ajusta la rapidez suavemente');
       if(frame===59)assert.ok(a.vx<0,'el cuerpo activo debe rebotar durante la retirada');
     });
   }],

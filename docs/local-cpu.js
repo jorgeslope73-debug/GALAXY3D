@@ -989,14 +989,7 @@
     }
     beginAsteroidExit(a){
       if(!a||a.exiting)return;
-      const edge=ASTEROID_RADIUS*3;
-      const targets=[
-        {x:-edge,y:rand(50,H-50)},{x:W+edge,y:rand(50,H-50)},
-        {x:rand(50,W-50),y:-edge},{x:rand(50,W-50),y:H+edge}
-      ];
-      const target=targets[randint(0,targets.length-1)];
-      const n=normalize(target.x-a.x,target.y-a.y);
-      a.exiting=true;a.exitDelay=-1;a.vx=n.x*90;a.vy=n.y*90;
+      a.exiting=true;a.exitDelay=-1;
     }
     chooseAsteroidPopulation(){
       const current=this.asteroidPopulationUnits();
@@ -2464,6 +2457,7 @@
           a.exitDelay-=DT;
           if(a.exitDelay<=0)this.beginAsteroidExit(a);
         }
+        if(a.exiting)PHYSICS_CORE.stepAsteroidExit(a,DT,W,H);
         if(PHYSICS_CORE.isMediumRock(a))PHYSICS_CORE.advanceRockPose(a,DT);
         a.px=a.x;a.py=a.y;a.x+=a.vx*DT;a.y+=a.vy*DT;
         PHYSICS_CORE.captureRockMotion(a);

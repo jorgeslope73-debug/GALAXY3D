@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.79
+V23.80
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -243,3 +243,8 @@ SALIDA NATURAL DE LA LLUVIA AL CAMBIAR DE FASE - V23.79
 - Los cuerpos que ya se ven conservan ID, movimiento y colisiones hasta salir por los bordes o destruirse normalmente.
 - Se mantienen el calendario, la duracion de emision y la limpieza real al empezar/reiniciar una partida.
 - CPU local ya dejaba terminar su recorrido; el anfitrion online sigue ahora el mismo criterio de salida natural. Sin cambios de formato o frecuencia de red.
+
+RETIRADA DE METEORITOS SIN REBOTE FICTICIO - V23.80
+- Al reducir la poblacion se conserva el rumbo del meteorito al retirarse; ya no se cambia de golpe hacia un borde aleatorio.
+- La velocidad de salida se ajusta progresivamente, tambien si parte del reposo. Se conservan los contactos reales y la retirada fuera de pantalla.
+- CPU local y anfitrion comparten el mismo paso de salida. Sin nuevos campos ni cambios de frecuencia en la red.
