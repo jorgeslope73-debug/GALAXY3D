@@ -27,12 +27,18 @@ function flight(fps,speed=1,heldSeconds=30,totalSeconds=38,thrustAt=now=>now<hel
   return samples;
 }
 const flights=new Map([30,60,120].map(fps=>[fps,flight(fps)]));
-function checkHeldFlight(samples,speed){
-  const held=samples.filter(s=>s.now>=1000&&s.now<30000);
+function checkThrustPulse(samples,speed){
+  const recovery=samples.filter(s=>s.now>=1000&&s.now<=2000);
   const braking=samples.filter(s=>s.now>=30000&&s.now<31000);
-  assert.ok(Math.max(...samples.filter(s=>s.now<1000).map(s=>s.pitch))*DEG>24.7,'la subida inicial alcanza los 25 grados sin una espera larga');
+  assert.ok(Math.max(...samples.filter(s=>s.now<1000).map(s=>s.pitch))*DEG>24.5,'la subida inicial alcanza aproximadamente 25 grados sin una espera larga');
   assert.ok(samples.filter(s=>s.thrust).every(s=>s.pitch>=0),'acelerando desde parado nunca cabecea hacia abajo');
-  assert.ok(held.every(s=>s.pitch*DEG>=24.9&&s.pitch*DEG<=25.000001),'mantener el acelerador sostiene 25 grados durante 30 segundos, incluso en crucero');
+  const halfway=samples.find(s=>s.now>=1000),later=samples.find(s=>s.now>=1500),level=samples.find(s=>s.now>=2000);
+  assert.ok(halfway.pitch*DEG>5,'el pulso se recupera de forma gradual, no desaparece inmediatamente tras el pico');
+  assert.ok((halfway.pitch-later.pitch)*DEG>3,'la recuperación avanza mientras se mantiene el acelerador');
+  for(let i=1;i<recovery.length;i++)assert.ok(recovery[i].pitch<=recovery[i-1].pitch+1e-12,'la recuperación hacia horizontal es progresiva y sin oscilación');
+  assert.ok(level.thrust&&Math.abs(level.pitch)*DEG<1,'a los dos segundos ya está horizontal sin tener que soltar el acelerador');
+  assert.ok(level.speed>50*speed,'la recuperación no espera a que se detenga el movimiento');
+  assert.ok(samples.filter(s=>s.now>=2000&&s.now<30000).every(s=>Math.abs(s.pitch)*DEG<1),'la nave permanece horizontal al seguir acelerando durante 30 segundos');
   assert.ok(Math.min(...braking.map(s=>s.pitch))*DEG<-4.25,'soltar produce un pequeño cabeceo hacia abajo perceptible');
   assert.ok(braking.every(s=>s.pitch*DEG>=-5.000001),'el cabeceo al soltar no supera cinco grados');
   const afterOne=samples.find(s=>s.now>=31000);
@@ -41,7 +47,7 @@ function checkHeldFlight(samples,speed){
   assert.ok(samples.filter(s=>s.now>=31000).every(s=>Math.abs(s.pitch)*DEG<1),'la nave sigue nivelada durante el deslizamiento posterior, sin otro cabeceo');
   assert.ok(Math.abs(samples.at(-1).pitch)*DEG<.00001,'se nivela al quedar parada');
 }
-for(const samples of flights.values())checkHeldFlight(samples,1);
+for(const samples of flights.values())checkThrustPulse(samples,1);
 let maxFrameDifference=0;
 for(const fps of [30,120]){
   const compared=new Map(flights.get(fps).map(s=>[Math.round(s.now*1000),s]));
@@ -53,7 +59,7 @@ for(const fps of [30,120]){
 assert.ok(maxFrameDifference*DEG<.25,'el movimiento no depende materialmente de 30/60/120 Hz');
 for(const fps of [30,60,120])for(const speed of [1.5,2]){
   const samples=flight(fps,speed),normal=flights.get(fps);
-  checkHeldFlight(samples,speed);
+  checkThrustPulse(samples,speed);
   const peak=list=>Math.max(...list.map(s=>s.pitch))*DEG,dip=list=>Math.min(...list.map(s=>s.pitch))*DEG;
   assert.ok(Math.abs(peak(samples)-peak(normal))<.05,'las mejoras de velocidad mantienen la misma elevación máxima de 25 grados');
   assert.ok(Math.abs(dip(samples)-dip(normal))<.05,'las mejoras de velocidad conservan el pequeño cabeceo de cinco grados');
@@ -62,9 +68,12 @@ for(const fps of [30,60,120])for(const speed of [1.5,2]){
 const tap=flight(60,1,.08,7),repress=flight(60,1,2,12,now=>now<2000||(now>=2400&&now<6000));
 assert.ok(tap.every(s=>s.pitch*DEG<=25.000001&&s.pitch*DEG>=-5.000001),'un toque corto permanece acotado');
 assert.ok(Math.abs(tap.at(-1).pitch)*DEG<.00001,'el toque corto no deja inclinación residual');
-const ramp=repress.filter(s=>s.now>=2400&&s.now<3000);
+const ramp=repress.filter(s=>s.now>=2400&&s.now<2650);
 for(let i=1;i<ramp.length;i++)assert.ok(ramp[i].pitch>=ramp[i-1].pitch,'reactivar durante la bajada empieza a levantar sin otro cabeceo hacia abajo');
-assert.ok(repress.find(s=>s.now>=4000).pitch*DEG>24.9,'reactivar recupera la postura mantenida de 25 grados');
+assert.ok(Math.max(...repress.filter(s=>s.now>=2400&&s.now<3400).map(s=>s.pitch))*DEG>24.5,'reactivar inicia un nuevo pulso de aproximadamente 25 grados');
+const relevelled=repress.find(s=>s.now>=4400);
+assert.ok(relevelled.thrust&&Math.abs(relevelled.pitch)*DEG<1,'el segundo pulso se recupera en dos segundos sin volver a soltar');
+assert.ok(repress.filter(s=>s.now>=4400&&s.now<6000).every(s=>Math.abs(s.pitch)*DEG<1),'mantener la segunda aceleración tampoco deja una postura elevada residual');
 assert.ok(Math.abs(repress.at(-1).pitch)*DEG<.15,'la segunda frenada vuelve a nivelarse');
 
 let brakingState=null;
@@ -120,5 +129,5 @@ for(const pitch of [25/DEG,dip,0]){
   const worldMount=mount.getWorldPosition(new T.Vector3()),expected=mount.position.clone().applyEuler(tilt.rotation);
   assert.ok(worldMount.distanceTo(expected)<1e-10,'las armas montadas siguen la elevación, el cabeceo y la vuelta a horizontal');
 }
-for(const [fps,samples] of flights)console.log(fps+' Hz: impulso '+(Math.max(...samples.map(s=>s.pitch))*DEG).toFixed(3)+'°, mantenida30s '+(samples.find(s=>s.now>=29900).pitch*DEG).toFixed(3)+'°, frenado '+(Math.min(...samples.map(s=>s.pitch))*DEG).toFixed(3)+'°.');
-console.log('Inercia visual OK: 25° mantenidos con acelerador y mejoras, cabeceo de hasta 5° al soltar y horizontal <1° en un segundo mientras desliza; 30/60/120 Hz (diferencia máxima '+(maxFrameDifference*DEG).toFixed(4)+'°), pulsos/reactivación continua, resets, aislamiento, inmutabilidad, morro GLB y armas.');
+for(const [fps,samples] of flights)console.log(fps+' Hz: impulso '+(Math.max(...samples.map(s=>s.pitch))*DEG).toFixed(3)+'°, horizontal2s '+(samples.find(s=>s.now>=2000).pitch*DEG).toFixed(3)+'°, frenado '+(Math.min(...samples.map(s=>s.pitch))*DEG).toFixed(3)+'°.');
+console.log('Inercia visual OK: pulso inicial de 25° y vuelta progresiva a horizontal <1° en dos segundos sin soltar, también con mejoras; cabeceo de hasta 5° al soltar y horizontal en un segundo mientras desliza; 30/60/120 Hz (diferencia máxima '+(maxFrameDifference*DEG).toFixed(4)+'°), nueva aceleración con pulso, continuidad, resets, aislamiento, inmutabilidad, morro GLB y armas.');

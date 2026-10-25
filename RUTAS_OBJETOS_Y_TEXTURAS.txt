@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.73
+V23.74
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -206,3 +206,9 @@ INCLINACION VISUAL DE LAS NAVES - V23.73
 - Al soltar: cabeceo hacia abajo limitado a 5 grados y recuperacion de la horizontal en menos de un segundo.
 - Los limites son los mismos con y sin mejoras de velocidad.
 - Efecto local de cada render: no cambia fisica, perfiles de colision ni paquetes de red.
+
+RECUPERACION DE LA INERCIA AL ACELERAR - V23.74
+- Al comenzar a acelerar, el morro sube hasta 25 grados y recupera progresivamente la horizontal en 2 segundos, aunque siga pulsado el acelerador.
+- Cada nueva pulsacion inicia un nuevo impulso visual continuo desde la inclinacion actual.
+- Al soltar se conserva el cabeceo de hasta 5 grados y la recuperacion rapida.
+- Solo presentacion local; sin cambios de fisica, colisiones o datos de red.

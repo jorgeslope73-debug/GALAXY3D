@@ -27,9 +27,11 @@ export function stepShipInertia(previous,{now,context='',thrust=false,vx,vy,spee
       // position jump or another downward swing inherited from braking.
     }
     releaseAt=null;releaseSpeed=0;
-    // Keep the nose at 25 degrees while accelerating, including at cruise
-    // speed and with speed pickups. The downward dip has its own smaller cap.
-    target=liftLimit;
+    // An initial lift eases back to level over two seconds, even while
+    // thrust stays held. Leave the final fraction for the spring to settle.
+    const age=Math.max(0,(now-heldAt)*.001),recovery=Math.max(0,Math.min(1,(age-.4)/1.35));
+    const eased=recovery*recovery*recovery*(10+recovery*(-15+6*recovery));
+    target=liftLimit*(1-eased);
   }else{
     heldAt=null;
     if(previous.thrust){releaseAt=now;releaseSpeed=motionSpeed;}
