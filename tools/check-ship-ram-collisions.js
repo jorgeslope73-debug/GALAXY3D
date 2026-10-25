@@ -59,7 +59,7 @@ for(const name of names){
   }
 }
 // Independent polygon checks catch false hits in the empty areas between wings.
-function hull(ship){const a=ship.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return core.SHIP_PROJECTILE_HULL.map(([x,y])=>[ship.x+x*c+y*s,ship.y-x*s+y*c]);}
+function hull(ship){const a=ship.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return core.shipProfile(core.shipPose(ship)).outline.map(([x,y])=>[ship.x+x*c+y*s,ship.y-x*s+y*c]);}
 const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
 function inside(p,poly){let yes=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[j],b=poly[i];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])yes=!yes;}return yes;}
 function gap(a,b){let best=Infinity;for(let side=0;side<2;side++){const p=side?b:a,q=side?a:b;for(const v of p)for(let i=0;i<q.length;i++){const u=q[i],w=q[(i+1)%q.length],dx=w[0]-u[0],dy=w[1]-u[1],t=Math.max(0,Math.min(1,((v[0]-u[0])*dx+(v[1]-u[1])*dy)/(dx*dx+dy*dy)));best=Math.min(best,Math.hypot(v[0]-u[0]-t*dx,v[1]-u[1]-t*dy));}}return best;}

@@ -17,6 +17,7 @@ Math.random=()=>{
 };
 
 require(path.join(__dirname,'../docs/campaign-config.js'));
+require(path.join(__dirname,'../docs/collision-profiles.js'));
 require(path.join(__dirname,'../docs/physics-core.js'));
 require(path.join(__dirname,'../docs/local-cpu.js'));
 

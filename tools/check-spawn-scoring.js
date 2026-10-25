@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 global.window=global;
 require('../docs/net-protocol.js');
+require('../docs/collision-profiles.js');
 require('../docs/physics-core.js');
 require('../docs/host-physics.js');
 require('../docs/local-cpu.js');

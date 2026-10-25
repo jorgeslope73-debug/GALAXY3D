@@ -14,7 +14,7 @@ const noop=()=>{};
 function engineContext(clock={now:1000000}){
   class TestDate extends Date{static now(){return clock.now;}}
   const ctx=vm.createContext({window:{},console,Date:TestDate,performance,setTimeout,clearTimeout});
-  for(const file of ['net-protocol','campaign-config','physics-core','host-physics','local-cpu']){
+  for(const file of ['net-protocol','campaign-config','collision-profiles','physics-core','host-physics','local-cpu']){
     vm.runInContext(read('docs/'+file+'.js'),ctx,{filename:file+'.js'});
   }
   return ctx;

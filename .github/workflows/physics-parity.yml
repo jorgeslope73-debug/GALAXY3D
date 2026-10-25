@@ -6,6 +6,7 @@ on:
       - 'docs/host-physics.js'
       - 'docs/local-cpu.js'
       - 'docs/physics-core.js'
+      - 'docs/collision-profiles.js'
       - 'docs/net-protocol.js'
       - 'docs/p2p-network.js'
       - 'docs/game.js'
@@ -23,6 +24,8 @@ on:
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
       - 'tools/check-medium-outline.mjs'
+      - 'tools/check-rotating-profiles.mjs'
+      - 'tools/profile-geometry.mjs'
       - 'tools/check-ufo-model.mjs'
       - 'tools/check-menu-ufo.mjs'
       - 'docs/view-3d.css'
@@ -54,6 +57,7 @@ on:
       - 'docs/host-physics.js'
       - 'docs/local-cpu.js'
       - 'docs/physics-core.js'
+      - 'docs/collision-profiles.js'
       - 'docs/net-protocol.js'
       - 'docs/p2p-network.js'
       - 'docs/game.js'
@@ -71,6 +75,8 @@ on:
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
       - 'tools/check-medium-outline.mjs'
+      - 'tools/check-rotating-profiles.mjs'
+      - 'tools/profile-geometry.mjs'
       - 'tools/check-ufo-model.mjs'
       - 'tools/check-menu-ufo.mjs'
       - 'docs/view-3d.css'
@@ -142,6 +148,8 @@ jobs:
         run: node tools/check-giant-outline.mjs
       - name: Check irregular medium outline and rock shape contacts
         run: node tools/check-medium-outline.mjs
+      - name: Check rotating GLB profiles, banked hulls and authority packets
+        run: node tools/check-rotating-profiles.mjs
       - name: Check UFO GLB resources, orientation, size and animation
         run: node tools/check-ufo-model.mjs
       - name: Check decorative menu UFO timing and clearance

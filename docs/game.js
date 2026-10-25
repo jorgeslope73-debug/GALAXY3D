@@ -4883,6 +4883,14 @@
       ctx.restore();
     }
   }
+  function drawProfileSprite(image,outline,x,y,angle,scale,alpha,base,artSize){
+    // The 2D view keeps the authoritative silhouette too, including bank/tumble.
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
+    ctx.beginPath();outline.forEach(([px,py],i)=>{if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});ctx.closePath();
+    ctx.fillStyle=base;ctx.fill();ctx.clip();
+    if(imageReady(image))drawImageSafely(image,-artSize*.5,-artSize*.5,artSize,artSize);
+    ctx.restore();
+  }
   function drawLocalizaMarker(x,y,owner,alpha=.92){
     const idx=Math.max(0,Math.min(3,Number(owner)||0));
     const im=images[localizaSpriteKeys[idx]];
@@ -5386,12 +5394,14 @@
       shipSize*=.28+.72*me;
       alpha*=.18+.82*me;
     }
+    const hullPose={bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i};
     if(scene3D){
       const shieldPulse=p.shield>0?(p.shield<=3?.38+.62*(.5+.5*Math.sin(now*.012)):1):0;
       scene3D.ship(p.i,x,y,r,shipSize,alpha,thrusting,armed,shieldPulse,
         Number(p.flare)>0,p.shock===true,p.mira===true,
-        Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma,Number(p.ammo)>0);
-    }else drawImageCentered(im,x,y,shipSize,-r,alpha);
+        Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma,Number(p.ammo)>0,
+        hullPose);
+    }else drawProfileSprite(im,window.GalaxyPhysicsCore.shipProfile(hullPose).outline,x,y,-r*Math.PI/180,shipSize/SHIP_DRAW_SIZE,alpha,'#263b50',98);
     // V20.98: confirmacion visual muy corta de impacto. Solo se alimenta de
     // eventos ya recibidos y nunca revela una nave rival en modo FANTASMA.
     const hitLeft=Number(shipHitFlashUntil[Number(p.i)]||0)-now;
@@ -6603,10 +6613,11 @@
       const old=previousLookup.asteroids.get(a.id);
       const x=old?lerp(old.x,a.x,blend):a.x;
       const y=old?lerp(old.y,a.y,blend):a.y;
-      const size=a.fragment===true?56:Math.max(56,Math.round((Number(a.r)||45)*2));
-      if(scene3D)scene3D.rock('a'+a.id,x,y,size,a.type,0,a.fragment===true?'fragment':'medium');
+      const size=a.fragment===true?56:Math.max(56,(Number(a.r)||45)*2);
+      const spin=old?(Number(old.s)||0)+Math.atan2(Math.sin((Number(a.s)||0)-(Number(old.s)||0)),Math.cos((Number(a.s)||0)-(Number(old.s)||0)))*blend:Number(a.s)||0;
+      if(scene3D)scene3D.rock('a'+a.id,x,y,size,a.type,0,a.fragment===true?'fragment':'medium',spin);
       else if(a.fragment===true)drawImageCentered(images[ASTEROID_IMAGE_KEYS[a.type]]||images.asteroid1,x,y,size);
-      else drawImageCentered(images.asteroidMedium,x,y,size,-window.GalaxyPhysicsCore.mediumRotation(x,y,a.id)*180/Math.PI);
+      else drawProfileSprite(images.asteroidMedium,window.GalaxyPhysicsCore.mediumProfile({spin}).outline,x,y,-window.GalaxyPhysicsCore.mediumRotation(x,y,a.id),size*.5,1,'#5b5450',2.5);
     }
     for(const pk of state.pickups){
       const old=previousLookup.pickups.get(pk.id);

@@ -244,7 +244,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.63';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.64';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
@@ -405,17 +405,21 @@
         for(const record of records.values()){record.used=false;record.root.visible=false;}
         collectEffects(snapshot,localIndex);
       },
-      rock(id,x,y,size,type=1,angle=0,role){
+      rock(id,x,y,size,type=1,angle=0,role,spin){
         const modelRole=role||(size<=56?'fragment':size>=180?'large':'medium');
         const record=take('rock:'+modelRole,id),variant=Math.abs(Number(type)||0)%6;
         record.root.scale.setScalar(size*.5);
         place(record.root,x,y,-8);
         const phase=(Number(String(id).replace(/\D/g,''))||variant)*.7;
         if(modelRole==='large'&&String(id)==='giant')record.rock.rotation.set(0,0,window.GalaxyPhysicsCore.giantRotation(x,y));
-        else if(modelRole==='medium'&&/^a\d/.test(String(id)))record.rock.rotation.set(0,0,window.GalaxyPhysicsCore.mediumRotation(x,y,Number(String(id).slice(1))||0));
+        else if(modelRole==='medium'&&/^a\d/.test(String(id))){
+          const yaw=window.GalaxyPhysicsCore.mediumRotation(x,y,Number(String(id).slice(1))||0);
+          const q=window.GalaxyPhysicsCore.mediumQuaternion(Number(spin)||0,yaw);
+          record.rock.quaternion.set(q.x,q.y,q.z,q.w);
+        }
         else record.rock.rotation.set(now*.00013+phase,now*.00017+phase,angle*Math.PI/180+phase);
       },
-      ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false,missileCount=missile?1:0,hasAmmo=armed){
+      ship(index,x,y,rotation,size,alpha,thrust,armed,shield,flare,shock,missile,hit=0,showcase=false,missileCount=missile?1:0,hasAmmo=armed,pose){
         const record=take('ship:'+index,index),root=record.root;
         attachImportedShip(record,index);
         attachMountedRocket(record,index);
@@ -425,9 +429,10 @@
         if(!showcase)record.shield.scale.setScalar((window.GalaxyPhysicsCore?.SHIELD_RADIUS||60)/root.scale.x);
         root.rotation.z=rotation*Math.PI/180;
         // Turning keeps its bank; a very small passive sway remains at rest.
-        const bank=turnBank(record,rotation,showcase);
+        const bank=pose?Number(pose.bank)||0:turnBank(record,rotation,showcase);
         const sway=passiveShipSway(index),swayWeight=1-Math.min(1,Math.abs(bank)/SHIP_BANK_LIMIT);
-        record.tilt.rotation.set(showcase?.38:sway.pitch*swayWeight,showcase?Math.sin(now*.0006)*.30:bank+sway.roll*swayWeight,0);
+        const tilt=pose?window.GalaxyPhysicsCore.shipTilt(bank,pose.time,index):{pitch:sway.pitch*swayWeight,roll:bank+sway.roll*swayWeight};
+        record.tilt.rotation.set(showcase?.38:tilt.pitch,showcase?Math.sin(now*.0006)*.30:tilt.roll,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
         // Engine trails for thrust and turns use the existing particle system in game.js.

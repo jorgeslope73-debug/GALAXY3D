@@ -10,7 +10,7 @@ export function menuFloaters(time,mobile=false){
   const ship=(index,x,y,size,rotation,anchorY=y,drift=0)=>({id:'ship'+index,kind:'ship',index,x,y,size,rotation,safety:{x,y:anchorY,r:size*.56+drift}});
   const objects=[
     rock('menu1',(mobile?240:410)+Math.sin(time*.00012)*35,mobile?260:340,mobile?216:375,1,'large',mobile?240:410,35),
-    rock('menu2',(mobile?1690:1490)+Math.cos(time*.0001)*25,245,mobile?60:88,3,'medium',mobile?1690:1490,25)
+    rock('menu2',(mobile?1690:1490)+Math.cos(time*.0001)*25,245,mobile?69:101.2,3,'medium',mobile?1690:1490,25)
   ];
   if(!mobile)objects.push(rock('menu3',1240,465+Math.sin(time*.0002)*18,46,4,'fragment',1240,18));
   // The third rock drifts vertically; its envelope is centred on its rest position.

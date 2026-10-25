@@ -45,6 +45,7 @@ const SHELL_FILES = [
   './impactos.js',
   './voz.js',
   './net-protocol.js',
+  './collision-profiles.js',
   './physics-core.js',
   './motion-prediction.js',
   './local-cpu.js',

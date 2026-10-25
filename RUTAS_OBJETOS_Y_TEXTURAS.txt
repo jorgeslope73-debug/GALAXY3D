@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.63
+V23.64
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -135,3 +135,11 @@ Originales:
 https://github.com/jorgeslope73-debug/GALAXY3D/tree/main/mas/final
 Sprites/fondos:
 https://github.com/jorgeslope73-debug/GALAXY3D/tree/main/docs/assets/sprites
+
+V23.64 - Perfiles y movimiento 3D
+- docs/collision-profiles.js: perfiles precalculados de nave.glb (alabeo -60 a +60 grados) y asteroidemediano.glb (giro 3D completo).
+- docs/physics-core.js: colisiones y alabeo de autoridad; los clientes solo representan el estado recibido.
+- Mediano: radio 51,75 / diametro 103,5 (+15%); gira sobre su eje 3D a 0,18 rad/s, ademas de su orientacion sobre el plano.
+- Paquetes de estado: players[].b (alabeo), asteroids[].s (fase 3D), simTime (reloj de simulacion).
+- Generacion: tools/profile-geometry.mjs, tools/build-collision-profiles.py (numpy/Pillow), tools/pack-collision-profiles.mjs. Si cambia un GLB, regenerar los perfiles; las texturas pueden cambiar sin regenerarlos.
+- La vista 2D sigue los mismos perfiles mediante recorte de los sprites.

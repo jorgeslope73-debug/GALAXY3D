@@ -9,7 +9,7 @@
 (() => {
   const build=window.GALAXY_BUILD;
   if(!build||typeof build.versioned!=='function')throw new Error('GALAXY_BUILD no cargado');
-  const scripts=['config.js','campaign-config.js','physics-core.js','local-cpu.js'];
+  const scripts=['config.js','campaign-config.js','collision-profiles.js','physics-core.js','local-cpu.js'];
   document.write(scripts.map(src=>'<script src="'+build.versioned(src)+'"><\/script>').join(''));
 })();
 </script>

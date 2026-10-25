@@ -8,7 +8,7 @@
   const DRAG_PER_TICK=Math.pow(0.35,DT);
   const IDLE_CONTROL=Object.freeze({turn:0,thrust:false,fire:false,controlSeq:0,rocketPulse:false,flarePulse:false,shockPulse:false});
   const SCORE_TO_WIN=5;
-  const SHIP_RADIUS=24,ASTEROID_RADIUS=45,GIANT_RADIUS=135,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
+  const SHIP_RADIUS=24,ASTEROID_RADIUS=51.75,GIANT_RADIUS=135,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
   const shipCollisionRadius=p=>PHYSICS_CORE.shipCollisionRadius(p,SHIP_RADIUS);
   const SPAWN_PROTECTION_SECONDS=3,SPAWN_MATERIALIZE_SECONDS=1.15,BRUTAL_SHOT_DISTANCE=850;
   // V22.29: memoria anti-bucle de combate. Es estado local de la CPU, no viaja por red.
@@ -299,7 +299,7 @@
       }
       const n=normalize(targetX-start.x,targetY-start.y);
       this.asteroids.push({
-        id:uid(),x:start.x,y:start.y,rot,type,
+        id:uid(),x:start.x,y:start.y,rot,type,spin:rand(0,Math.PI*2),
         vx:n.x*80,vy:n.y*80,r:radius,exiting:false,exitDelay:-1
       });
     }
@@ -956,7 +956,7 @@
         if(score>bestScore){best=candidate;bestScore=score;}
         if(clearance>=0&&!tooSimilar){best=candidate;break;}
       }
-      p.x=best.x;p.y=best.y;p.px=p.x;p.py=p.y;p.rot=rand(0,360);p.pr=p.rot;p.vx=0;p.vy=0;p.lastSpawn={x:p.x,y:p.y};p.spawnAnchorX=p.x;p.spawnAnchorY=p.y;
+      p.x=best.x;p.y=best.y;p.px=p.x;p.py=p.y;p.rot=rand(0,360);p.pr=p.rot;p.bank=0;p.pbank=0;p.vx=0;p.vy=0;p.lastSpawn={x:p.x,y:p.y};p.spawnAnchorX=p.x;p.spawnAnchorY=p.y;
       p.openingFleeUntil=p.cpu&&Math.random()<.45?(Number(this.fxClock)||0)+SPAWN_MATERIALIZE_SECONDS+rand(1.5,3.5):0;
       p.aiControl=null;p.easyControl=null;
     }
@@ -1633,6 +1633,7 @@
       this.fxEvents.length=fxWrite;
       const controlNow=Date.now();
       for(const p of this.players){
+        p.previousPoseTime=Number.isFinite(p.poseTime)?p.poseTime:this.fxClock-dt;p.poseTime=this.fxClock;
         if((Number(p.spawnFx)||0)>0){p.spawnFx=Math.max(0,p.spawnFx-dt);p.protection=SPAWN_PROTECTION_SECONDS;}else p.protection=p.protection-dt>1e-9?p.protection-dt:0;
         p.shield=Math.max(0,p.shield-dt);p.camo=Math.max(0,p.camo-dt);p.reload=Math.max(0,p.reload-dt);
         if(p.dead){p.thrust=false;p.respawn-=dt;if(p.respawn<=0)this.respawnPlayer(p);continue;}
@@ -1694,6 +1695,7 @@
           a.exitDelay-=DT;
           if(a.exitDelay<=0)this.beginAsteroidExit(a);
         }
+        if(PHYSICS_CORE.isMediumRock(a))PHYSICS_CORE.advanceRockPose(a,DT);
         a.px=a.x;a.py=a.y;a.x+=a.vx*DT;a.y+=a.vy*DT;
         if(a.exiting){
           if(a.x<-220||a.x>W+220||a.y<-220||a.y>H+220)this.asteroids.splice(i,1);
@@ -2061,7 +2063,7 @@
         }
         if(removed)continue;
         for(const p of this.players){
-          if(!p.dead&&sweptCircles(m,SMALL_METEOR_RADIUS,p,shipCollisionRadius(p),false)){
+          if(!p.dead&&PHYSICS_CORE.shipHitsCircle(p,m,SMALL_METEOR_RADIUS)){
             if(p.shield>0){
               this.emitShipImpact(p,m,false);
               PHYSICS_CORE.separateShipContact(p,m,SMALL_METEOR_RADIUS,0);
@@ -2107,7 +2109,7 @@
       }
       for(const p of this.players){
         if(p.dead)continue;
-        const contact=PHYSICS_CORE.giantHitsCircle(g,p,shipCollisionRadius(p));if(!contact)continue;
+        const contact=PHYSICS_CORE.asteroidShipContact(g,p,true);if(!contact)continue;
         if(p.shield>0||p.protection>0){
           this.emitShipImpact(p,{x:contact.x,y:contact.y},false);const n=PHYSICS_CORE.separateGiantShipContact(p,g,contact);
           p.vx=n.x*130;p.vy=n.y*130;
@@ -2282,7 +2284,7 @@
         // V21.28: para una embestida letal exigimos solape real en este tick.
         // A 60 Hz el OVNI no atraviesa una nave; evita muertes entre snapshots
         // que visualmente puedan parecer que no llegaron a tocarse.
-        if(!p||p.dead||!circles(u,UFO_RADIUS,p,shipCollisionRadius(p)))continue;
+        if(!p||p.dead||!PHYSICS_CORE.shipHitsCircle(p,u,UFO_RADIUS))continue;
         const protectedContact=p.shield>0||p.protection>0;
         if(protectedContact){
           this.emitShipImpact(p,u,false);
@@ -2313,7 +2315,7 @@
         for(let f=this.flares.length-1;f>=0;f--){
           const flare=this.flares[f];
           if(Number(flare.owner)===Number(p.index)&&(Number(flare.ownerSafe)||0)>0)continue;
-          if(!sweptCircles(p,shipCollisionRadius(p),flare,FLARE_RADIUS,false))continue;
+          if(!PHYSICS_CORE.shipHitsCircle(p,flare,FLARE_RADIUS))continue;
           const flareOwner=this.players.find(q=>Number(q.index)===Number(flare.owner))||null;
           this.flares.splice(f,1);
           if(p.shield>0||p.protection>0){
@@ -2337,7 +2339,7 @@
         if(p.dead)continue;
 
         for(const a of this.asteroids){
-          const contact=PHYSICS_CORE.asteroidHitsCircle(a,p,shipCollisionRadius(p),sweptCircles);if(!contact)continue;
+          const contact=PHYSICS_CORE.asteroidShipContact(a,p);if(!contact)continue;
           if(p.shield>0){
             this.emitShipImpact(p,{x:contact.x,y:contact.y},false);const n=PHYSICS_CORE.separateAsteroidShipContact(p,a,contact);
             const dot=(p.vx-a.vx)*n.x+(p.vy-a.vy)*n.y;
@@ -2389,8 +2391,8 @@
         ...PROTOCOL.context(this),t:'state',seq:++this.seq,round:this.rankRound,code:this.code,mode:'p2p',testProfile:this.testProfile,started:this.started,finished:this.finished,winner:this.winner,
         w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,simTime:round3(this.fxClock),
         fx:this.fxEvents.map(e=>({id:e.id,i:e.i,x:e.x,y:e.y,kind:e.kind,hidden:e.hidden,age:Math.max(0,Math.round((this.fxClock-e.at)*1000))})),
-        players:this.players.map(p=>({i:p.index,n:p.name,cpu:p.cpu,motion:!p.cpu&&p.motionStream?{v:1,epoch:p.motionStream.epoch,ack:p.motionStream.ack,active:p.motionStream.active,x:p.x,y:p.y,rot:p.rot,vx:p.vx,vy:p.vy}:undefined,appliedControlSeq:Number(p.appliedControlSeq)||0,x:round1(p.x),y:round1(p.y),r:round1(p.rot),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn)})),
-        asteroids:this.asteroids.map(a=>({id:a.id,x:round1(a.x),y:round1(a.y),type:a.type,r:round1(Number(a.r)||ASTEROID_RADIUS),fragment:!!a.fragment})),
+        players:this.players.map(p=>({i:p.index,n:p.name,cpu:p.cpu,motion:!p.cpu&&p.motionStream?{v:1,epoch:p.motionStream.epoch,ack:p.motionStream.ack,active:p.motionStream.active,x:p.x,y:p.y,rot:p.rot,vx:p.vx,vy:p.vy}:undefined,appliedControlSeq:Number(p.appliedControlSeq)||0,x:round1(p.x),y:round1(p.y),r:round1(p.rot),b:round3(Number(p.bank)||0),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn)})),
+        asteroids:this.asteroids.map(a=>({id:a.id,x:round1(a.x),y:round1(a.y),type:a.type,s:round3(Number(a.spin)||0),r:round3(Number(a.r)||ASTEROID_RADIUS),fragment:!!a.fragment})),
         bullets:this.bullets.map(b=>({id:b.id,o:b.owner,owner:b.owner,x:round1(b.x),y:round1(b.y),vx:round1(b.vx),vy:round1(b.vy),g:!!b.guided,guided:!!b.guided,gt:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,target:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,wt:(!b.decoyed&&b.guided&&Number.isInteger(b.target))?b.target:-1})),
         flares:this.flares.map(f=>({id:f.id,o:f.owner,x:round1(f.x),y:round1(f.y),a:round1(f.angle),life:round2(Math.max(0,f.life))})),
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),

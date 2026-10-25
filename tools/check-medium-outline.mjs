@@ -85,5 +85,8 @@ for(const name of ['GalaxyHostPhysics','GalaxyLocalCpu']){
 const source=await readFile(new URL('../docs/render-3d.js',import.meta.url),'utf8'),method=source.match(/      rock\([^\n]+\{[\s\S]*?\n      \},/)[0];
 const record={root:new T.Group(),rock:template.clone(true)};
 const draw=vm.runInNewContext('({'+method+'}).rock',{take:()=>record,place:()=>{},now:987654,Math,Number,String,window:{GalaxyPhysicsCore:core}});
-draw('a19',700,500,90,1,0,'medium');assert.equal(record.rock.rotation.x,0);assert.equal(record.rock.rotation.y,0);assert.equal(record.rock.rotation.z,core.mediumRotation(700,500,19),'authority and visual pose use the same per-ID orientation');
+draw('a19',700,500,90,1,0,'medium');assert.ok(Math.abs(record.rock.rotation.x)<1e-10);assert.ok(Math.abs(record.rock.rotation.y)<1e-10);const yawDelta=record.rock.rotation.z-core.mediumRotation(700,500,19);assert.ok(Math.abs(Math.atan2(Math.sin(yawDelta),Math.cos(yawDelta)))<1e-10,'authority and visual pose use the same per-ID orientation');
+draw('a19',700,500,103.5,1,0,'medium',1.234);
+const pose=core.mediumQuaternion(1.234,core.mediumRotation(700,500,19));
+assert.ok(record.rock.quaternion.angleTo(new T.Quaternion(pose.x,pose.y,pose.z,pose.w))<1e-7,'renderer consumes the authoritative 3D spin');
 console.log(`Medium outline OK: ${meshSamples} mesh samples, ${emptyCircle} empty-circle passes, ${pairSamples} polygon comparisons, ${hits} medium pairs, ${giantHits} giant/medium pairs, ${surfaceContacts} round contacts; concave CCD and per-ID pose.`);
