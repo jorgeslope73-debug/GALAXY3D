@@ -6,6 +6,26 @@ import * as T from '../docs/vendor/three.module.min.js';
 import {modelGeometry} from './profile-geometry.mjs';
 const {engineContext}=createRequire(import.meta.url)('./check-session-regressions.js');
 const ctx=engineContext(),core=ctx.window.GalaxyPhysicsCore,data=ctx.window.GalaxyCollisionProfiles;
+const DEG=180/Math.PI,idlePoses=[];
+for(let index=0;index<4;index++)for(const sign of [-1,1]){
+  const phase=sign>0?Math.PI/2:Math.PI*1.5,time=(phase-index*1.7+Math.PI*4)/.7;
+  const tilt=core.shipTilt(0,time,index,0);
+  assert.ok(Math.abs(tilt.roll*DEG-sign*5)<1e-8,'resting ships gently reach five degrees on either side');
+  idlePoses.push({value:0,time,index,motionSpeed:0});
+}
+for(const motionSpeed of [0,2,36,72,120,660])for(const bank of [-60,-30,0,30,60])for(let time=0;time<20;time+=.19){
+  const tilt=core.shipTilt(bank/DEG,time,2,motionSpeed);
+  assert.ok(Math.abs(tilt.roll)*DEG<=60.000001,'sway never extends a full turn beyond its sixty-degree bank limit');
+  if(!bank)assert.ok(Math.abs(tilt.roll)*DEG<=(motionSpeed>=72?1.2:5)+1e-6,'moving ships retain the small sway and resting ships stay inside five degrees');
+}
+for(const boundary of [2,72]){
+  const low=core.shipTilt(0,2.1,1,boundary-.01),high=core.shipTilt(0,2.1,1,boundary+.01);
+  assert.ok(Math.abs(high.roll-low.roll)*DEG<.001,'entering or leaving the resting range never snaps the wings');
+}
+const movingPose=core.shipPose({x:0,y:0,rot:0,bank:0,poseTime:2,index:1,vx:30,vy:40});
+assert.equal(movingPose.motionSpeed,50,'authoritative profiles derive sway from existing velocity data');
+assert.equal(core.shipProfile(movingPose),core.shipProfile({...movingPose,motionSpeed:50}));
+assert.notEqual(core.shipProfile({...movingPose,motionSpeed:0}),core.shipProfile({...movingPose,motionSpeed:120}),'the actual collision profile follows the resting/moving sway distinction');
 const index=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
 assert.ok(index.indexOf('src="collision-profiles.js')>0&&index.indexOf('src="collision-profiles.js')<index.indexOf('src="physics-core.js'),'static startup loads profile data before physics');
 for(const file of ['build-version.js','cpu-training.html','sw.js'])assert.ok((await readFile(new URL('../docs/'+file,import.meta.url),'utf8')).includes('collision-profiles.js'),file+' includes the shared profile table');
@@ -38,10 +58,15 @@ function triangleTester(vertices,indices){
 let meshChecks=0,vertexChecks=0,maxShipError=0,maxRockError=0;
 for(const kind of ['ship','medium']){
   const geometry=await modelGeometry(kind);
-  const poses=kind==='ship'?[-60,-59.5,-45.4,-30.5,-15.3,-.5,0,.5,15.5,30.4,45.5,59.5,60]:[0,.0043,.17,.48,.83,1.31,1.9,2.45,3.14,3.73,4.25,4.94,5.69,6.279];
-  for(const value of poses){
-    const body=kind==='ship'?{x:0,y:0,rot:0,bank:value*Math.PI/180,poseTime:7.123+value*.3}:{id:0,x:0,y:0,r:51.75,spin:value};
-    const tilt=kind==='ship'?core.shipTilt(body.bank,body.poseTime,0):null;
+  const poses=kind==='ship'?[
+    ...[-60,-59.5,-45.4,-30.5,-15.3,-.5,0,.5,15.5,30.4,45.5,59.5,60].map(value=>({value,time:7.123+value*.3,index:0,motionSpeed:0})),
+    ...idlePoses,
+    ...[36,72,120].flatMap(motionSpeed=>[0,1,2,3].map(index=>({value:0,time:2.1+index,index,motionSpeed})))
+  ]:[0,.0043,.17,.48,.83,1.31,1.9,2.45,3.14,3.73,4.25,4.94,5.69,6.279];
+  for(const sample of poses){
+    const value=kind==='ship'?sample.value:sample;
+    const body=kind==='ship'?{x:0,y:0,rot:0,bank:value*Math.PI/180,poseTime:sample.time,index:sample.index,vx:sample.motionSpeed,vy:0}:{id:0,x:0,y:0,r:51.75,spin:value};
+    const tilt=kind==='ship'?core.shipTilt(body.bank,body.poseTime,body.index,Math.hypot(body.vx,body.vy)):null;
     const q=kind==='ship'?new T.Quaternion().setFromEuler(new T.Euler(tilt.pitch,tilt.roll,0)):new T.Quaternion(...Object.values(core.mediumQuaternion(value,0)));
     const radius=kind==='ship'?1:51.75;
     const vertices=geometry.vertices.map(p=>{const v=new T.Vector3(...p).applyQuaternion(q).multiplyScalar(radius);return [v.x,-v.y];});
@@ -86,4 +111,4 @@ for(const name of ['GalaxyHostPhysics','GalaxyLocalCpu']){
   assert.ok(Number.isFinite(snapshot.simTime),'both engines publish simulation time');
   const before=p.bank;for(let i=0;i<120;i++)core.stepShipMovement(p,{turn:0,thrust:false});assert.ok(Math.abs(p.bank)<Math.abs(before)*.001,'bank smoothly returns to level');
 }
-console.log(`Rotating profiles OK: ${partitions} convex partitions, ${vertexChecks} actual GLB vertices, ${meshChecks} independent projected-mesh checks; max ship error ${maxShipError.toFixed(3)}, rock ${maxRockError.toFixed(3)} arena units. Authority packets, +15% size, banked wing contacts and projectile gaps OK.`);
+console.log(`Rotating profiles OK: ${partitions} convex partitions, ${vertexChecks} actual GLB vertices, ${meshChecks} independent projected-mesh checks; max ship error ${maxShipError.toFixed(3)}, rock ${maxRockError.toFixed(3)} arena units. Resting sway +/-5 degrees, smooth speed blending, all four ship phases, banked wing contacts and projectile gaps; existing authority packets unchanged.`);

@@ -244,7 +244,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.74';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.75';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
@@ -354,8 +354,8 @@
     function passiveShipSway(index){
       if(reducedMotion)return {pitch:0,roll:0};
       const phase=(Number(index)||0)*1.7;
-      // Slow, tiny breathing motion, independent of movement and frame rate.
-      return {pitch:Math.sin(now*.0008+phase+.7)*.6*Math.PI/180,roll:Math.sin(now*.001+phase)*1.2*Math.PI/180};
+      // Slow resting sway: five degrees either side over a nine-second cycle.
+      return {pitch:Math.sin(now*.0008+phase+.7)*.6*Math.PI/180,roll:Math.sin(now*.0007+phase)*5*Math.PI/180};
     }
     function collectEffects(snapshot,localIndex){
       if(!snapshot)return;
@@ -429,10 +429,10 @@
         // Hulls can be enlarged on mobile; the shield edge stays at its physics radius.
         if(!showcase)record.shield.scale.setScalar((window.GalaxyPhysicsCore?.SHIELD_RADIUS||60)/root.scale.x);
         root.rotation.z=rotation*Math.PI/180;
-        // Turning keeps its bank; a very small passive sway remains at rest.
+        // Resting sway shares the collision pose and fades as speed increases.
         const bank=pose?Number(pose.bank)||0:turnBank(record,rotation,showcase);
         const sway=passiveShipSway(index),swayWeight=1-Math.min(1,Math.abs(bank)/SHIP_BANK_LIMIT);
-        const tilt=pose?window.GalaxyPhysicsCore.shipTilt(bank,pose.time,index):{pitch:sway.pitch*swayWeight,roll:bank+sway.roll*swayWeight};
+        const tilt=pose?window.GalaxyPhysicsCore.shipTilt(bank,pose.time,index,pose.motionSpeed??Math.hypot(Number(pose.vx)||0,Number(pose.vy)||0)):{pitch:sway.pitch*swayWeight,roll:bank+sway.roll*swayWeight};
         record.inertiaPose=stepImportedShipInertia?.(record.inertiaPose,{
           now,context:poseContext,thrust,vx:pose?.vx,vy:pose?.vy,speed:pose?.speed,
           active:!showcase&&!reducedMotion&&poseContext!=='menu'&&pose?.motionActive!==false&&alpha>0

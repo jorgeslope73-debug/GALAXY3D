@@ -15,13 +15,15 @@
     }
     return profileCache[kind][index];
   }
-  function shipTilt(bank=0,time,index=0){
+  function shipTilt(bank=0,time,index=0,motionSpeed=0){
     if(!Number.isFinite(time))return {pitch:0,roll:bank};
     const phase=(Number(index)||0)*1.7,weight=1-Math.min(1,Math.abs(bank)/SHIP_BANK_LIMIT);
-    return {pitch:Math.sin(time*.8+phase+.7)*.6*Math.PI/180*weight,roll:bank+Math.sin(time+phase)*1.2*Math.PI/180*weight};
+    const moving=Math.max(0,Math.min(1,((Number(motionSpeed)||0)-2)/70)),blend=moving*moving*(3-2*moving);
+    const sway=Math.sin(time*.7+phase)*5*(1-blend)+Math.sin(time+phase)*1.2*blend;
+    return {pitch:Math.sin(time*.8+phase+.7)*.6*Math.PI/180*weight,roll:bank+sway*Math.PI/180*weight};
   }
   function shipProfile(pose){
-    const tilt=shipTilt(pose.bank,pose.time,pose.index);
+    const tilt=shipTilt(pose.bank,pose.time,pose.index,pose.motionSpeed);
     return collisionProfile('ship',Math.round(tilt.roll*180/Math.PI)+60);
   }
   const outerHulls=new WeakMap(),outerShips=new WeakMap(),outerRocks=new WeakMap();
@@ -138,7 +140,7 @@
   }
 
   const shipShapeCache=new WeakMap();
-  function shipPose(ship){return {x:ship.x,y:ship.y,rot:(Number(ship.rot)||0)*Math.PI/180,bank:Number(ship.bank)||0,time:ship.poseTime,index:ship.index};}
+  function shipPose(ship){return {x:ship.x,y:ship.y,rot:(Number(ship.rot)||0)*Math.PI/180,bank:Number(ship.bank)||0,time:ship.poseTime,index:ship.index,motionSpeed:Math.hypot(Number(ship.vx)||0,Number(ship.vy)||0)};}
   function shipShape(ship,pose){
     const profile=shipProfile(pose),outline=profile.outline;
     let shape=shipShapeCache.get(ship);
@@ -215,9 +217,9 @@
     const turn=Math.atan2(Math.sin(current.rot-rot),Math.cos(current.rot-rot));
     const bank=Number.isFinite(ship.pbank)?ship.pbank:current.bank;
     const time=Number.isFinite(ship.previousPoseTime)?ship.previousPoseTime:ship.poseTime;
-    return {x,y,rot,bank,time,index:ship.index,dx:ship.x-x,dy:ship.y-y,turn,dBank:current.bank-bank,dTime:Number.isFinite(time)?(Number(ship.poseTime)||0)-time:0};
+    return {x,y,rot,bank,time,index:ship.index,motionSpeed:current.motionSpeed,dx:ship.x-x,dy:ship.y-y,turn,dBank:current.bank-bank,dTime:Number.isFinite(time)?(Number(ship.poseTime)||0)-time:0};
   }
-  function shipMotionPose(m,t){return {x:m.x+m.dx*t,y:m.y+m.dy*t,rot:m.rot+m.turn*t,bank:m.bank+m.dBank*t,time:Number.isFinite(m.time)?m.time+m.dTime*t:undefined,index:m.index};}
+  function shipMotionPose(m,t){return {x:m.x+m.dx*t,y:m.y+m.dy*t,rot:m.rot+m.turn*t,bank:m.bank+m.dBank*t,time:Number.isFinite(m.time)?m.time+m.dTime*t:undefined,index:m.index,motionSpeed:m.motionSpeed};}
   function shipHitsCircle(ship,body,radius,swept=true){
     if(!ship||!body)return null;
     const motion=shipMotion(ship);

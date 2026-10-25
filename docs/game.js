@@ -5559,7 +5559,7 @@
       shipSize*=.28+.72*me;
       alpha*=.18+.82*me;
     }
-    const hullPose={bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:Number.isFinite(presentation?.simTime)?presentation.simTime:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i};
+    const hullPose={bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:Number.isFinite(presentation?.simTime)?presentation.simTime:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i,motionSpeed:Math.hypot(Number(p.vx)||0,Number(p.vy)||0)};
     if(scene3D){
       // Existing motion data feeds a client-only model pose. It never enters
       // authoritative state, prediction, collision profiles or network packets.

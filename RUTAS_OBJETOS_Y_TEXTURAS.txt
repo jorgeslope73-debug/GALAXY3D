@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.74
+V23.75
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -212,3 +212,9 @@ RECUPERACION DE LA INERCIA AL ACELERAR - V23.74
 - Cada nueva pulsacion inicia un nuevo impulso visual continuo desde la inclinacion actual.
 - Al soltar se conserva el cabeceo de hasta 5 grados y la recuperacion rapida.
 - Solo presentacion local; sin cambios de fisica, colisiones o datos de red.
+
+BALANCEO LATERAL EN REPOSO - V23.75
+- Nave parada: balanceo lateral suave entre -5 y +5 grados, ciclo aproximado de9 segundos y fase distinta por nave.
+- La amplitud vuelve progresivamente al balanceo leve de vuelo al ganar velocidad; el giro conserva su limite de60 grados.
+- Physics-core y renderer comparten inclinacion y perfil de colision usando velocidad y reloj de partida existentes. No se anaden campos a los paquetes de red.
+- Se conservan los25 grados y la recuperacion progresiva de2 segundos al acelerar, y los5 grados de cabeceo al soltar.
