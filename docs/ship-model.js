@@ -11,38 +11,48 @@ const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde-luces-
 // pose or the previous frame, and never use a network/simulation clock here.
 export function stepShipInertia(previous,{now,context='',thrust=false,vx,vy,speed=1,active=true}={}){
   const valid=active&&Number.isFinite(now)&&Number.isFinite(vx)&&Number.isFinite(vy)&&Number.isFinite(speed)&&speed>0;
-  const neutral=()=>({pitch:0,velocity:0,time:Number.isFinite(now)?now:null,context,thrust:!!thrust,releaseAt:null,releaseStrength:0,active:!!valid});
+  const limit=Math.max(35,Math.min(45,35+10*(speed-1)))*Math.PI/180;
+  const neutral=()=>({pitch:0,velocity:0,time:Number.isFinite(now)?now:null,context,thrust:!!thrust,heldAt:thrust?now:null,releaseAt:null,releaseSpeed:0,target:valid&&thrust?limit:0,active:!!valid});
   const elapsed=previous?now-previous.time:0;
   if(!valid||!previous||!previous.active||previous.context!==context||!Number.isFinite(previous.time)||elapsed<0||elapsed>250)return neutral();
   if(elapsed===0)return {...previous};
-  const dt=elapsed*.001,limit=20*Math.PI/180;
-  // The movement integrator applies drag after acceleration. Its actual steady
-  // speed is below the safety cap of 330, so a held accelerator can level out.
-  const drag=Math.pow(.35,1/60),terminal=(240/60)*drag/(1-drag)*speed;
-  const ratio=Math.max(0,Math.min(1,Math.hypot(vx,vy)/terminal));
-  let releaseAt=previous.releaseAt,releaseStrength=previous.releaseStrength;
-  if(thrust){releaseAt=null;releaseStrength=0;}
-  else if(previous.thrust){releaseAt=now;releaseStrength=ratio;}
-  const omega=11,damping=.58,decayRate=omega*damping,frequency=omega*Math.sqrt(1-damping*damping);
-  let pitch=previous.pitch,velocity=previous.velocity;
-  const spring=(target,seconds)=>{
-    if(seconds<=0)return;
-    const offset=pitch-target,sine=Math.sin(frequency*seconds),cosine=Math.cos(frequency*seconds),decay=Math.exp(-decayRate*seconds);
-    pitch=target+decay*(offset*cosine+(velocity+decayRate*offset)/frequency*sine);
-    velocity=decay*(velocity*cosine-(decayRate*velocity+omega*omega*offset)/frequency*sine);
-  };
-  if(thrust)spring(limit*(1-ratio),dt);
-  else{
-    // A short nose-down impulse, followed by free damped motion, gives braking
-    // a small rebound instead of leaving a permanent downward inclination.
-    const end=releaseAt===null?-Infinity:releaseAt+180;
-    const pulse=Math.max(0,Math.min(now,end)-Math.max(previous.time,releaseAt??Infinity))*.001;
-    spring(-3*Math.PI/180*releaseStrength,pulse);
-    spring(0,dt-pulse);
-    if(now>=end){releaseAt=null;releaseStrength=0;}
+  const dt=elapsed*.001,changed=!!thrust!==previous.thrust;
+  const motionSpeed=Math.hypot(vx,vy);
+  let heldAt=previous.heldAt,releaseAt=previous.releaseAt,releaseSpeed=previous.releaseSpeed;
+  let pitch=previous.pitch,velocity=previous.velocity,target=0;
+  if(thrust){
+    if(!previous.thrust||!Number.isFinite(heldAt)){
+      heldAt=now;
+      // Reapplying thrust raises the nose from its current angle, without a
+      // position jump or another downward swing inherited from braking.
+    }
+    releaseAt=null;releaseSpeed=0;
+    // Hold the initial lift, then relax only a little over several seconds.
+    // Cruising with the accelerator held never makes the ship horizontal.
+    const age=Math.max(0,(now-heldAt)*.001-.8);
+    target=limit*(.8+.2*Math.exp(-age/6));
+  }else{
+    heldAt=null;
+    if(previous.thrust){releaseAt=now;releaseSpeed=motionSpeed;}
+    if(releaseAt!==null&&releaseSpeed>0&&motionSpeed>.5){
+      // Give the nose time to lower fully. Recovery then follows the actual
+      // remaining coasting speed, rather than ending after a short timer.
+      const hold=.65,age=(now-releaseAt)*.001;
+      const remaining=Math.max(0,Math.min(1,(motionSpeed-.5)/Math.max(.5,releaseSpeed*Math.pow(.35,hold)-.5)));
+      target=-limit*(age<hold?1:remaining);
+    }else{releaseAt=null;releaseSpeed=0;}
   }
+  // Integrate the old target until an input edge actually occurs. Between
+  // edges, solve the critical spring with a linear target so 30/60/120 Hz do
+  // not anticipate a release or acquire a different recovery delay.
+  const from=Number.isFinite(previous.target)?previous.target:target,to=changed?from:target;
+  const omega=13,slope=(to-from)/dt,offset=pitch-from+2*slope/omega,relativeVelocity=velocity-slope;
+  const coefficient=relativeVelocity+omega*offset,decay=Math.exp(-omega*dt);
+  pitch=to-2*slope/omega+(offset+coefficient*dt)*decay;
+  velocity=slope+(relativeVelocity-omega*coefficient*dt)*decay;
+  if(changed&&thrust)velocity=Math.max(0,velocity);
   if(Math.abs(pitch)>limit){pitch=Math.sign(pitch)*limit;if(velocity*pitch>0)velocity=0;}
-  return {pitch,velocity,time:now,context,thrust:!!thrust,releaseAt,releaseStrength,active:true};
+  return {pitch,velocity,time:now,context,thrust:!!thrust,heldAt,releaseAt,releaseSpeed,target,active:true};
 }
 
 function assetURL(name){

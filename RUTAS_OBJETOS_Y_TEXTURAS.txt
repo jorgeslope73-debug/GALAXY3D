@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.70
+V23.71
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -187,3 +187,10 @@ CABECEO VISUAL LOCAL — V23.69
 ARRANQUE MAS PRONUNCIADO — V23.70
 - El límite visual de elevación al acelerar pasa de 8 a 20 grados; el pico natural del resorte ronda los 18 grados.
 - Se conserva el leve cabeceo de frenado, la recuperación de postura y la inclinación lateral. Sigue sin añadir datos a la red ni modificar la física.
+
+
+INERCIA MANTENIDA Y MEJORAS DE VELOCIDAD — V23.71
+- Al acelerar, la inclinación parte de 35 grados y se mantiene elevada; con el tiempo baja solo un poco, de forma gradual. No se nivela por alcanzar la velocidad de crucero.
+- Solo al soltar el acelerador cabecea hacia abajo y recupera progresivamente la postura conforme pierde velocidad, hasta detenerse.
+- Las mejoras de velocidad intensifican moderadamente ambas inercias: 35 grados normal, 40 con una mejora y 45 con dos mejoras.
+- Todo usa controles y velocidades que el cliente ya conoce. Sigue siendo exclusivamente visual, sin cambiar física, colisiones ni mensajes de red.
