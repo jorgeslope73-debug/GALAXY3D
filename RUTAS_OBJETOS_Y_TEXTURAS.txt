@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.60
+V23.61
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -33,6 +33,12 @@ LUCES Y ESTADO DEL DISPARO
 - Tras sustituir estas imágenes en GitHub, recarga la página; se revalidan
   frente a la red aunque el nombre del archivo no cambie. Sin conexión
   se utiliza la última copia guardada.
+
+BALANCEO SUAVE DE LAS NAVES
+- docs/render-3d.js: passiveShipSway, visual incluso estando paradas.
+- Roll maximo 1,2 grados, periodo de 6,28 segundos; pitch maximo 0,6 grados, periodo de 7,85 segundos.
+- Fase diferente para cada nave; se atenúa durante el giro para conservar su inclinacion maxima de 60 grados.
+- Movimiento reducido lo desactiva; no desplaza la nave ni modifica el estado de la partida.
 
 CHOQUES ENTRE NAVES
 - docs/physics-core.js: shipPairContact, moveShipsToContact y separateShipPair.

@@ -244,7 +244,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.60';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.61';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
@@ -350,6 +350,12 @@
       record.turnPose={rotation,time:now,bank,context};
       return bank;
     }
+    function passiveShipSway(index){
+      if(reducedMotion)return {pitch:0,roll:0};
+      const phase=(Number(index)||0)*1.7;
+      // Slow, tiny breathing motion, independent of movement and frame rate.
+      return {pitch:Math.sin(now*.0008+phase+.7)*.6*Math.PI/180,roll:Math.sin(now*.001+phase)*1.2*Math.PI/180};
+    }
     function collectEffects(snapshot,localIndex){
       if(!snapshot)return;
       const nextContext=[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':');
@@ -418,9 +424,10 @@
         // Hulls can be enlarged on mobile; the shield edge stays at its physics radius.
         if(!showcase)record.shield.scale.setScalar((window.GalaxyPhysicsCore?.SHIELD_RADIUS||60)/root.scale.x);
         root.rotation.z=rotation*Math.PI/180;
-        // Bank only while turning; ease back to the overhead pose when the turn stops.
+        // Turning keeps its bank; a very small passive sway remains at rest.
         const bank=turnBank(record,rotation,showcase);
-        record.tilt.rotation.set(showcase?.38:0,showcase?Math.sin(now*.0006)*.30:bank,0);
+        const sway=passiveShipSway(index),swayWeight=1-Math.min(1,Math.abs(bank)/SHIP_BANK_LIMIT);
+        record.tilt.rotation.set(showcase?.38:sway.pitch*swayWeight,showcase?Math.sin(now*.0006)*.30:bank+sway.roll*swayWeight,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
         // Engine trails for thrust and turns use the existing particle system in game.js.
