@@ -88,7 +88,7 @@ const checks=[
   })],
   ['limite exterior y bordes opuestos no chocan',()=>{
     for(const edge of [false,true])both('separacion '+edge,({engine,players:[a,b]})=>{
-      a.x=edge?5:500;b.x=edge?1915:a.x+R+24+.5;a.px=a.x;b.px=b.x;
+      a.x=edge?5:500;b.x=edge?1915:a.x+R+core.SHIP_PROJECTILE_RADIUS+2;a.px=a.x;b.px=b.x;
       engine.shipCollisions();assert.equal(a.dead||b.dead,false);
     });
   }],

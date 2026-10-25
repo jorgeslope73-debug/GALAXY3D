@@ -15,6 +15,8 @@
     [-37.25,22.75],[-38.5,19.5],[-38.5,17],[-37.5,14.25],[-28,11.25],
     [-16.75,6],[-14.25,-3.25],[-11,-11.75],[-10.25,-16.5],[-7.5,-24.25],[-3.75,-39.75]
   ].map(Object.freeze));
+  const SHIP_CONTACT_SKIN=.9; // less than one arena unit; covers the GLB outline rounding
+  const SHIP_CONTACT_PIECES=[[45,0,1,2,3,4],[45,4,5,6],[45,6,7,8],[9,10,11,12,13],[8,9,13,14,15,16],[45,8,16,17],[45,17,18,19],[45,19,20,21,22],[45,22,23,24,25,26],[45,26,27,29],[27,28,29],[45,29,30,31],[45,31,32,44],[33,34,35,36],[32,33,36,37,38,39],[32,39,40],[32,40,41,42],[32,42,43,44]];
   function pointSegmentDistance2(x,y,ax,ay,bx,by){
     const dx=bx-ax,dy=by-ay,length2=dx*dx+dy*dy;
     const t=length2>1e-12?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/length2)):0;
@@ -45,6 +47,120 @@
     }
     return inside;
   }
+  const shipShapeCache=new WeakMap();
+  function shipPose(ship){return {x:ship.x,y:ship.y,rot:(Number(ship.rot)||0)*Math.PI/180};}
+  function shipShape(ship,pose){
+    let shape=shipShapeCache.get(ship);
+    if(!shape){
+      const points=SHIP_PROJECTILE_HULL.map(()=>({x:0,y:0}));
+      const part=list=>({points:list.map(i=>points[i]),axes:list.map(()=>({x:0,y:0}))});
+      shape={points,parts:SHIP_CONTACT_PIECES.map(part),full:part(points.map((_,i)=>i))};
+      shape.allParts=[...shape.parts,shape.full];shipShapeCache.set(ship,shape);
+    }
+    if(shape.x===pose.x&&shape.y===pose.y&&shape.rot===pose.rot)return shape;
+    shape.x=pose.x;shape.y=pose.y;shape.rot=pose.rot;
+    const c=Math.cos(pose.rot),s=Math.sin(pose.rot);
+    for(let i=0;i<shape.points.length;i++){
+      const [x,y]=SHIP_PROJECTILE_HULL[i];shape.points[i].x=pose.x+x*c+y*s;shape.points[i].y=pose.y-x*s+y*c;
+    }
+    for(const part of shape.allParts){
+      part.minX=part.minY=Infinity;part.maxX=part.maxY=-Infinity;
+      for(let i=0;i<part.points.length;i++){
+        const a=part.points[i],b=part.points[(i+1)%part.points.length],dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1;
+        part.axes[i].x=dy/length;part.axes[i].y=-dx/length;
+        part.minX=Math.min(part.minX,a.x);part.maxX=Math.max(part.maxX,a.x);part.minY=Math.min(part.minY,a.y);part.maxY=Math.max(part.maxY,a.y);
+      }
+    }
+    return shape;
+  }
+  function shipSurface(pose,x,y){return outlineSurface(pose,x,y,1,SHIP_PROJECTILE_HULL,()=>pose.rot);}
+  function shipPartContact(a,b,skin){
+    const contact=convexContact(a,b,skin);if(!contact||contact.depth>0)return contact;
+    // A padded SAT alone would lengthen a very sharp nose. Check Euclidean
+    // distance so the tolerance stays below one unit even at those tips.
+    let best=skin*skin,first=null,second=null;
+    for(let side=0;side<2;side++){
+      const vertices=side?b.points:a.points,edges=side?a.points:b.points;
+      for(const p of vertices)for(let i=0;i<edges.length;i++){
+        const u=edges[i],v=edges[(i+1)%edges.length],dx=v.x-u.x,dy=v.y-u.y,len=dx*dx+dy*dy;
+        const t=len?Math.max(0,Math.min(1,((p.x-u.x)*dx+(p.y-u.y)*dy)/len)):0,q={x:u.x+dx*t,y:u.y+dy*t};
+        const distance=(p.x-q.x)**2+(p.y-q.y)**2;
+        if(distance<=best){best=distance;first=side?q:p;second=side?p:q;}
+      }
+    }
+    if(!first)return null;
+    const length=Math.sqrt(best);
+    return {depth:0,nx:length>1e-8?(second.x-first.x)/length:contact.nx,ny:length>1e-8?(second.y-first.y)/length:contact.ny,x:(first.x+second.x)/2,y:(first.y+second.y)/2};
+  }
+  function shipContactAt(a,pa,b,pb,skin=SHIP_CONTACT_SKIN){
+    const shieldA=Number(a.shield)>0,shieldB=Number(b.shield)>0;
+    const ra=shieldA?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS,rb=shieldB?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS;
+    const dx=pb.x-pa.x,dy=pb.y-pa.y,d=Math.hypot(dx,dy);
+    if(d>ra+rb+skin)return null;
+    if(shieldA&&shieldB){
+      const nx=d?dx/d:1,ny=d?dy/d:0;
+      return {nx,ny,depth:Math.max(0,ra+rb-d),x:pa.x+nx*ra,y:pa.y+ny*ra};
+    }
+    if(shieldA||shieldB){
+      const circle=shieldA?pa:pb,hull=shieldA?pb:pa,hit=shipSurface(hull,circle.x,circle.y),radius=SHIELD_RADIUS;
+      if(hit.distance>radius+skin)return null;
+      return {...hit,nx:hit.nx*(shieldA?-1:1),ny:hit.ny*(shieldA?-1:1),depth:Math.max(0,radius-hit.distance)};
+    }
+    const sa=shipShape(a,pa),sb=shipShape(b,pb);let best=null;
+    for(const ca of sa.parts)for(const cb of sb.parts){const hit=shipPartContact(ca,cb,skin);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+    return best?{...best,depth:Math.max(0,best.depth)}:null;
+  }
+  function shipMotion(ship){
+    const current=shipPose(ship);
+    let x=Number.isFinite(ship.px)?ship.px:ship.x,y=Number.isFinite(ship.py)?ship.py:ship.y;
+    let rot=(Number.isFinite(ship.pr)?ship.pr:Number(ship.rot)||0)*Math.PI/180;
+    // Crossing the screen edge is a teleport, never a collision sweep across the arena.
+    if(Math.abs(ship.x-x)>960||Math.abs(ship.y-y)>540){x=ship.x;y=ship.y;rot=current.rot;}
+    const turn=Math.atan2(Math.sin(current.rot-rot),Math.cos(current.rot-rot));
+    return {x,y,rot,dx:ship.x-x,dy:ship.y-y,turn};
+  }
+  function shipMotionPose(m,t){return {x:m.x+m.dx*t,y:m.y+m.dy*t,rot:m.rot+m.turn*t};}
+  function shipPairContact(a,b,swept=true){
+    if(!a||!b||a.dead||b.dead)return null;
+    const ma=shipMotion(a),mb=shipMotion(b);
+    const ra=Number(a.shield)>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS,rb=Number(b.shield)>0?SHIELD_RADIUS:SHIP_PROJECTILE_RADIUS;
+    if(pointSegmentDistance2(0,0,ma.x-mb.x,ma.y-mb.y,a.x-b.x,a.y-b.y)>(ra+rb+SHIP_CONTACT_SKIN)**2)return null;
+    const current=shipContactAt(a,shipPose(a),b,shipPose(b));if(current)return {...current,t:1};
+    if(!swept)return null;
+    const motion=Math.hypot(ma.dx-mb.dx,ma.dy-mb.dy)+(a.shield>0?0:ra*Math.abs(ma.turn))+(b.shield>0?0:rb*Math.abs(mb.turn));
+    // Vertex motion stays below half a unit; the contact skin also covers the
+    // <0.3-unit rounding error of each outline, including the very narrow nose.
+    const steps=Math.ceil(motion/.5);
+    for(let i=0;i<steps;i++){
+      const t=i/steps,hit=shipContactAt(a,shipMotionPose(ma,t),b,shipMotionPose(mb,t));
+      if(hit)return {...hit,t};
+    }
+    return null;
+  }
+  function moveShipsToContact(a,b,contact){
+    if(!contact||contact.t>=1)return;
+    const pa=shipMotionPose(shipMotion(a),contact.t),pb=shipMotionPose(shipMotion(b),contact.t);
+    a.x=pa.x;a.y=pa.y;b.x=pb.x;b.y=pb.y;
+  }
+  function separateShipPair(a,b,contact){
+    const initial=contact||shipPairContact(a,b);if(!initial)return {x:1,y:0};
+    let hit=shipContactAt(a,shipPose(a),b,shipPose(b)),nx=initial.nx,ny=initial.ny;
+    for(let pass=0;pass<12&&hit;pass++){
+      const correction=(hit.depth+SHIP_CONTACT_SKIN+.2)*.5;nx=hit.nx;ny=hit.ny;
+      a.x-=nx*correction;a.y-=ny*correction;b.x+=nx*correction;b.y+=ny*correction;
+      hit=shipContactAt(a,shipPose(a),b,shipPose(b));
+    }
+    if(hit){
+      const sa=a.shield>0?null:shipShape(a,shipPose(a)),sb=b.shield>0?null:shipShape(b,shipPose(b));
+      const full=sa&&sb?convexContact(sa.full,sb.full):null;
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+      nx=full?full.nx:d?dx/d:1;ny=full?full.ny:d?dy/d:0;
+      const correction=((full?full.depth:2*SHIELD_RADIUS-d)+SHIP_CONTACT_SKIN+1)*.5;
+      a.x-=nx*correction;a.y-=ny*correction;b.x+=nx*correction;b.y+=ny*correction;
+    }
+    return {x:-nx,y:-ny};
+  }
+
   // Rocky_Asteroid_5.glb: XY silhouette extracted from its normalized mesh.
   // 111 concave contour points; raster/RDP tolerance <0.7 arena units at r=135.
   // Fixed out-of-plane pose lets authority, clients and 2D fallback share the exact outline.
@@ -233,15 +349,15 @@
     }
     return shape;
   }
-  function convexContact(a,b){
-    if(a.maxX<=b.minX||b.maxX<=a.minX||a.maxY<=b.minY||b.maxY<=a.minY)return null;
+  function convexContact(a,b,skin=0){
+    if(a.maxX+skin<=b.minX||b.maxX+skin<=a.minX||a.maxY+skin<=b.minY||b.maxY+skin<=a.minY)return null;
     let depth=Infinity,nx=1,ny=0;
     for(const axes of [a.axes,b.axes])for(const n of axes){
       let minA=Infinity,maxA=-Infinity,minB=Infinity,maxB=-Infinity;
       for(const p of a.points){const d=p.x*n.x+p.y*n.y;minA=Math.min(minA,d);maxA=Math.max(maxA,d);}
       for(const p of b.points){const d=p.x*n.x+p.y*n.y;minB=Math.min(minB,d);maxB=Math.max(maxB,d);}
       const forward=maxA-minB,backward=maxB-minA;
-      if(forward<=1e-7||backward<=1e-7)return null;
+      if(forward<=1e-7-skin||backward<=1e-7-skin)return null;
       if(Math.min(forward,backward)<depth){depth=Math.min(forward,backward);const sign=forward<backward?1:-1;nx=n.x*sign;ny=n.y*sign;}
     }
     let pa=a.points[0],pb=b.points[0];
@@ -916,6 +1032,7 @@
 
   window.GalaxyPhysicsCore=Object.freeze({
     SHIP_DRAW_SIZE,SHIP_PROJECTILE_HULL,SHIP_PROJECTILE_RADIUS,projectileHitsShipHull,
+    SHIP_CONTACT_SKIN,shipPairContact,moveShipsToContact,separateShipPair,
     GIANT_OUTLINE,giantRotation,giantSurface,giantCircleContact,giantHitsCircle,separateGiantShipContact,
     MEDIUM_OUTLINE,mediumRotation,mediumSurface,isMediumRock,asteroidCircleContact,asteroidHitsCircle,separateAsteroidShipContact,rockContact,
     chooseSpawnSector,

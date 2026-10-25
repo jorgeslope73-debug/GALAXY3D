@@ -39,6 +39,7 @@ on:
       - 'tools/check-rock-collisions.js'
       - 'tools/check-shield-collisions.js'
       - 'tools/check-ship-projectile-collisions.js'
+      - 'tools/check-ship-ram-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -86,6 +87,7 @@ on:
       - 'tools/check-rock-collisions.js'
       - 'tools/check-shield-collisions.js'
       - 'tools/check-ship-projectile-collisions.js'
+      - 'tools/check-ship-ram-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -124,6 +126,8 @@ jobs:
         run: node tools/check-rock-collisions.js
       - name: Check shield perimeter, projectiles and ramming in both engines
         run: node tools/check-shield-collisions.js
+      - name: Check nose, wing and engine ship ramming contacts
+        run: node tools/check-ship-ram-collisions.js
       - name: Check projectile collisions against the real ship silhouette
         run: node tools/check-ship-projectile-collisions.js
       - name: Check 3D presentation syntax

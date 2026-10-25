@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.59
+V23.60
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -33,6 +33,14 @@ LUCES Y ESTADO DEL DISPARO
 - Tras sustituir estas imágenes en GitHub, recarga la página; se revalidan
   frente a la red aunque el nombre del archivo no cambie. Sin conexión
   se utiliza la última copia guardada.
+
+CHOQUES ENTRE NAVES
+- docs/physics-core.js: shipPairContact, moveShipsToContact y separateShipPair.
+- Contorno completo de nave.glb: morro, alas y motores; 46 puntos compartidos con los impactos de bala.
+- Contornos concavos conservados con 18 piezas; tolerancia de contacto 0,9 unidades de arena.
+- Barrido del movimiento y giro dentro de cada tick; un cruce de borde no barre toda la pantalla.
+- Escudo activo: se usa su esfera de radio 60 frente al contorno o escudo de la otra nave.
+- La misma deteccion y separacion se aplica a CPU local y host online.
 
 COLISIONES DEL METEORITO GRANDE
 - Contorno concavo de 111 puntos extraido de la proyeccion XY del GLB normalizado.

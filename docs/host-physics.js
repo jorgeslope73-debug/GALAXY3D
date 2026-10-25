@@ -2347,20 +2347,16 @@
       }
       for(let i=0;i<this.players.length;i++)for(let j=i+1;j<this.players.length;j++){
         const a=this.players[i],b=this.players[j];
-        // V21.28: no colisionar dos naves que se ven en bordes opuestos.
-        // El movimiento sigue haciendo wrap, pero el choque solo existe cuando
-        // sus trayectorias se tocan en la misma zona visible de la pantalla.
-        // V21.29: a 60 Hz la velocidad maxima no permite atravesar
-        // completamente otra nave en un tick. Exigimos solape REAL para que
-        // toda embestida corresponda con un contacto visible.
-        if(a.dead||b.dead||!circles(a,shipCollisionRadius(a),b,shipCollisionRadius(b)))continue;
-        if(a.shield>0||a.protection>0)this.emitShipImpact(a,b,false);
-        if(b.shield>0||b.protection>0)this.emitShipImpact(b,a,false);
+        if(a.dead||b.dead)continue;
+        const contact=PHYSICS_CORE.shipPairContact(a,b);if(!contact)continue;
+        PHYSICS_CORE.moveShipsToContact(a,b,contact);
+        if(a.shield>0||a.protection>0)this.emitShipImpact(a,{x:contact.x,y:contact.y},false);
+        if(b.shield>0||b.protection>0)this.emitShipImpact(b,{x:contact.x,y:contact.y},false);
         if(a.shield>0&&b.shield<=0)this.destroyShip(b,a,true);
         else if(b.shield>0&&a.shield<=0)this.destroyShip(a,b,true);
         else if(a.shield<=0&&b.shield<=0){this.destroyShip(a,null);this.destroyShip(b,null);}
         if(!a.dead&&!b.dead){
-          const n=PHYSICS_CORE.separateShipContact(a,b,shipCollisionRadius(b),.5);
+          const n=PHYSICS_CORE.separateShipPair(a,b,contact);
           a.vx=n.x*120;a.vy=n.y*120;b.vx=-n.x*120;b.vy=-n.y*120;
         }
       }
