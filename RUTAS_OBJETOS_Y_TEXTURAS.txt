@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.61
+V23.62
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -71,13 +71,12 @@ TEXTURAS DE LOS METEORITOS
 - Color, normales y metal/rugosidad incluidos dentro de cada GLB activo.
 - Rocky_Asteroid_5 conserva su color/rugosidad; su mapa de altura original se ha convertido a normales tangentes para corregir el sombreado.
 - Copia web: 615.520 bytes, 12.852 triangulos y tres mapas de 1024 px; original de Downloads sin modificar.
-- meteorito1.glb: mediano y grande/gigante, 416.216 bytes, 6.000 triangulos, mapas JPEG de 1024 px.
-- meteorito2.glb se conserva como recurso anterior; no se carga ni se precarga.
+- meteorito1.glb y meteorito2.glb se conservan como recursos anteriores; no se cargan ni se precargan.
 - meteorito3.glb: fragmentos, 192.564 bytes, 3.000 triangulos, mapas JPEG de 512 px.
-- El mediano y el gigante comparten modelo y texturas, con tamaños de juego distintos.
-- El mismo GLB se carga y prepara una sola vez para ambos tamaños.
-- El material utiliza los colores y mapas originales de cada GLB.
-- Cada modelo ajusta su escala visual al radio circular del juego; la fisica conserva sus dimensiones.
+- Cada GLB activo se carga una sola vez y comparte geometria, materiales y mapas entre sus instancias.
+- El material utiliza los mapas originales de cada GLB.
+- El grande compensa su albedo muy oscuro con luminosidad x7 en docs/meteor-model.js; no cambia el archivo de textura.
+- Mediano y grande conservan la escala y los contornos de colision de su modelo.
 - Los tres originales proporcionados por el usuario se conservan sin modificar.
 - mas/final/meteor.glb, meteorrit.obj, meteorrit.mtl y luna.jpg son recursos anteriores; no los carga el juego.
 

@@ -33,6 +33,9 @@ export function prepareMeteorTemplate(source,kind='medium'){
   geometry.scale(1/radius,1/radius,1/radius);
   geometry.computeBoundingBox();geometry.computeBoundingSphere();
   const material=authoredMaterial.clone();
+  // This asset has a very dark albedo. Compensate its luminosity locally,
+  // retaining the authored maps, normal relief and the shared scene lighting.
+  if(kind==='large')material.color.multiplyScalar(7);
   const template=new T.Group();template.name='meteor-'+kind+'-glb';
   template.userData.galaxyMeteorKind=kind;
   template.scale.setScalar((METEOR_MODELS[kind]||METEOR_MODELS.medium).scale);
