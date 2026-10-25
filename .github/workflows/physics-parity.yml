@@ -9,6 +9,8 @@ on:
       - 'docs/collision-profiles.js'
       - 'docs/net-protocol.js'
       - 'docs/p2p-network.js'
+      - 'docs/net-state-codec.js'
+      - 'docs/network-playback.js'
       - 'docs/game.js'
       - 'docs/render-3d.js'
       - 'docs/ship-model.js'
@@ -46,6 +48,13 @@ on:
       - 'tools/check-ship-projectile-collisions.js'
       - 'tools/check-ship-ram-collisions.js'
       - 'tools/check-network-resilience.js'
+      - 'tools/check-state-codec.js'
+      - 'tools/check-joystick-controls.js'
+      - 'tools/check-network-playback.js'
+      - 'tools/check-online-presentation.js'
+      - 'tools/check-host-continuity.js'
+      - 'tools/check-host-presentation-cadence.js'
+      - 'tools/check-physics-hot-paths.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
       - 'tools/check-online-protocol.js'
@@ -62,6 +71,8 @@ on:
       - 'docs/collision-profiles.js'
       - 'docs/net-protocol.js'
       - 'docs/p2p-network.js'
+      - 'docs/net-state-codec.js'
+      - 'docs/network-playback.js'
       - 'docs/game.js'
       - 'docs/render-3d.js'
       - 'docs/ship-model.js'
@@ -99,6 +110,13 @@ on:
       - 'tools/check-ship-projectile-collisions.js'
       - 'tools/check-ship-ram-collisions.js'
       - 'tools/check-network-resilience.js'
+      - 'tools/check-state-codec.js'
+      - 'tools/check-joystick-controls.js'
+      - 'tools/check-network-playback.js'
+      - 'tools/check-online-presentation.js'
+      - 'tools/check-host-continuity.js'
+      - 'tools/check-host-presentation-cadence.js'
+      - 'tools/check-physics-hot-paths.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
       - 'tools/check-online-protocol.js'
@@ -122,6 +140,12 @@ jobs:
         run: node tools/check-online-protocol.js
       - name: Check session and control regressions
         run: node tools/check-session-regressions.js
+      - name: Check host continuity and stale recovery replies
+        run: node tools/check-host-continuity.js
+      - name: Check compact packets and negotiated compatibility
+        run: node tools/check-state-codec.js
+      - name: Check controller mapping and transported actions
+        run: node tools/check-joystick-controls.js
   shared-physics-parity:
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -132,6 +156,14 @@ jobs:
         run: node --check docs/p2p-network.js && node --check docs/menu-loader.js && node --check docs/game.js && node --check docs/pwa.js && node --check docs/build-version.js && node --check docs/sw.js && node --check server/p2p-server.js && node --check tools/check-game-invariants.js && node --check tools/stress-game.js
       - name: Check host/local shared physics parity
         run: node tools/check-physics-parity.js
+      - name: Check conservative collision filters against exact profiles
+        run: node tools/check-physics-hot-paths.js
+      - name: Check host presentation and unchanged state cadence
+        run: node tools/check-host-presentation-cadence.js
+      - name: Check jittered remote playback clock
+        run: node tools/check-network-playback.js
+      - name: Check authoritative and visual state integration
+        run: node tools/check-online-presentation.js
       - name: Check rock collisions in local and host engines
         run: node tools/check-rock-collisions.js
       - name: Check physical rock sweeps without depenetration jumps

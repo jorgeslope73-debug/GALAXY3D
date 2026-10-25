@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.65
+V23.66
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -149,3 +149,16 @@ V23.65 - Contactos del mediano
 - Dibujo local CPU sin mezclar posiciones interpoladas, predicciones ni inclinaciones de otro instante.
 - Los barridos de colision conservan el movimiento real anterior a la correccion entre rocas; el ajuste de separacion no es una trayectoria que pueda hacer dano.
 - Se conservan las mallas, las texturas, los perfiles y el aumento del 15% del mediano.
+
+
+RED Y CONTINUIDAD — V23.66
+- Física y decisiones de impacto: solo el anfitrión. Cada cliente genera sus efectos, partículas, luces y reflejos en local.
+- docs/net-state-codec.js: estados compactos independientes, sin pérdida de precisión ni redondeo adicional. Posición, orientación, movimiento y cambios del juego siguen sincronizados; no se envían modelos ni efectos por cada frame.
+- Se conservan controles, eventos de disparo/destrucción, contexto de sala y datos para predecir la nave local. El historial de movimiento se envía solo a su propietario.
+- Negociación por cada conexión: clientes antiguos reciben JSON normal; los nuevos usan el formato compacto.
+- docs/network-playback.js: reloj de reproducción común para cuerpos remotos, con búfer acotado; no decide impactos.
+- Anfitrión: presentación al ritmo de la física, estados de red a 20 Hz y disparos humanos inmediatos. No se incrementa la frecuencia continua de envío.
+- Reconexión: se conservan partida y resultados útiles ante cortes de señalización. Las respuestas antiguas de recuperación no pueden cerrar otra sala.
+- Render mantiene su política actual de cierre de salas. Si el servidor elimina la sala, la partida local continúa con aviso, pero la sala no admite nuevas entradas ni operaciones de ranking. No se han modificado servicio ni base de datos.
+- Colisiones: filtros conservadores AABB y envolventes convexas previos a los perfiles exactos; las tolerancias y la decisión final se mantienen.
+- Medida en prueba cargada de cuatro jugadores: unos 57 % menos bytes por estado P2P. No equivale a garantizar ausencia de latencia en todas las redes o móviles.

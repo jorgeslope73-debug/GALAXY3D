@@ -152,7 +152,7 @@ function clientFixture(){
   const ui=()=>({classList:{add:noop,remove:noop},textContent:''});
   const ctx=vm.createContext({
     console,PROTOCOL,performance,state:null,isHost:true,hostPhysics:null,hostEpoch:2,onlineSeriesId:'a'.repeat(32),onlineSeriesPhase:'playing',onlineEventContext:'',onlineEvents:new PROTOCOL.ReplayWindow(),roomCode:'TEST',myIndex:0,playerToken:'token',inputSessionId:'1'.repeat(32),
-    inGame:false,lobbyPlayers:[{i:0,n:'Host'},{i:1,n:'Guest'}],cpuFillEnabled:false,
+    inGame:false,lobbyPlayers:[{i:0,n:'Host'},{i:1,n:'Guest'}],cpuFillEnabled:false,onlineRoomUnavailable:false,
     onlineSeriesComplete:false,onlineSeriesConfirmedRound:0,onlineSeriesRound:0,onlineSeriesScoredRound:0,onlineSessionWins:new Map(),onlineStartGeneration:0,lastRestartedRound:0,
     lastAcceptedStateEpoch:-1,lastAcceptedStateRound:-1,lastAcceptedStateSeq:-1,
     lastP2PStateAt:0,lastFallbackRequestAt:0,lastFallbackStateSentAt:0,fallbackActive:false,p2pStableCount:0,

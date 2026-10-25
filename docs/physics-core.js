@@ -22,6 +22,58 @@
     const tilt=shipTilt(pose.bank,pose.time,pose.index);
     return collisionProfile('ship',Math.round(tilt.roll*180/Math.PI)+60);
   }
+  const outerHulls=new WeakMap(),outerShips=new WeakMap(),outerRocks=new WeakMap();
+  function outerHull(outline){
+    let hull=outerHulls.get(outline);if(hull)return hull;
+    const sorted=outline.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+    const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+    const half=points=>{const result=[];for(const p of points){while(result.length>1&&cross(result[result.length-2],result[result.length-1],p)<=0)result.pop();result.push(p);}return result;};
+    const lower=half(sorted),upper=half(sorted.slice().reverse());lower.pop();upper.pop();
+    const points=lower.concat(upper),axes=points.map((a,i)=>{const b=points[(i+1)%points.length],dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy)||1;return {x:dy/length,y:-dx/length};});
+    hull={points,axes};outerHulls.set(outline,hull);return hull;
+  }
+  function outerShape(cache,body,outline,x,y,radius,angle){
+    let shape=cache.get(body);
+    if(!shape||shape.outline!==outline){
+      const hull=outerHull(outline);
+      if(!shape){shape={points:[],axes:[]};cache.set(body,shape);}
+      shape.outline=outline;shape.hull=hull;shape.x=undefined;
+      while(shape.points.length<hull.points.length)shape.points.push({x:0,y:0});
+      while(shape.axes.length<hull.axes.length)shape.axes.push({x:0,y:0});
+      shape.points.length=hull.points.length;shape.axes.length=hull.axes.length;
+    }
+    if(shape.x===x&&shape.y===y&&shape.radius===radius&&shape.angle===angle)return shape;
+    shape.x=x;shape.y=y;shape.radius=radius;shape.angle=angle;shape.minX=shape.minY=Infinity;shape.maxX=shape.maxY=-Infinity;
+    const c=Math.cos(angle),s=Math.sin(angle);
+    for(let i=0;i<shape.points.length;i++){
+      const [px,py]=shape.hull.points[i],p=shape.points[i],n=shape.hull.axes[i],axis=shape.axes[i];
+      p.x=x+radius*(px*c+py*s);p.y=y+radius*(-px*s+py*c);axis.x=n.x*c+n.y*s;axis.y=-n.x*s+n.y*c;
+      if(p.x<shape.minX)shape.minX=p.x;if(p.x>shape.maxX)shape.maxX=p.x;if(p.y<shape.minY)shape.minY=p.y;if(p.y>shape.maxY)shape.maxY=p.y;
+    }
+    return shape;
+  }
+  function outerShip(ship,pose){return outerShape(outerShips,ship,shipProfile(pose).outline,pose.x,pose.y,1,pose.rot);}
+  function outerRock(rock,radius,kind){
+    if(!kind&&!isMediumRock(rock,radius))return null;
+    const giant=kind==='giant',outline=giant?GIANT_OUTLINE:mediumProfile(rock).outline,angle=giant?giantRotation(rock.x,rock.y):mediumRotation(rock.x,rock.y,rock.id);
+    return outerShape(outerRocks,rock,outline,rock.x,rock.y,radius,angle);
+  }
+  function outerOverlap(a,b,skin=0){
+    if(separatedBounds(a,b,skin))return false;
+    // With one box completely inside the other, let the original narrow
+    // phase handle the likely contact instead of projecting a second hull.
+    if((a.minX<=b.minX&&a.maxX>=b.maxX&&a.minY<=b.minY&&a.maxY>=b.maxY)||
+       (b.minX<=a.minX&&b.maxX>=a.maxX&&b.minY<=a.minY&&b.maxY>=a.maxY))return true;
+    // True convex envelopes contain every concave piece. Reject only a clear
+    // separating axis; the original narrow phase decides contact and response.
+    for(const axes of [a.axes,b.axes])for(const n of axes){
+      let minA=Infinity,maxA=-Infinity,minB=Infinity,maxB=-Infinity;
+      for(const p of a.points){const d=p.x*n.x+p.y*n.y;if(d<minA)minA=d;if(d>maxA)maxA=d;}
+      for(const p of b.points){const d=p.x*n.x+p.y*n.y;if(d<minB)minB=d;if(d>maxB)maxB=d;}
+      if(maxA<minB-skin-1e-7||maxB<minA-skin-1e-7)return false;
+    }
+    return true;
+  }
   function mediumProfile(rock){
     if(!Number.isFinite(rock.spin))return {outline:MEDIUM_OUTLINE,pieces:MEDIUM_PIECES};
     const phase=((rock.spin%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
@@ -143,8 +195,13 @@
       if(hit.distance>radius+skin)return null;
       return {...hit,nx:hit.nx*(shieldA?-1:1),ny:hit.ny*(shieldA?-1:1),depth:Math.max(0,radius-hit.distance)};
     }
+    if(!outerOverlap(outerShip(a,pa),outerShip(b,pb),skin))return null;
     const sa=shipShape(a,pa),sb=shipShape(b,pb);let best=null;
-    for(const ca of sa.parts)for(const cb of sb.parts){const hit=shipPartContact(ca,cb,skin);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+    if(separatedBounds(sa.full,sb.full,skin))return null;
+    for(const ca of sa.parts){
+      if(separatedBounds(ca,sb.full,skin))continue;
+      for(const cb of sb.parts){const hit=shipPartContact(ca,cb,skin);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+    }
     return best?{...best,depth:Math.max(0,best.depth)}:null;
   }
   function shipMotion(ship){
@@ -362,10 +419,16 @@
     const radius=giant?135:Number(rock.r)||45;
     if(ship.shield>0)return giant?giantCircleContact(rock,ship,SHIELD_RADIUS):asteroidCircleContact(rock,ship,SHIELD_RADIUS);
     if(Math.hypot(rock.x-ship.x,rock.y-ship.y)>radius+SHIP_PROJECTILE_RADIUS+1)return null;
-    const rs=rockShape(rock,radius,giant?'giant':undefined),ss=shipShape(ship,shipPose(ship));
+    const pose=shipPose(ship),kind=giant?'giant':undefined,outer=outerRock(rock,radius,kind);
+    if(outer&&!outerOverlap(outer,outerShip(ship,pose),.75))return null;
+    const rs=rockShape(rock,radius,kind),ss=shipShape(ship,pose);
     if(rs){
+      if(separatedBounds(rs.full,ss.full,.75))return null;
       let best=null;
-      for(const a of rs.parts)for(const b of ss.parts){const hit=shipPartContact(a,b,.75);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+      for(const a of rs.parts){
+        if(separatedBounds(a,ss.full,.75))continue;
+        for(const b of ss.parts){const hit=shipPartContact(a,b,.75);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+      }
       return best?{...best,depth:Math.max(0,best.depth)}:null;
     }
     const hit=shipSurface(shipPose(ship),rock.x,rock.y);
@@ -456,6 +519,11 @@
     }
     return shape;
   }
+  function separatedBounds(a,b,skin=0){
+    // Bounds contain every concave piece: rejection is conservative, including
+    // the existing contact skin. The narrow phase still decides every hit.
+    return a.maxX+skin<=b.minX||b.maxX+skin<=a.minX||a.maxY+skin<=b.minY||b.maxY+skin<=a.minY;
+  }
   function convexContact(a,b,skin=0){
     if(a.maxX+skin<=b.minX||b.maxX+skin<=a.minX||a.maxY+skin<=b.minY||b.maxY+skin<=a.minY)return null;
     let depth=Infinity,nx=1,ny=0;
@@ -474,10 +542,16 @@
   }
   function rockContact(a,b,ra=Number(a.r)||45,rb=Number(b.r)||45,aKind){
     if(Math.hypot(b.x-a.x,b.y-a.y)>ra+rb+1)return null;
+    const oa=outerRock(a,ra,aKind),ob=outerRock(b,rb);
+    if(oa&&ob&&!outerOverlap(oa,ob))return null;
     const sa=rockShape(a,ra,aKind),sb=rockShape(b,rb);
     if(sa&&sb){
+      if(separatedBounds(sa.full,sb.full))return null;
       let best=null;
-      for(const pa of sa.parts)for(const pb of sb.parts){const hit=convexContact(pa,pb);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+      for(const pa of sa.parts){
+        if(separatedBounds(pa,sb.full))continue;
+        for(const pb of sb.parts){const hit=convexContact(pa,pb);if(hit&&(!best||hit.depth>best.depth))best=hit;}
+      }
       return best;
     }
     if(sa||sb){

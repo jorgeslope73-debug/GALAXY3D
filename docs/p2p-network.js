@@ -2,6 +2,7 @@
 (() => {
   const PROTOCOL=window.GalaxyNetProtocol;
   if(!PROTOCOL)throw new Error('GalaxyNetProtocol no cargado');
+  const peerNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
   class GalaxyP2P {
     constructor({sendSignal,onControl,onState,onEvent,onPeerState}={}){
       this.sendSignal=sendSignal||(()=>false);
@@ -96,7 +97,7 @@
       const pc=new RTCPeerConnection({iceServers:this.iceServers});
       // V22.15: fast = estado/controles descartables; reliable = eventos/acciones.
       // rec.dc queda como alias del canal fast para compatibilidad con métricas.
-      const rec={pc,dc:null,fastDc:null,reliableDc:null,open:false,pendingIce:[],signalContext:PROTOCOL.context(this)};this.peers.set(peerIndex,rec);
+      const rec={pc,dc:null,fastDc:null,reliableDc:null,open:false,pendingIce:[],createdAt:peerNow(),stateCodec:0,capabilitiesSent:false,signalContext:PROTOCOL.context(this)};this.peers.set(peerIndex,rec);
       pc.onicecandidate=e=>{
         if(this.closed||this.peers.get(peerIndex)!==rec)return;
         if(e.candidate)this.sendSignal(PROTOCOL.stamp(rec.signalContext,{t:'p2p-ice',to:peerIndex,data:e.candidate}));
@@ -158,7 +159,9 @@
       this.pendingStateRaw=null;this.pendingStateEpoch=-1;this.pendingStateRound=-1;this.pendingStateSeq=-1;
       let m;try{m=JSON.parse(raw);}catch(_){return false;}
       if(!this.isHost&&m&&m.t==='state'){
-        const state=m.state||{};
+        const wire=m.state||{},codec=window.GalaxyStateCodec;
+        const state=wire.stateCodec!==undefined?(wire.stateCodec===1&&codec?codec.decode(wire):null):wire;
+        if(!state)return false;
         if(!PROTOCOL.matches(state,this,{futureRound:true})||state.round!==state.rankRound||!PROTOCOL.counter(state.seq,1))return false;
         const epoch=Number.isInteger(Number(state.hostEpoch))?Number(state.hostEpoch):(queuedEpoch>=0?queuedEpoch:this.hostEpoch);
         if(epoch<this.hostEpoch)return false;
@@ -191,6 +194,12 @@
         this.flushPendingState();
       });
     }
+    announceCapabilities(rec){
+      if(rec.capabilitiesSent||!window.GalaxyStateCodec||window.GalaxyStateCodec.version!==1)return false;
+      const packet=PROTOCOL.stamp(this,{t:'capabilities',capabilities:1});
+      if(!this.sendReliable(rec,JSON.stringify(packet)))return false;
+      rec.capabilitiesSent=true;return true;
+    }
     bindChannel(peerIndex,dc){
       const rec=this.peers.get(peerIndex)||this.makePc(peerIndex);
       const label=String(dc&&dc.label||'');
@@ -207,7 +216,11 @@
       }
 
       dc.binaryType='arraybuffer';
-      dc.onopen=()=>{this.updatePeerOpen(peerIndex,rec,rec.pc.connectionState);};
+      dc.onopen=()=>{
+        if(this.closed||this.peers.get(peerIndex)!==rec)return;
+        this.updatePeerOpen(peerIndex,rec,rec.pc.connectionState);
+        this.announceCapabilities(rec);
+      };
       dc.onclose=()=>{this.updatePeerOpen(peerIndex,rec,rec.pc.connectionState);};
       dc.onerror=()=>{};
       dc.onmessage=e=>{
@@ -223,6 +236,13 @@
 
         let m;try{m=JSON.parse(raw);}catch(_){return;}
         if(!m||typeof m!=='object'||Array.isArray(m))return;
+        if(allowReliable&&m.t==='capabilities'){
+          if(PROTOCOL.matches(m,this,{ignoreRound:true})){
+            rec.stateCodec=m.capabilities===1&&window.GalaxyStateCodec?.version===1?1:0;
+            this.announceCapabilities(rec);
+          }
+          return;
+        }
         if(allowFast&&this.isHost&&m.t==='ctrl'){
           if(PROTOCOL.matches(m,this)&&PROTOCOL.counter(m.controlSeq,1)&&PROTOCOL.validId(m.inputSessionId))this.onControl(peerIndex,m);
           return;
@@ -275,11 +295,13 @@
         catch(err){console.warn('[Galaxy P2P] ICE pendiente',err);}
       }
     }
-    async reconnectPeer(peerIndex){
+    async reconnectPeer(peerIndex,{force=false}={}){
       const i=Number(peerIndex);
       if(this.closed||!this.isHost||!Number.isInteger(i)||i===this.myIndex)return false;
       const existing=this.reconnectingPeers.get(i);
       if(existing)return existing;
+      const pending=this.peers.get(i),age=pending&&Number.isFinite(pending.createdAt)?peerNow()-pending.createdAt:Infinity;
+      if(!force&&pending&&pending.pc&&!['failed','closed'].includes(pending.pc.connectionState)&&age>=0&&age<8000)return true;
       const task=(async()=>{
         this.closePeer(i);
         if(this.closed)return false;
@@ -348,11 +370,24 @@
       if(!this.isHost||!this.pendingBroadcastState)return false;
       const state=this.pendingBroadcastState;
       this.pendingBroadcastState=null;
-      let raw;try{raw=JSON.stringify({t:'state',state});}catch(_){return false;}
-      for(const rec of this.peers.values()){
+      let legacyRaw,prepared;
+      const compactByRecipient=new Map(),codec=window.GalaxyStateCodec;
+      for(const [peerIndex,rec] of this.peers){
         const dc=rec&&rec.fastDc;
         if(rec.open&&dc&&dc.readyState==='open'&&dc.bufferedAmount<16*1024){
-          try{dc.send(raw);}catch(_){}
+          try{
+            let raw;
+            if(rec.stateCodec===1&&codec?.version===1){
+              if(!compactByRecipient.has(peerIndex)){
+                if(prepared===undefined&&typeof codec.prepare==='function')prepared=codec.prepare(state);
+                const packed=typeof codec.prepare==='function'?(prepared&&prepared.encodeFor(peerIndex)):codec.encode(state,peerIndex);
+                compactByRecipient.set(peerIndex,packed?JSON.stringify({t:'state',state:packed}):null);
+              }
+              raw=compactByRecipient.get(peerIndex);
+            }
+            if(!raw){if(legacyRaw===undefined)legacyRaw=JSON.stringify({t:'state',state});raw=legacyRaw;}
+            dc.send(raw);
+          }catch(_){}
         }
       }
       return true;

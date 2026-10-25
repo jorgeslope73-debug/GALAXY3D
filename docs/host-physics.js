@@ -121,9 +121,11 @@
   }
 
   class GalaxyHostPhysics{
-    constructor({onState,onEvent,code='P2P',rankRound=1,rankHostToken='',hostEpoch=1,seriesId=''}={}){
+    constructor({onState,onEvent,onRenderState=null,renderEveryStep=false,code='P2P',rankRound=1,rankHostToken='',hostEpoch=1,seriesId=''}={}){
       this.onState=typeof onState==='function'?onState:()=>{};
       this.onEvent=typeof onEvent==='function'?onEvent:()=>{};
+      this.onRenderState=typeof onRenderState==='function'?onRenderState:null;
+      this.renderEveryStep=!!renderEveryStep;
       this.code=String(code||'P2P');
       this.rankRound=Math.max(1,Number(rankRound)||1);
       this.rankHostToken=String(rankHostToken||'');
@@ -620,7 +622,7 @@
       this.accumulator+=Math.min(100,elapsed);
       let steps=0,publishState=false;
       this.humanShotPending=false;
-      while(this.accumulator>=STEP_MS&&steps<5){
+      while(this.accumulator+1e-7>=STEP_MS&&steps<5){
         const perfStart=this.perfDebug?performance.now():0;
         this.update(DT);
         if(this.perfDebug){
@@ -628,7 +630,7 @@
           this.perfTickMs+=tickMs;this.perfTicks++;
           if(tickMs>this.perfTickMax)this.perfTickMax=tickMs;
         }
-        this.accumulator-=STEP_MS;
+        this.accumulator=Math.max(0,this.accumulator-STEP_MS);
         this.tickCount++;
         // V20.16 PERF: publicar estado cada 3 ticks = 20 snapshots/s.
         // La simulacion sigue ejecutando todos los ticks a 60 Hz.
@@ -646,7 +648,15 @@
       // Publicamos solo el estado final mas reciente.
       // Publicar el disparo humano en este frame, sin esperar al tick de 20 Hz.
       // Incluso recuperando varios ticks solo se construye un estado final.
-      if(publishState||this.humanShotPending)this.onState(this.publicState());
+      const publish=publishState||this.humanShotPending;
+      const render=this.renderEveryStep&&this.onRenderState&&steps>0;
+      if(publish||render){
+        // A single final snapshot serves both paths. Local presentation may run
+        // every physics frame; network traffic retains its 20 Hz/shot cadence.
+        const snapshot=this.publicState();
+        if(publish)this.onState(snapshot);
+        if(render)this.onRenderState(snapshot);
+      }
     }
     restart(targetRound=null){
       if(!this.finished||this.players.length<2)return false;
