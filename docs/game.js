@@ -345,12 +345,14 @@
   let smoothedStateInterval=NET_FRAME_MS;
   const localVisual={ready:false,index:-1,x:0,y:0,r:0,vx:0,vy:0,lastAt:0,lastError:0};
   const guestMotion=typeof window.GalaxyMotionPrediction==='function'&&new URLSearchParams(location.search).get('prediction')!=='legacy'?new window.GalaxyMotionPrediction():null;
+  const guestShotOcclusion=typeof window.GalaxyShotOcclusion==='function'?new window.GalaxyShotOcclusion():null;
   let guestMotionContext='';
   const remoteVisuals=Array.from({length:4},()=>({
     ready:false,x:0,y:0,r:0,vx:0,vy:0,lastAt:0
   }));
   function resetLocalVisual(){
     if(guestMotion)guestMotion.reset();
+    if(typeof guestShotOcclusion!=='undefined'&&guestShotOcclusion)guestShotOcclusion.reset();
     guestMotionContext='';
     localVisual.ready=false;localVisual.index=-1;localVisual.lastAt=0;localVisual.lastError=0;
   }
@@ -6741,6 +6743,14 @@
     }
     scene3D=window.Galaxy3D?.begin(ctx,now,renderState,myIndex)||null;
     if(!scene3D&&canvas.dataset)canvas.dataset.view='2d';
+    if(playback&&typeof guestShotOcclusion!=='undefined'&&guestShotOcclusion){
+      // Only hide the local drawing at the first visible surface. The host's
+      // projectile, ammunition, impacts and confirmations remain untouched.
+      renderState.bullets=guestShotOcclusion.filter(renderState,myIndex,now,{
+        prediction:guestMotion,authoritative:state,front:scene3D?4:0,tail:scene3D?7.5:12,radius:4,
+        playerVisible:p=>!(Number(p.camo)>0)||ghostRevealAlpha(p,now)>0
+      });
+    }
 
     const nowSec=now/1000;
     // Extrapolacion corta compartida por proyectiles y avisos de misiles.

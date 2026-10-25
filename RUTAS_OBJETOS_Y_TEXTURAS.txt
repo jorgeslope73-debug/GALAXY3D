@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.77
+V23.78
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -230,3 +230,10 @@ SINCRONIZACION VISUAL DE BALAS PROPIAS EN EL INVITADO - V23.77
 - Las vistas previas locales nacen del paso real de movimiento y conservan su origen y rumbo; se confirman o retiran al llegar el ACK del anfitrion.
 - Los proyectiles remotos y guiados mantienen la reproduccion autoritativa existente. Los disparos ambiguos no crean vistas previas sin confirmar.
 - Solo presentacion local: no cambia municion, dano, colisiones, frecuencia ni formato de los paquetes de red.
+
+CONTACTO VISUAL DE BALAS PROPIAS EN EL INVITADO - V23.78
+- La representacion adelantada de una bala normal propia se oculta al primer cruce del contorno que se ve, incluido el frente y el rastro de la bala3D o2D.
+- Se conserva el registro de municion pendiente y su enlace del ID provisional al confirmado; ocultar el dibujo no crea impactos ni efectos locales.
+- Si el anfitrion confirma que el tiro sobrevivio al momento del contacto y su nuevo tramo visible esta libre, la presentacion puede continuar.
+- Se usan los perfiles irregulares existentes y el escudo enemigo. Se excluyen el tirador, protegidos y naves invisibles.
+- Sin cambios de fisica, dano, frecuencia o formato de red; las balas remotas y los misiles mantienen su presentacion anterior.

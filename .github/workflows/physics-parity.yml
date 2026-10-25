@@ -54,6 +54,7 @@ on:
       - 'tools/check-joystick-controls.js'
       - 'tools/check-network-playback.js'
       - 'tools/check-motion-prediction.js'
+      - 'tools/check-shot-occlusion.js'
       - 'tools/check-online-presentation.js'
       - 'tools/check-host-continuity.js'
       - 'tools/check-host-presentation-cadence.js'
@@ -120,6 +121,7 @@ on:
       - 'tools/check-joystick-controls.js'
       - 'tools/check-network-playback.js'
       - 'tools/check-motion-prediction.js'
+      - 'tools/check-shot-occlusion.js'
       - 'tools/check-online-presentation.js'
       - 'tools/check-host-continuity.js'
       - 'tools/check-host-presentation-cadence.js'
@@ -174,6 +176,8 @@ jobs:
         run: node tools/check-online-hazards.js
       - name: Check jittered remote playback clock
         run: node tools/check-network-playback.js
+      - name: Check guest shot contact with visible surfaces
+        run: node tools/check-shot-occlusion.js
       - name: Check authoritative and visual state integration
         run: node tools/check-online-presentation.js
       - name: Check rock collisions in local and host engines
