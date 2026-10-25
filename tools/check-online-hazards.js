@@ -95,6 +95,7 @@ function fixture(seed){
       inside(engine.nextUfo,75,120,'repetición tras destruir OVNI',0);
       round.removedUfoAt=engine.fxClock;
     }
+    const previousMeteorIds=new Set(engine.meteors.map(m=>m.id));
     round.ticks++;totalTicks++;clock.now=1000000+totalTicks*STEP_MS;
     engine.advance(clock.now);
     assert.equal(engine.finished,false);assert.equal(engine.winner,null);
@@ -105,7 +106,8 @@ function fixture(seed){
     const stages=[[60,1],[120,2],[165,3],[195,2],[240,3],[285,4],[315,2],[360,5]];
     assert.equal(engine.asteroidTargetCount,stages.find(([until])=>age<until)[1],'rampa de asteroides conservada');
     if((age>=165&&age<195)||(age>=285&&age<315)){
-      assert.equal(engine.ufo,null,'descanso sin OVNI');assert.equal(engine.meteors.length,0,'descanso sin lluvia');
+      assert.equal(engine.ufo,null,'descanso sin OVNI');
+      assert.ok(engine.meteors.every(m=>previousMeteorIds.has(m.id)),'el descanso no genera meteoritos nuevos; los anteriores pueden salir o destruirse');
       assert.equal(engine.showerLeft,0);assert.equal(engine.nextGiant,999999,'descanso sin nuevos gigantes');
     }
   }

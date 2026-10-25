@@ -227,7 +227,7 @@
     }
     resetHazardCycle(){
       this.hazardCycleAge=0;
-      this.meteors=[];
+      // Termina la generacion; los meteoritos existentes salen o chocan normalmente.
       // V21.93: el reinicio del ciclo tampoco hace desaparecer un gigante
       // que ya este atravesando la escena; terminara su salida normalmente.
       this.ufo=null;
@@ -257,7 +257,7 @@
         }
       }
       if(stage.shower&&this.showerLeft<=0&&this.firstShower>900000&&this.nextShower<=0)this.firstShower=rand(18,28);
-      if(!stage.shower){this.firstShower=999999;this.nextShower=0;this.showerLeft=0;this.meteors=[];}
+      if(!stage.shower){this.firstShower=999999;this.nextShower=0;this.showerLeft=0;}
       if(stage.giant&&this.nextGiant>900000&&!this.giant)this.nextGiant=rand(12,24);
       // V21.93: al terminar una fase con gigante no borramos el que ya esta
       // cruzando la pantalla. Solo bloqueamos nuevas apariciones.
@@ -2040,7 +2040,7 @@
     }
     updateShower(dt){
       const stage=this.hazardStage();
-      if(!stage.shower){this.showerLeft=0;this.meteors=[];return;}
+      if(!stage.shower){this.showerLeft=0;return;}
       const profile=this.hazardProfile();
       if(this.showerLeft<=0){
         this.firstShower-=dt;

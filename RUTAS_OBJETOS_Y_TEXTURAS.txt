@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.78
+V23.79
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -237,3 +237,9 @@ CONTACTO VISUAL DE BALAS PROPIAS EN EL INVITADO - V23.78
 - Si el anfitrion confirma que el tiro sobrevivio al momento del contacto y su nuevo tramo visible esta libre, la presentacion puede continuar.
 - Se usan los perfiles irregulares existentes y el escudo enemigo. Se excluyen el tirador, protegidos y naves invisibles.
 - Sin cambios de fisica, dano, frecuencia o formato de red; las balas remotas y los misiles mantienen su presentacion anterior.
+
+SALIDA NATURAL DE LA LLUVIA AL CAMBIAR DE FASE - V23.79
+- Al entrar en descanso o reiniciar el ciclo ambiental se detiene la generacion de lluvia sin borrar los meteoritos existentes.
+- Los cuerpos que ya se ven conservan ID, movimiento y colisiones hasta salir por los bordes o destruirse normalmente.
+- Se mantienen el calendario, la duracion de emision y la limpieza real al empezar/reiniciar una partida.
+- CPU local ya dejaba terminar su recorrido; el anfitrion online sigue ahora el mismo criterio de salida natural. Sin cambios de formato o frecuencia de red.
