@@ -101,7 +101,7 @@
     const fill=new T.DirectionalLight(0xffffff,.6);fill.position.set(650,-280,450);scene.add(fill);
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffe14a];
     const records=new Map(),spares=new Map();
-    let createImportedShip=null,setImportedShipAmmo=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
+    let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
@@ -244,7 +244,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.68';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.69';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
@@ -281,6 +281,7 @@
       const template=await assets.loadShipTemplate({strict:true});
       createImportedShip=assets.createShipFactory(template);
       setImportedShipAmmo=assets.setShipAmmoLights;
+      stepImportedShipInertia=assets.stepShipInertia;
       document.documentElement.dataset.galaxyShip='nave-glb';
     }).catch(error=>{
       document.documentElement.dataset.galaxyShip='fallback';
@@ -323,7 +324,7 @@
       let record=records.get(key);
       if(!record){
         record=spares.get(kind)?.pop()||model(kind);
-        record.kind=kind;record.turnPose=null;record.ufoMotion=null;record.launchAt=now;record.launchContext=poseContext;
+        record.kind=kind;record.turnPose=null;record.inertiaPose=null;record.ufoMotion=null;record.launchAt=now;record.launchContext=poseContext;
         if(!record.root.parent)scene.add(record.root);
         records.set(key,record);
       }
@@ -432,7 +433,11 @@
         const bank=pose?Number(pose.bank)||0:turnBank(record,rotation,showcase);
         const sway=passiveShipSway(index),swayWeight=1-Math.min(1,Math.abs(bank)/SHIP_BANK_LIMIT);
         const tilt=pose?window.GalaxyPhysicsCore.shipTilt(bank,pose.time,index):{pitch:sway.pitch*swayWeight,roll:bank+sway.roll*swayWeight};
-        record.tilt.rotation.set(showcase?.38:tilt.pitch,showcase?Math.sin(now*.0006)*.30:tilt.roll,0);
+        record.inertiaPose=stepImportedShipInertia?.(record.inertiaPose,{
+          now,context:poseContext,thrust,vx:pose?.vx,vy:pose?.vy,speed:pose?.speed,
+          active:!showcase&&!reducedMotion&&poseContext!=='menu'&&pose?.motionActive!==false&&alpha>0
+        });
+        record.tilt.rotation.set(showcase?.38:tilt.pitch+(record.inertiaPose?.pitch||0),showcase?Math.sin(now*.0006)*.30:tilt.roll,0);
         record.canopyMaterial.color.setHex(armed?0x8aff9d:0x58cfff);
         record.canopyMaterial.emissive.setHex(armed?0x287b36:0x0c596b);
         // Engine trails for thrust and turns use the existing particle system in game.js.
@@ -495,7 +500,7 @@
         updateEffects();
         for(const [key,record] of records){
           if(record.used)continue;
-          record.root.visible=false;records.delete(key);
+          record.root.visible=false;record.inertiaPose=null;records.delete(key);
           if(!spares.has(record.kind))spares.set(record.kind,[]);
           spares.get(record.kind).push(record);
         }

@@ -7,6 +7,44 @@ const lightStates=new WeakMap(),lampMasks=new WeakMap();
 // Player 4 uses the yellow artwork uploaded under the existing naveroja.png name.
 const paintFiles=['naveazul-cupula-oscura.png','navefuxia.jpg','naveverde-luces-rojas.png','naveroja.png'];
 
+// Local presentation only. Return a new spring state; never write into a game
+// pose or the previous frame, and never use a network/simulation clock here.
+export function stepShipInertia(previous,{now,context='',thrust=false,vx,vy,speed=1,active=true}={}){
+  const valid=active&&Number.isFinite(now)&&Number.isFinite(vx)&&Number.isFinite(vy)&&Number.isFinite(speed)&&speed>0;
+  const neutral=()=>({pitch:0,velocity:0,time:Number.isFinite(now)?now:null,context,thrust:!!thrust,releaseAt:null,releaseStrength:0,active:!!valid});
+  const elapsed=previous?now-previous.time:0;
+  if(!valid||!previous||!previous.active||previous.context!==context||!Number.isFinite(previous.time)||elapsed<0||elapsed>250)return neutral();
+  if(elapsed===0)return {...previous};
+  const dt=elapsed*.001,limit=8*Math.PI/180;
+  // The movement integrator applies drag after acceleration. Its actual steady
+  // speed is below the safety cap of 330, so a held accelerator can level out.
+  const drag=Math.pow(.35,1/60),terminal=(240/60)*drag/(1-drag)*speed;
+  const ratio=Math.max(0,Math.min(1,Math.hypot(vx,vy)/terminal));
+  let releaseAt=previous.releaseAt,releaseStrength=previous.releaseStrength;
+  if(thrust){releaseAt=null;releaseStrength=0;}
+  else if(previous.thrust){releaseAt=now;releaseStrength=ratio;}
+  const omega=11,damping=.58,decayRate=omega*damping,frequency=omega*Math.sqrt(1-damping*damping);
+  let pitch=previous.pitch,velocity=previous.velocity;
+  const spring=(target,seconds)=>{
+    if(seconds<=0)return;
+    const offset=pitch-target,sine=Math.sin(frequency*seconds),cosine=Math.cos(frequency*seconds),decay=Math.exp(-decayRate*seconds);
+    pitch=target+decay*(offset*cosine+(velocity+decayRate*offset)/frequency*sine);
+    velocity=decay*(velocity*cosine-(decayRate*velocity+omega*omega*offset)/frequency*sine);
+  };
+  if(thrust)spring(limit*(1-ratio),dt);
+  else{
+    // A short nose-down impulse, followed by free damped motion, gives braking
+    // a small rebound instead of leaving a permanent downward inclination.
+    const end=releaseAt===null?-Infinity:releaseAt+180;
+    const pulse=Math.max(0,Math.min(now,end)-Math.max(previous.time,releaseAt??Infinity))*.001;
+    spring(-3*Math.PI/180*releaseStrength,pulse);
+    spring(0,dt-pulse);
+    if(now>=end){releaseAt=null;releaseStrength=0;}
+  }
+  if(Math.abs(pitch)>limit){pitch=Math.sign(pitch)*limit;if(velocity*pitch>0)velocity=0;}
+  return {pitch,velocity,time:now,context,thrust:!!thrust,releaseAt,releaseStrength,active:true};
+}
+
 function assetURL(name){
   const asset=new URL('./assets/models/'+name,import.meta.url);
   asset.search=new URL(import.meta.url).search;

@@ -5561,11 +5561,17 @@
     }
     const hullPose={bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:Number.isFinite(presentation?.simTime)?presentation.simTime:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i};
     if(scene3D){
+      // Existing motion data feeds a client-only model pose. It never enters
+      // authoritative state, prediction, collision profiles or network packets.
+      const renderPose={...hullPose,
+        vx:Number(local&&localVisual.ready?localVisual.vx:p.vx)||0,
+        vy:Number(local&&localVisual.ready?localVisual.vy:p.vy)||0,
+        speed:Number(p.spd)||1,motionActive:!materializing};
       const shieldPulse=p.shield>0?(p.shield<=3?.38+.62*(.5+.5*Math.sin(now*.012)):1):0;
       scene3D.ship(p.i,x,y,r,shipSize,alpha,thrusting,armed,shieldPulse,
         Number(p.flare)>0,p.shock===true,p.mira===true,
         Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma,Number(p.ammo)>0,
-        hullPose);
+        renderPose);
     }else drawProfileSprite(im,window.GalaxyPhysicsCore.shipProfile(hullPose).outline,x,y,-r*Math.PI/180,shipSize/SHIP_DRAW_SIZE,alpha,'#263b50',98);
     // V20.98: confirmacion visual muy corta de impacto. Solo se alimenta de
     // eventos ya recibidos y nunca revela una nave rival en modo FANTASMA.

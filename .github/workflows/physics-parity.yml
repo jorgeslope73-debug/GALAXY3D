@@ -22,6 +22,7 @@ on:
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
       - 'tools/check-ship-model.mjs'
+      - 'tools/check-ship-inertia.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
@@ -85,6 +86,7 @@ on:
       - 'docs/vendor/GLTFLoader.js'
       - 'docs/vendor/BufferGeometryUtils.js'
       - 'tools/check-ship-model.mjs'
+      - 'tools/check-ship-inertia.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
@@ -184,6 +186,8 @@ jobs:
         run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js
       - name: Check ship GLB orientation and embedded resources
         run: node tools/check-ship-model.mjs
+      - name: Check local visual ship pitch and damped throttle inertia
+        run: node tools/check-ship-inertia.mjs
       - name: Check rocket GLB orientation, roll axis and shared geometry
         run: node tools/check-rocket-model.mjs
       - name: Check meteor GLB resources, scale and shared geometry
