@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.62
+V23.63
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -79,6 +79,12 @@ TEXTURAS DE LOS METEORITOS
 - Mediano y grande conservan la escala y los contornos de colision de su modelo.
 - Los tres originales proporcionados por el usuario se conservan sin modificar.
 - mas/final/meteor.glb, meteorrit.obj, meteorrit.mtl y luna.jpg son recursos anteriores; no los carga el juego.
+
+METEORITO GRANDE DE LA PORTADA
+- docs/menu-ufo.js: objeto menu1, tamano 375 en escritorio y 216 en movil.
+- Triple del tamano anterior (125 / 72); mismo modelo, textura y luminosidad.
+- El recorrido decorativo del OVNI recalcula su margen con el nuevo tamano.
+- Los tamanos de los meteoritos de la partida se mantienen en su configuracion de juego.
 
 OVNI DECORATIVO DE LA PORTADA
 - Reutiliza docs/assets/models/ovni.glb con vista lateral, giro y luces suaves.
