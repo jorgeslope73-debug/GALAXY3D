@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.67
+V23.68
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -167,3 +167,11 @@ RED Y CONTINUIDAD — V23.66
 CORRECCION DE ACCESO ONLINE — V23.67
 - Al empezar una serie, el backend renueva seriesId y hostEpoch. Se acepta esa transición legítima desde el lobby de la misma sala, conservando el rechazo de mensajes antiguos y de otras salas.
 - La regresión se comprueba con crear, unirse e iniciar usando mensajes del servidor y los controladores reales del cliente; incluye retorno desde CPU y entrada en partida en curso.
+
+
+PELIGROS EN PARTIDAS ONLINE — V23.68
+- Aparición escalonada durante el primer minuto: OVNI a los 18–32 s, gigante a los 32–44 s y lluvia a los 50–60 s de simulación activa. Son tiempos de generación; los objetos entran desde fuera del encuadre.
+- Antes el calendario bloqueaba esos peligros durante 195–240 s y cada ronda volvía a iniciar la espera.
+- Se conservan el máximo de cinco asteroides medianos, los descansos del ciclo ambiental de seis minutos y la trayectoria completa de un gigante ya presente.
+- Generación, movimiento e impactos siguen calculados por el anfitrión. Los invitados reciben el mismo estado; efectos y modelos siguen en local. La frecuencia de envío permanece igual.
+- Se respeta el intervalo de 55–85 s entre el final de una lluvia y la siguiente; el temporizador inicial no se rearma durante una lluvia activa.

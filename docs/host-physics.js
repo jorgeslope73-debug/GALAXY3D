@@ -200,12 +200,14 @@
     }
     hazardStage(){
       const t=Math.max(0,Number(this.hazardCycleAge)||0);
-      // Fases con descansos intermedios. El tope estándar sigue siendo 5 asteroides.
-      if(t<60)return {asteroids:1,shower:false,giant:false,ufo:false,rest:false};
-      if(t<120)return {asteroids:2,shower:false,giant:false,ufo:false,rest:false};
-      if(t<165)return {asteroids:3,shower:false,giant:false,ufo:false,rest:false};
+      // Abrir los peligros durante el primer minuto conserva sus demoras y
+      // repeticiones habituales, sin posponerlos hasta rondas de 4 minutos.
+      // El ciclo, los descansos y el tope de 5 asteroides siguen iguales.
+      if(t<60)return {asteroids:1,shower:t>=32,giant:t>=20,ufo:true,rest:false};
+      if(t<120)return {asteroids:2,shower:true,giant:true,ufo:true,rest:false};
+      if(t<165)return {asteroids:3,shower:true,giant:true,ufo:true,rest:false};
       if(t<195)return {asteroids:2,shower:false,giant:false,ufo:false,rest:true};
-      if(t<240)return {asteroids:3,shower:false,giant:true,ufo:false,rest:false};
+      if(t<240)return {asteroids:3,shower:true,giant:true,ufo:true,rest:false};
       if(t<285)return {asteroids:4,shower:true,giant:true,ufo:true,rest:false};
       if(t<315)return {asteroids:2,shower:false,giant:false,ufo:false,rest:true};
       return {asteroids:5,shower:true,giant:true,ufo:true,rest:false};
@@ -254,7 +256,7 @@
           for(let i=0;i<Math.min(excess,candidates.length);i++)candidates[i].exitDelay=rand(.5,2.5);
         }
       }
-      if(stage.shower&&this.firstShower>900000&&this.nextShower<=0)this.firstShower=rand(18,28);
+      if(stage.shower&&this.showerLeft<=0&&this.firstShower>900000&&this.nextShower<=0)this.firstShower=rand(18,28);
       if(!stage.shower){this.firstShower=999999;this.nextShower=0;this.showerLeft=0;this.meteors=[];}
       if(stage.giant&&this.nextGiant>900000&&!this.giant)this.nextGiant=rand(12,24);
       // V21.93: al terminar una fase con gigante no borramos el que ya esta

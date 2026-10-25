@@ -54,6 +54,7 @@ on:
       - 'tools/check-online-presentation.js'
       - 'tools/check-host-continuity.js'
       - 'tools/check-host-presentation-cadence.js'
+      - 'tools/check-online-hazards.js'
       - 'tools/check-physics-hot-paths.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -116,6 +117,7 @@ on:
       - 'tools/check-online-presentation.js'
       - 'tools/check-host-continuity.js'
       - 'tools/check-host-presentation-cadence.js'
+      - 'tools/check-online-hazards.js'
       - 'tools/check-physics-hot-paths.js'
       - 'tools/check-spawn-scoring.js'
       - 'tools/check-session-regressions.js'
@@ -160,6 +162,8 @@ jobs:
         run: node tools/check-physics-hot-paths.js
       - name: Check host presentation and unchanged state cadence
         run: node tools/check-host-presentation-cadence.js
+      - name: Check online hazards appear naturally during normal rounds
+        run: node tools/check-online-hazards.js
       - name: Check jittered remote playback clock
         run: node tools/check-network-playback.js
       - name: Check authoritative and visual state integration
