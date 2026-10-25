@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.76
+V23.77
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -224,3 +224,9 @@ COLISIONES ENTRE EL GIGANTE Y LOS MEDIANOS - V23.76
 - Despues de un choque con el gigante, el apoyo se propaga hacia las rocas cercanas sin empujar otra vez la primera roca contra el gigante. Solo la correccion de posicion usa ese apoyo; el impulso conserva las masas reales.
 - Una separacion correctiva no se convierte en un barrido ficticio contra naves o proyectiles ni anade impulsos a cuerpos que ya se alejan.
 - La trayectoria y velocidad del gigante no cambian; CPU y anfitrion online usan el mismo codigo compartido, sin nuevos campos de red.
+
+SINCRONIZACION VISUAL DE BALAS PROPIAS EN EL INVITADO - V23.77
+- La nave predicha y sus balas normales propias se presentan en el mismo reloj de comandos.
+- Las vistas previas locales nacen del paso real de movimiento y conservan su origen y rumbo; se confirman o retiran al llegar el ACK del anfitrion.
+- Los proyectiles remotos y guiados mantienen la reproduccion autoritativa existente. Los disparos ambiguos no crean vistas previas sin confirmar.
+- Solo presentacion local: no cambia municion, dano, colisiones, frecuencia ni formato de los paquetes de red.

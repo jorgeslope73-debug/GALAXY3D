@@ -5261,15 +5261,20 @@
     if(!previousState||previousState===state||!lastStateTime)return 1;
     return clamp((now-lastStateTime)/smoothedStateInterval,0,1);
   }
-  function networkDrawingState(sample,authoritative,index){
+  function networkDrawingState(sample,authoritative,index,ownShots=null){
     if(!sample)return authoritative;
     const visible=sample.state,local=(authoritative.players||[]).find(p=>p.i===index);
     const players=(visible.players||[]).map(p=>p.i===index&&local?local:p);
     if(local&&!players.some(p=>p.i===index))players.push(local);
+    // Local normal shots share the pilot's current command clock. Remote
+    // projectiles and guided missiles retain their authoritative playback.
+    const ownNormal=b=>Number(b.o??b.owner)===Number(index)&&!(b.g??b.guided);
+    const localShots=Array.isArray(ownShots)?ownShots:(authoritative.bullets||[]).filter(ownNormal);
+    const bullets=[...(visible.bullets||[]).filter(b=>!ownNormal(b)),...localShots.filter(ownNormal)];
     const elapsed=Math.max(0,(sample.simTime-(sample.previous.simTime||0))*1000);
     const fx=(visible.fx||[]).filter(e=>Number(e.i)!==Number(index)).map(e=>({...e,age:Math.max(0,Number(e.age)||0)+elapsed}));
     for(const e of authoritative.fx||[])if(Number(e.i)===Number(index))fx.push(e);
-    return {...visible,players,fx};
+    return {...visible,players,bullets,fx};
   }
   function wrappedDelta(from,to,size){
     let d=to-from;
@@ -6720,7 +6725,9 @@
     if((MATCH_BACKGROUNDS[currentMatchBackground]||MATCH_BACKGROUNDS[0]).stars)drawDecorativeStars(now);
     if(!state){drawOnlineStartAnnouncement(now);return;}
     const playback=!localCpuActive&&!isHost&&networkPlayback?networkPlayback.sample(now):null;
-    const renderState=networkDrawingState(playback,state,myIndex);
+    const ownPilot=playback?(state.players||[]).find(p=>p.i===myIndex):null;
+    const ownShots=playback&&guestMotion?.ready&&typeof guestMotion.projectiles==='function'?guestMotion.projectiles(ownPilot,state.bullets||[],now):null;
+    const renderState=networkDrawingState(playback,state,myIndex,ownShots);
     if(playback){
       // Effects are generated here, from the same playback tick as the remote
       // bodies. The local player's confirmed feedback remains immediate.
