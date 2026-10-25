@@ -543,7 +543,7 @@
   // V20.3 LocalFX: pequeñas rocas grises en choques del meteorito gigante
   // contra asteroides. Se calcula solo en cada cliente: cero datos P2P.
   const ROCK_FX_MAX=isMobile?48:96;
-  const GIANT_LOCAL_RADIUS=135,ASTEROID_LOCAL_RADIUS=45;
+  const ASTEROID_LOCAL_RADIUS=45;
   const rockParticles=Array.from({length:ROCK_FX_MAX},()=>({
     life:0,maxLife:2,x:0,y:0,vx:0,vy:0,size:0,rot:0,spin:0
   }));
@@ -730,14 +730,12 @@
     const gx=Number(giant.x),gy=Number(giant.y);
     if(!Number.isFinite(gx)||!Number.isFinite(gy))return;
 
-    const rr=GIANT_LOCAL_RADIUS+ASTEROID_LOCAL_RADIUS;
-    const rr2=rr*rr;
     for(const asteroid of asteroids){
       if(!asteroid)continue;
       const ax=Number(asteroid.x),ay=Number(asteroid.y);
       if(!Number.isFinite(ax)||!Number.isFinite(ay))continue;
-      const dx=ax-gx,dy=ay-gy,d2=dx*dx+dy*dy;
-      if(d2>rr2)continue;
+      const contact=window.GalaxyPhysicsCore.giantCircleContact(giant,asteroid,(Number(asteroid.r)||ASTEROID_LOCAL_RADIUS)+3);
+      if(!contact)continue;
 
       const key=String(asteroid.id);
       nextContacts.add(key);
@@ -747,11 +745,8 @@
       if(now-last<700)continue;
       giantRockLastBurst.set(key,now);
 
-      const d=Math.sqrt(d2)||1;
-      const nx=dx/d,ny=dy/d;
-      // Punto aproximado de contacto sobre el borde del meteorito gigante.
-      const hitX=gx+nx*GIANT_LOCAL_RADIUS;
-      const hitY=gy+ny*GIANT_LOCAL_RADIUS;
+      const nx=contact.nx,ny=contact.ny;
+      const hitX=contact.x,hitY=contact.y;
       emitRockDebris(hitX,hitY,nx,ny,now);
     }
 
@@ -6636,7 +6631,7 @@
       const giantY=old?lerp(old.y,state.giant.y,blend):state.giant.y;
       drawGiantEntryWarning({x:giantX,y:giantY},now);
       if(scene3D)scene3D.rock('giant',giantX,giantY,270,3,0,'large');
-      else drawImageCentered(images.giant,giantX,giantY,270,0,1);
+      else drawImageCentered(images.giant,giantX,giantY,270,-window.GalaxyPhysicsCore.giantRotation(giantX,giantY)*180/Math.PI,1);
     }
     {
       const visibleUfos=Array.isArray(state.ufos)?state.ufos:(state.ufo?[state.ufo]:[]);

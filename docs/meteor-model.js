@@ -3,11 +3,11 @@ import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
-// Each authored outline is calibrated to the existing circular gameplay radius.
+// Medium/fragment artwork is calibrated to circular contacts; the giant uses its real contour.
 export const METEOR_MODELS=Object.freeze({
   fragment:Object.freeze({file:'meteorito3.glb',scale:1.066}),
   medium:Object.freeze({file:'meteorito1.glb',scale:1.082}),
-  large:Object.freeze({file:'meteorito1.glb',scale:1.082})
+  large:Object.freeze({file:'Rocky_Asteroid_5.glb',scale:1})
 });
 export const METEOR_VISUAL_SCALE=METEOR_MODELS.medium.scale;
 
@@ -61,7 +61,7 @@ export async function loadMeteorTemplates(){
 }
 
 export function createMeteorFactory(templates){
-  // Instances reuse each loaded artwork, including the medium/large shared model.
+  // Instances share geometry, materials and maps within each artwork role.
   if(templates.isObject3D)return ()=>templates.clone(true);
   return (kind='medium')=>(templates[kind]||templates.medium).clone(true);
 }

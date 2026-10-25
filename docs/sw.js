@@ -23,6 +23,7 @@ const SHELL_FILES = [
   './assets/models/nave.glb',
   './assets/models/meteorito1.glb',
   './assets/models/meteorito3.glb',
+  './assets/models/Rocky_Asteroid_5.glb',
   './assets/models/ovni.glb',
   './assets/models/nave-luces-mask.svg',
   './assets/models/cohete_galaxy_combat.glb',

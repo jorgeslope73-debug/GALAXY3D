@@ -2866,20 +2866,22 @@
       // sin cambiar su velocidad ni su trayectoria.
       for(let f=this.flares.length-1;f>=0;f--){
         const flare=this.flares[f];
-        if(!sweptCircles(g,GIANT_RADIUS,flare,FLARE_RADIUS,false))continue;
+        if(!PHYSICS_CORE.giantHitsCircle(g,flare,FLARE_RADIUS))continue;
         this.emitExplosionAt(flare.x,flare.y,flare.owner);
         this.emit({t:'sound',kind:'impact'});
         this.flares.splice(f,1);
       }
-      for(const p of this.players)if(!p.dead&&sweptCircles(g,GIANT_RADIUS,p,shipCollisionRadius(p),false)){
+      for(const p of this.players){
+        if(p.dead)continue;
+        const contact=PHYSICS_CORE.giantHitsCircle(g,p,shipCollisionRadius(p));if(!contact)continue;
         if(p.shield>0||p.protection>0){
-          this.emitShipImpact(p,g,false);const n=PHYSICS_CORE.separateShipContact(p,g,GIANT_RADIUS);
+          this.emitShipImpact(p,{x:contact.x,y:contact.y},false);const n=PHYSICS_CORE.separateGiantShipContact(p,g,contact);
           p.vx=n.x*130;p.vy=n.y*130;
         }else this.destroyShip(p,null);
       }
       for(const a of this.asteroids)this.resolveGiantAsteroidCollision(g,a);
       for(const m of this.meteors)PHYSICS_CORE.resolveGiantAsteroidCollision(g,m,GIANT_RADIUS,SMALL_METEOR_RADIUS,240);
-      for(let i=this.pickups.length-1;i>=0;i--)if(circles(g,GIANT_RADIUS,this.pickups[i],PICKUP_RADIUS))this.pickups.splice(i,1);
+      for(let i=this.pickups.length-1;i>=0;i--)if(PHYSICS_CORE.giantCircleContact(g,this.pickups[i],PICKUP_RADIUS))this.pickups.splice(i,1);
       if(g.entered&&(g.x<-350||g.x>W+350||g.y<-350||g.y>H+350)){
         this.giant=null;
         const profile=this.hazardProfile();
@@ -3209,8 +3211,10 @@
       }
 
       const bounceFrom=(h,radius,retention=.88)=>{
-        if(!h||this.fxClock<Number(u.bounceUntil||0)||!circles(u,UFO_RADIUS,h,radius))return false;
-        const n=normalize(u.x-h.x,u.y-h.y);
+        if(!h||this.fxClock<Number(u.bounceUntil||0))return false;
+        const contact=h===this.giant?PHYSICS_CORE.giantCircleContact(h,u,UFO_RADIUS):null;
+        if(h===this.giant?!contact:!circles(u,UFO_RADIUS,h,radius))return false;
+        const n=contact?{x:contact.nx,y:contact.ny}:normalize(u.x-h.x,u.y-h.y);
         const dot=u.vx*n.x+u.vy*n.y;
         if(dot<0){
           u.vx=(u.vx-2*dot*n.x)*retention;
@@ -3219,7 +3223,7 @@
           u.vx+=n.x*70;u.vy+=n.y*70;
         }
         const d=Math.hypot(u.x-h.x,u.y-h.y)||1;
-        const overlap=UFO_RADIUS+radius-d;
+        const overlap=contact?contact.depth:UFO_RADIUS+radius-d;
         if(overlap>0){u.x+=n.x*(overlap+3);u.y+=n.y*(overlap+3);}
         u.bounceUntil=this.fxClock+.22;
         return true;

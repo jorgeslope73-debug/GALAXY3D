@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.56
+V23.58
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -10,7 +10,7 @@ MODELOS 3D ACTIVOS
 - OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
 - Asteroide mediano: docs/assets/models/meteorito1.glb
-- Meteorito grande/gigante: docs/assets/models/meteorito1.glb (ampliado)
+- Meteorito grande/gigante: docs/assets/models/Rocky_Asteroid_5.glb
 - Fragmentos al romperse y pequenos de lluvia: docs/assets/models/meteorito3.glb
 - Cohete equipado en las alas y disparado: docs/assets/models/cohete_galaxy_combat.glb
 
@@ -34,8 +34,19 @@ LUCES Y ESTADO DEL DISPARO
   frente a la red aunque el nombre del archivo no cambie. Sin conexión
   se utiliza la última copia guardada.
 
+COLISIONES DEL METEORITO GRANDE
+- Contorno concavo de 111 puntos extraido de la proyeccion XY del GLB normalizado.
+- docs/physics-core.js: GIANT_OUTLINE, giantRotation, giantSurface y giantHitsCircle.
+- Naves/escudos, balas/misiles, rocas, bengalas, OVNI y mejoras usan ese contorno.
+- El radio 135 se conserva para descarte rapido y planificacion; el contacto usa la silueta.
+- El giro en partida es sobre Z, compartido por posicion y sin depender del reloj de cada cliente.
+- Respaldo 2D con la misma silueta: docs/assets/sprites/asteroidegrande_270.png.
+- Medianos y fragmentos mantienen sus modelos y fisica anteriores.
+
 TEXTURAS DE LOS METEORITOS
 - Color, normales y metal/rugosidad incluidos dentro de cada GLB activo.
+- Rocky_Asteroid_5 conserva su color/rugosidad; su mapa de altura original se ha convertido a normales tangentes para corregir el sombreado.
+- Copia web: 615.520 bytes, 12.852 triangulos y tres mapas de 1024 px; original de Downloads sin modificar.
 - meteorito1.glb: mediano y grande/gigante, 416.216 bytes, 6.000 triangulos, mapas JPEG de 1024 px.
 - meteorito2.glb se conserva como recurso anterior; no se carga ni se precarga.
 - meteorito3.glb: fragmentos, 192.564 bytes, 3.000 triangulos, mapas JPEG de 512 px.

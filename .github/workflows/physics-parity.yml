@@ -21,6 +21,7 @@ on:
       - 'tools/check-ship-model.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
+      - 'tools/check-giant-outline.mjs'
       - 'tools/check-ufo-model.mjs'
       - 'tools/check-menu-ufo.mjs'
       - 'docs/view-3d.css'
@@ -66,6 +67,7 @@ on:
       - 'tools/check-ship-model.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-meteor-model.mjs'
+      - 'tools/check-giant-outline.mjs'
       - 'tools/check-ufo-model.mjs'
       - 'tools/check-menu-ufo.mjs'
       - 'docs/view-3d.css'
@@ -130,6 +132,8 @@ jobs:
         run: node tools/check-rocket-model.mjs
       - name: Check meteor GLB resources, scale and shared geometry
         run: node tools/check-meteor-model.mjs
+      - name: Check irregular giant mesh outline and continuous contacts
+        run: node tools/check-giant-outline.mjs
       - name: Check UFO GLB resources, orientation, size and animation
         run: node tools/check-ufo-model.mjs
       - name: Check decorative menu UFO timing and clearance
