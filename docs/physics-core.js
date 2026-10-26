@@ -8,7 +8,7 @@
     // Stable birth variation uses the existing ID, without consuming another
     // random number or changing the spawn/calendar random sequence.
     const roll=(Math.imul((Number(id)||0)>>>0,0x9e3779b1)>>>0)/4294967296;
-    return MEDIUM_ROCK_RADII[roll<.55?0:roll<.85?1:2];
+    return MEDIUM_ROCK_RADII[Math.floor(roll*MEDIUM_ROCK_RADII.length)];
   }
   const PROFILE_DATA=window.GalaxyCollisionProfiles;
   if(!PROFILE_DATA)throw new Error('Collision profiles not loaded');

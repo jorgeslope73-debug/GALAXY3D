@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.86
+V23.87
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -273,3 +273,7 @@ LUZ DE BALA MAS INTENSA Y TAMAÑOS DE MEDIANOS - V23.86
 - Medianos: radios51.75 (actual/minimo),59.513 (+15%) y67.275 (+30%), con el mismo GLB, materiales, giro y perfil irregular escalado.
 - El tamaño se fija al nacer a partir del ID existente, sin consumir numeros aleatorios extra; origen, velocidad inicial y calendario mantienen su secuencia de generacion.
 - El radio r ya existente sincroniza visualizacion y colisiones en todos los equipos; se conservan el limite de poblacion y los fragmentos.
+
+TAMAÑOS DE MEDIANOS EQUIPROBABLES - V23.87
+- Los tres tamaños tienen la misma probabilidad de aparicion: un tercio cada uno. El reparto concreto puede variar en una partida corta.
+- Se mantiene la seleccion al nacer, sin llamadas aleatorias adicionales ni cambios en el calendario, los tamaños, los perfiles de colision o el formato de red.

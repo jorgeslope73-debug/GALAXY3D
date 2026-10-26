@@ -26,7 +26,7 @@ check('current size is the minimum and larger variants stay in the medium collis
       assert.equal(core.mediumRockRadius(id),radius);
     }
   }finally{vm.runInContext('Math.random=globalThis.sizeSavedRandom;delete globalThis.sizeSavedRandom;',ctx);}
-  for(const [i,weight]of [.55,.30,.15].entries())assert.ok(Math.abs(counts.get(radii[i])/10000-weight)<.003);
+  for(const r of radii)assert.ok(Math.abs(counts.get(r)/10000-1/radii.length)<.003,'every size has the same chance');
   for(const r of radii){assert.ok(r>=51.75&&r<100);assert.ok(core.isMediumRock(rock(1,r)));}
 });
 
