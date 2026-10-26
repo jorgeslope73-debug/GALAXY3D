@@ -26,6 +26,10 @@ async function gpuCase({legacy=false,lost=false,failed=false}={}){
   let modelsReady,gpuReady;const models=new Promise(r=>modelsReady=r),gpu=new Promise(r=>gpuReady=r);
   const assets=vm.createContext({gameAssetsReady:false,gameAssetsPromise:null,Promise,imageDecodePromises:{},document:{fonts:{load:()=>Promise.resolve()}},updateCanvasResolution(){},warmRendererCaches(){},warmOnlineStartCaches(){},canvas:{width:1280,height:720},window:{Galaxy3D:{ready:models,prepareMatch:()=>gpu}}});
   vm.runInContext(game.slice(a,b),assets);const pending=assets.prepareGameAssets();for(let i=0;i<10;i++)await Promise.resolve();assert.equal(assets.gameAssetsReady,false);modelsReady({ok:true});for(let i=0;i<10;i++)await Promise.resolve();assert.equal(assets.gameAssetsReady,false);gpuReady({});await pending;assert.equal(assets.gameAssetsReady,true);
+  const renderStart=game.indexOf('  function render('),renderBody=game.indexOf('    const now=',renderStart);
+  const preview=vm.createContext({requestAnimationFrame(){},gameAssetsReady:false,onlineStartPending:true,reached:false});
+  vm.runInContext(game.slice(renderStart,renderBody)+'reached=true;}',preview);preview.render(0);assert.equal(preview.reached,true,'PREPARADOS can render while resource preparation is pending');
+  preview.onlineStartPending=false;preview.reached=false;preview.render(0);assert.equal(preview.reached,false);
   const handlers={},cached=new Set();let active=0,peak=0,downloads=0,waiting;
   const cache={put:async request=>cached.add(new URL(request.url).pathname),match:async path=>cached.has(new URL(path,'https://test.invalid/GALAXY3D/').pathname)};
   const worker=vm.createContext({URL,Request,console,importScripts(){},caches:{open:async()=>cache},fetch:async()=>{active++;peak=Math.max(peak,active);downloads++;await new Promise(setImmediate);active--;return {ok:true,clone(){return this;}};},self:{GALAXY_BUILD:{version:'test'},registration:{scope:'https://test.invalid/GALAXY3D/'},addEventListener:(name,fn)=>handlers[name]=fn,skipWaiting:async()=>{waiting=true;}}});

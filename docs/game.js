@@ -6800,7 +6800,7 @@
 
   function render(rafNow){
     requestAnimationFrame(render);
-    if(!gameAssetsReady)return;
+    if(!gameAssetsReady&&!onlineStartPending)return;
     const now=Number.isFinite(rafNow)?rafNow:performance.now();
     sampleDisplayRefresh(now);
     // Consumir el ultimo estado P2P ANTES de dibujar este fotograma.
