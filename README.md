@@ -28,7 +28,7 @@ Las luces de la textura son negras durante la recarga o sin balas y se encienden
 
 Integra `cohete_galaxy_combat.glb` como misil guiado y como cohete equipado en los soportes de las alas. Aparece al recoger munición guiada y se retira al agotarse. En vuelo gira sobre su eje longitudinal mientras el morro sigue la trayectoria existente. El cohete montado acompaña la inclinación, la escala y el camuflaje de la nave.
 
-El original se conserva en `mas/final/cohete_galaxy_combat.glb` y se publica una copia idéntica en `docs/assets/models/`. El cargador agrupa las 38 piezas estáticas en una malla de 8200 triángulos, con colores por vértice y geometría compartida entre instancias. No se añaden llamas geométricas; se conserva la estela de partículas y se ajusta su origen a la tobera. La preferencia de movimiento reducido desactiva el giro continuo. Si el GLB falla, se mantiene el cohete de respaldo.
+El cohete activo es `docs/assets/models/cohete_galaxy_combat.glb`, actualizado con los materiales metálicos del usuario; `mas/final/` conserva la versión anterior. El cargador agrupa las piezas por material, conservando sus propiedades PBR y geometrías compartidas entre instancias. La pintura de cada equipo mantiene ese acabado y utiliza el mismo entorno de reflejos del OVNI. No se añaden llamas geométricas; se conserva la estela de partículas y se ajusta su origen a la tobera. La preferencia de movimiento reducido desactiva el giro continuo. Si el GLB falla, se mantiene el cohete de respaldo.
 
 Las cuatro naves conservan sus texturas azul, fucsia, verde y roja, asignadas en ese orden a los jugadores 1–4. Las variantes verde y roja se crearon con Adobe Photoshop a partir de la azul con cúpula oscura y la fucsia, respectivamente.
 

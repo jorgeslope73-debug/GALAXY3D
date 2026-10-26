@@ -215,14 +215,16 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.81';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.82';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
     }));
-    modelLoads.push(import('./ufo-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
+    const ufoAssets=import('./ufo-model.js?v='+encodeURIComponent(assetVersion));
+    // One baked reflection texture is shared by UFOs and rockets.
+    const reflectionsReady=ufoAssets.then(assets=>assets.createUfoEnvironment(renderer));
+    modelLoads.push(Promise.all([ufoAssets,reflectionsReady]).then(async ([assets,reflections])=>{
       const template=await assets.loadUfoTemplate();
-      const reflections=assets.createUfoEnvironment(renderer);
       createImportedUfo=assets.createUfoFactory(template,reflections.texture);setImportedUfoPose=assets.setUfoPose;
       document.documentElement.dataset.galaxyUfo='ovni-glb';
     }).catch(error=>{
@@ -231,8 +233,8 @@
       throw error;
     }));
     modelLoads.push(import('./rocket-model.js?v='+encodeURIComponent(assetVersion)).then(async assets=>{
-      const template=await assets.loadRocketTemplate();
-      createImportedRocket=assets.createRocketFactory(template);
+      const [template,reflections]=await Promise.all([assets.loadRocketTemplate(),reflectionsReady]);
+      createImportedRocket=assets.createRocketFactory(template,reflections.texture);
       document.documentElement.dataset.galaxyRocket='cohete-glb';
     }).catch(error=>{
       document.documentElement.dataset.galaxyRocket='fallback';

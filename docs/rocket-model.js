@@ -29,8 +29,7 @@ export function prepareRocketTemplate(source){
     for(const part of parts)part.dispose();
     if(!geometry)throw new Error('No se pueden agrupar las piezas del cohete');
     const material=original.clone();
-    // This vertex-coloured export has no authored PBR material; light it as painted metal.
-    material.metalness=.25;material.roughness=.5;
+    // Keep the authored PBR finish; team paint only changes vertex colours.
     geometry.computeBoundingSphere();geometry.computeBoundingBox();
     template.add(new T.Mesh(geometry,material));
   }
@@ -45,7 +44,7 @@ export async function loadRocketTemplate(){
   return prepareRocketTemplate(gltf.scene);
 }
 
-export function createRocketFactory(template){
+export function createRocketFactory(template,environment=null){
   const palettes=new Map();
   function paintedGeometry(original,index){
     const key=original.uuid+':'+index;
@@ -71,7 +70,11 @@ export function createRocketFactory(template){
       if(!object.isMesh)return;
       if(index!==undefined)object.geometry=paintedGeometry(object.geometry,team);
       const original=object.material;
-      if(!materials.has(original))materials.set(original,original.clone());
+      if(!materials.has(original)){
+        const material=original.clone();
+        if(environment&&!material.envMap){material.envMap=environment;material.needsUpdate=true;}
+        materials.set(original,material);
+      }
       object.material=materials.get(original);
     });
     if(index!==undefined)visual.userData.galaxyRocketTeam=team;

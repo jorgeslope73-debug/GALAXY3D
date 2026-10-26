@@ -10,7 +10,7 @@ const leanStates=new WeakMap();
 
 export function createUfoEnvironment(renderer){
   // Bake once: menus and matches share these soft reflections on the original PBR maps.
-  // Only UFO materials receive this map; other artwork keeps its existing lighting.
+  // UFO and rocket materials share this map; other artwork keeps its existing lighting.
   const studio=new T.Scene();studio.background=new T.Color(0x182235);
   const geometry=new T.PlaneGeometry(1,1),materials=[];
   const card=(x,y,z,w,h,r,g,b)=>{
