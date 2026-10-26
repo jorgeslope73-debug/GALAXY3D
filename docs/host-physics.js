@@ -741,12 +741,12 @@
       });
       if(this.fxEvents.length>32)this.fxEvents.splice(0,this.fxEvents.length-32);
     }
-    emitRocketDisintegrateAt(x,y,ownerIndex=0){
+    emitRocketDisintegrateAt(x,y,ownerIndex=0,selfHit=false){
       if(!Number.isFinite(x)||!Number.isFinite(y))return;
       const i=Number.isInteger(ownerIndex)&&ownerIndex>=0&&ownerIndex<4?ownerIndex:0;
       this.fxEvents.push({
         id:++this.fxSeq,i,x:+x.toFixed(1),y:+y.toFixed(1),
-        kind:'disintegrate',hidden:false,at:this.fxClock
+        kind:selfHit?'selfMissile':'disintegrate',hidden:false,at:this.fxClock
       });
       if(this.fxEvents.length>32)this.fxEvents.splice(0,this.fxEvents.length-32);
     }
@@ -1886,7 +1886,7 @@
               }
 
               if(shipHit.guided){
-                this.emitRocketDisintegrateAt(shipHit.impactX,shipHit.impactY,shipHit.owner);
+                this.emitRocketDisintegrateAt(shipHit.impactX,shipHit.impactY,shipHit.owner,shipHit.owner===Number(p.index));
                 this.emit({t:'sound',kind:'sparkle'});
               }
               // El atacante suma su baja; la victima no pierde punto por baja ajena.
@@ -1896,7 +1896,7 @@
               if(shipHit.guided){
                 // El misil consume por completo un escudo activo y la nave sobrevive.
                 p.shield=0;
-                this.emitRocketDisintegrateAt(shipHit.impactX,shipHit.impactY,shipHit.owner);
+                this.emitRocketDisintegrateAt(shipHit.impactX,shipHit.impactY,shipHit.owner,shipHit.owner===Number(p.index));
                 this.emit({t:'sound',kind:'sparkle'});
               }
             }

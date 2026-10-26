@@ -202,7 +202,14 @@
       if(age>500)continue;
       const owner=Number(e.i);
       const hidden=!!e.hidden&&owner!==Number(myIndex);
-      if(e.kind==='hit'&&!hidden&&Number.isInteger(owner)&&owner>=0&&owner<4){
+      if(e.kind==='selfMissile'){
+        if(owner===Number(myIndex)){
+          playNoticeStart=now;
+          playNoticeUntil=now+1050;
+          playNoticeText='¡UPSS!';
+          playNoticeKind='selfmissile';
+        }
+      }else if(e.kind==='hit'&&!hidden&&Number.isInteger(owner)&&owner>=0&&owner<4){
         shipHitFlashUntil[owner]=Math.max(shipHitFlashUntil[owner],now-age+165);
         if(owner===Number(myIndex)&&now-lastSavedNoticeAt>1200){
           lastSavedNoticeAt=now;

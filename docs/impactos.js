@@ -72,7 +72,7 @@
       if (event.hidden && event.i !== localIndex) return;
       if (!Number.isFinite(event.x) || !Number.isFinite(event.y)) return;
       if (Math.abs(event.x) > 10000 || Math.abs(event.y) > 10000) return;
-      const kind = event.kind === 'explosion' ? 'explosion' : event.kind === 'disintegrate' ? 'disintegrate' : 'hit';
+      const kind = event.kind === 'explosion' ? 'explosion' : (event.kind === 'disintegrate' || event.kind === 'selfMissile') ? 'disintegrate' : 'hit';
       const duration = durationFor(kind);
       const age = Number.isFinite(event.age) ? Math.max(0, event.age) : 0;
       if (age >= duration) return;
@@ -132,7 +132,7 @@
           const event=snapshot.fx[idx];
           if (!event || !Number.isSafeInteger(event.id) || event.id < 1) continue;
           if (!Number.isInteger(event.i) || event.i < 0 || event.i > 3) continue;
-          if (event.kind !== 'explosion' && event.kind !== 'hit' && event.kind !== 'disintegrate') continue;
+          if (event.kind !== 'explosion' && event.kind !== 'hit' && event.kind !== 'disintegrate' && event.kind !== 'selfMissile') continue;
           // Record only still-visible explosion events. If one was lost/delayed,
           // the state transition fallback below will recreate the death burst.
           if (event.kind === 'explosion') {
