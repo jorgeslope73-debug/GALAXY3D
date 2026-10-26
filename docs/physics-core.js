@@ -3,6 +3,13 @@
   const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
   // Shared linear scale for the giant artwork, its concave contacts and rendering.
   const GIANT_RADIUS=189,GIANT_DIAMETER=GIANT_RADIUS*2;
+  const MEDIUM_ROCK_RADII=Object.freeze([51.75,59.513,67.275]);
+  function mediumRockRadius(id){
+    // Stable birth variation uses the existing ID, without consuming another
+    // random number or changing the spawn/calendar random sequence.
+    const roll=(Math.imul((Number(id)||0)>>>0,0x9e3779b1)>>>0)/4294967296;
+    return MEDIUM_ROCK_RADII[roll<.55?0:roll<.85?1:2];
+  }
   const PROFILE_DATA=window.GalaxyCollisionProfiles;
   if(!PROFILE_DATA)throw new Error('Collision profiles not loaded');
   const profileCache={ship:[],medium:[]},SHIP_BANK_LIMIT=Math.PI/3;
@@ -1303,7 +1310,7 @@
     SHIP_CONTACT_SKIN,shipPairContact,moveShipsToContact,separateShipPair,
     shipTilt,shipHitsCircle,shipSurface,shipPose,shipProfile,mediumProfile,mediumQuaternion,advanceRockPose,captureRockMotion,asteroidShipContact,separateRockShipContact,
     GIANT_RADIUS,GIANT_DIAMETER,GIANT_OUTLINE,giantRotation,giantSurface,giantCircleContact,giantHitsCircle,separateGiantShipContact,
-    MEDIUM_OUTLINE,mediumRotation,mediumSurface,isMediumRock,asteroidCircleContact,asteroidHitsCircle,separateAsteroidShipContact,rockContact,
+    MEDIUM_ROCK_RADII,mediumRockRadius,MEDIUM_OUTLINE,mediumRotation,mediumSurface,isMediumRock,asteroidCircleContact,asteroidHitsCircle,separateAsteroidShipContact,rockContact,
     chooseSpawnSector,
     SHIELD_RADIUS,shipCollisionRadius,shipImpactPoint,separateShipContact,
     MOVEMENT_DT,stepShipMovement,stepAsteroidExit,createMotionStream,acceptMotionFrames,consumeMotionFrame,

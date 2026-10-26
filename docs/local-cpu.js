@@ -8,7 +8,7 @@
   const SCORE_TO_WIN=5;
   const CAMPAIGN=window.GalaxyCampaign||null;
   const CAMPAIGN_LEVELS=CAMPAIGN&&Number(CAMPAIGN.count)>0?Number(CAMPAIGN.count):5;
-  const SHIP_RADIUS=24,ASTEROID_RADIUS=51.75,GIANT_RADIUS=PHYSICS_CORE.GIANT_RADIUS,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
+  const SHIP_RADIUS=24,ASTEROID_RADIUS=PHYSICS_CORE.MEDIUM_ROCK_RADII[0],GIANT_RADIUS=PHYSICS_CORE.GIANT_RADIUS,PICKUP_RADIUS=22,BULLET_RADIUS=4,MISSILE_HIT_RADIUS=12,SMALL_METEOR_RADIUS=14;
   const shipCollisionRadius=p=>PHYSICS_CORE.shipCollisionRadius(p,SHIP_RADIUS);
   const SPAWN_PROTECTION_SECONDS=3,SPAWN_MATERIALIZE_SECONDS=1.15,BRUTAL_SHOT_DISTANCE=850;
   // V22.29: memoria anti-bucle de combate. Es estado local de la CPU, no viaja por red.
@@ -891,7 +891,6 @@
     spawnAsteroidFromEdge(templateIndex,fullyRandom=false){
       const idx=clamp(Math.round(Number(templateIndex)||0),0,ASTEROID_STARTS.length-1);
       let [targetX,targetY,rot,type]=ASTEROID_STARTS[idx];
-      const radius=ASTEROID_RADIUS;
       const edge=ASTEROID_RADIUS*2;
       let start;
       if(fullyRandom){
@@ -914,8 +913,9 @@
         start=choices[0];
       }
       const n=normalize(targetX-start.x,targetY-start.y);
+      const id=uid(),spin=rand(0,Math.PI*2),radius=PHYSICS_CORE.mediumRockRadius(id);
       this.asteroids.push({
-        id:uid(),x:start.x,y:start.y,rot,type,spin:rand(0,Math.PI*2),
+        id,x:start.x,y:start.y,rot,type,spin,
         vx:n.x*80,vy:n.y*80,r:radius,exiting:false,exitDelay:-1
       });
     }

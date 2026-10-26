@@ -46,6 +46,7 @@ on:
       - 'server/net-protocol.js'
       - 'tools/check-physics-parity.js'
       - 'tools/check-rock-collisions.js'
+      - 'tools/check-medium-sizes.js'
       - 'tools/check-asteroid-exit.js'
       - 'tools/check-rock-correction-sweeps.js'
       - 'tools/check-local-contact-presentation.js'
@@ -117,6 +118,7 @@ on:
       - 'server/net-protocol.js'
       - 'tools/check-physics-parity.js'
       - 'tools/check-rock-collisions.js'
+      - 'tools/check-medium-sizes.js'
       - 'tools/check-asteroid-exit.js'
       - 'tools/check-rock-correction-sweeps.js'
       - 'tools/check-local-contact-presentation.js'
@@ -192,6 +194,8 @@ jobs:
         run: node tools/check-online-presentation.js
       - name: Check rock collisions in local and host engines
         run: node tools/check-rock-collisions.js
+      - name: Check medium rock size variants, contacts and wire parity
+        run: node tools/check-medium-sizes.js
       - name: Check asteroid retirement preserves motion without phantom rebounds
         run: node tools/check-asteroid-exit.js
       - name: Check physical rock sweeps without depenetration jumps

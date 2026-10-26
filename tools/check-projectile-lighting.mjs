@@ -57,6 +57,15 @@ check('only actually drawn bullets emit, at their current drawn position',()=>{
   assert.equal(JSON.stringify(state),before,'presentation never changes the input snapshot');
 });
 
+check('a fast flyby receives most of its light in the first visible frame',()=>{
+  const f=fixture(),state=snapshot({asteroids:[{x:800,y:500,r:52}]}),bolts=[{id:1,x:750,y:500}];
+  frame(f,state,bolts,1000);const first=live(f.scene)[0].intensity;
+  for(let i=1;i<=40;i++)frame(f,state,bolts,1000+i*16);
+  const settled=live(f.scene)[0].intensity;
+  assert.ok(first>=settled*.55,'short projectile passes must not wait for a slow light fade-in');
+  frame(f,state,[],1700);assert.equal(f.api.activeCount,0);
+});
+
 check('range, invisible/dead ships, guided targets and menu/round resets',()=>{
   const f=fixture(),b={id:1,x:500,y:500};
   frame(f,snapshot({asteroids:[{x:1400,y:500,r:50}]}),[b]);assert.equal(f.api.activeCount,0);

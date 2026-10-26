@@ -1,6 +1,6 @@
 // Local presentation only: no authoritative projectile or collision state is changed.
 const MAX_BOLTS=256,MAX_TARGETS=512;
-const RANGE=220,HEIGHT=120,POWER=3600,SPACING=70;
+const RANGE=260,HEIGHT=120,POWER=60000,SPACING=70;
 
 export function createProjectileLighting(T,scene,{mobile=false}={}){
   const limit=mobile?2:4;
@@ -70,7 +70,7 @@ export function createProjectileLighting(T,scene,{mobile=false}={}){
         const slot=slots.find(s=>s.id===b.id);
         if(slot)slot.used=true;
       }
-      const blend=1-Math.exp(-dt/45);
+      const blend=1-Math.exp(-dt/14);
       for(const b of selected){
         let slot=slots.find(s=>s.id===b.id);
         if(!slot){

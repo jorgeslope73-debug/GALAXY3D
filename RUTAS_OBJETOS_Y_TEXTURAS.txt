@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.85
+V23.86
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -267,3 +267,9 @@ LUZ VERDE LOCAL DE LAS BALAS - V23.85
 - Las balas normales visibles iluminan suavemente los modelos3D cercanos con luz verde y alcance limitado.
 - Se reutilizan cuatro luces puntuales en ordenador y dos en movil, sin sombras. Se priorizan los tiros cercanos a objetos y se agrupan los disparos muy juntos.
 - La luz usa las posiciones que se dibujan y se apaga al desaparecer la bala o cambiar de ronda. No se anaden mensajes ni calculos de fisica por red.
+
+LUZ DE BALA MAS INTENSA Y TAMAÑOS DE MEDIANOS - V23.86
+- Luz verde: potencia de 3600 a 60000, alcance de 220 a 260 y respuesta de 45 a 14 ms; conserva el presupuesto de 4 luces en ordenador y 2 en movil, sin sombras.
+- Medianos: radios51.75 (actual/minimo),59.513 (+15%) y67.275 (+30%), con el mismo GLB, materiales, giro y perfil irregular escalado.
+- El tamaño se fija al nacer a partir del ID existente, sin consumir numeros aleatorios extra; origen, velocidad inicial y calendario mantienen su secuencia de generacion.
+- El radio r ya existente sincroniza visualizacion y colisiones en todos los equipos; se conservan el limite de poblacion y los fragmentos.
