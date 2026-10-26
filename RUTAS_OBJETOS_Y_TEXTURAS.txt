@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.83
+V23.84
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -258,3 +258,7 @@ ACABADO METALICO DEL COHETE - V23.82
 - El cohete activo es docs/assets/models/cohete_galaxy_combat.glb, actualizado por el usuario. mas/final conserva la version anterior.
 - La pintura de equipo solo modifica las zonas magenta de los colores de vertices. Se conservan metalicidad, rugosidad, mapas, emisiones y demas propiedades PBR del GLB.
 - Cohetes equipados y disparados comparten el mismo entorno de reflejos ya utilizado por el OVNI; no se crea uno por objeto ni se cambia la iluminacion del resto de la escena.
+
+ILUMINACION LIGERAMENTE MAYOR - V23.84
+- Exposicion del render3D de0.85 a0.95, un aumento suave para ver mejor los objetos y sus reflejos.
+- Se conservan los materiales y colores del GLB, la iluminacion direccional y el entorno compartido de reflejos.

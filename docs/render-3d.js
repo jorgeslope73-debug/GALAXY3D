@@ -62,7 +62,7 @@
     renderer.setClearColor(0x000000,0);
     renderer.outputColorSpace=T.SRGBColorSpace;
     renderer.toneMapping=T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure=.85;
+    renderer.toneMappingExposure=.95;
     const scene=new T.Scene();
     const camera=new T.OrthographicCamera(-W/2,W/2,H/2,-H/2,1,4000);
     camera.position.set(0,0,1800);
@@ -215,7 +215,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.83';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.84';
     const modelLoads=[];
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
