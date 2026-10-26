@@ -27,6 +27,7 @@ on:
       - 'tools/check-ship-inertia.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-projectile-lighting.mjs'
+      - 'tools/check-engine-particles.js'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
       - 'tools/check-medium-outline.mjs'
@@ -99,6 +100,7 @@ on:
       - 'tools/check-ship-inertia.mjs'
       - 'tools/check-rocket-model.mjs'
       - 'tools/check-projectile-lighting.mjs'
+      - 'tools/check-engine-particles.js'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
       - 'tools/check-medium-outline.mjs'
@@ -240,6 +242,8 @@ jobs:
         run: node tools/check-startup-graphics.js
       - name: Check edited model textures and offline cache
         run: node tools/check-model-texture-cache.js
+      - name: Check local engine particle density, blue lifecycle and pool limits
+        run: node tools/check-engine-particles.js
       - name: Check existing gameplay invariants
         run: node tools/check-game-invariants.js
       - name: Run 5-minute simulated gameplay stress

@@ -526,23 +526,22 @@
 
   // V20.1 LocalFX: particulas de propulsion 100% locales.
   // No forman parte del estado, fisicas, colisiones ni mensajes P2P.
-  const ENGINE_FX_MAX=isMobile?96:192;
+  const ENGINE_FX_MAX=isMobile?448:704;
   const ENGINE_FX_INTERVAL=isMobile?55:38;
-  // V20.21: cada particula elige una de dos gamas de combustion:
-  // amarillo -> naranja/oscuro -> negro, o rojo intenso -> rojo oscuro -> negro.
+  // Azul claro al nacer; azul oscuro al agotar su vida.
   // Las paletas son fijas para evitar gradientes/strings nuevos cada frame.
   const ENGINE_FIRE_PALETTES=[
     [
-      '#fff3a0','#ffe56a','#ffd33d','#ffb52a',
-      '#ff9220','#e9681b','#c94b19','#9f3518',
-      '#792818','#571e16','#3b1713','#26110f',
-      '#170d0c','#0e0908','#080606','#050505'
+      '#efffff','#d5f9ff','#b1efff','#8ee1ff',
+      '#65ccff','#43b4ff','#2998f4','#1d7cdd',
+      '#1861bf','#154b9c','#11377a','#0d275a',
+      '#091b40','#06132d','#040d20','#020817'
     ],
     [
-      '#ff2a16','#ff1b0d','#ff0d08','#f00000',
-      '#dc0000','#c60000','#b00000','#990000',
-      '#820000','#6b0000','#550000','#410000',
-      '#300000','#210000','#120000','#050505'
+      '#e2fbff','#c3f1ff','#a1e2ff','#7bcfff',
+      '#57baff','#369fff','#2184ee','#176bce',
+      '#1353ac','#103e89','#0c2d6b','#092050',
+      '#071639','#050f29','#030b1d','#020715'
     ]
   ];
   const engineParticles=Array.from({length:ENGINE_FX_MAX},()=>({
@@ -604,15 +603,20 @@
   }
   function emitEngineParticle(player,x,y,rot,now,vx,vy,thrusting=false){
     const owner=Math.max(0,Math.min(3,Number(player&&player.i)||0));
-    if(engineTrailHidden[owner]||now-engineEmitAt[owner]<ENGINE_FX_INTERVAL)return;
+    const emissionGap=now-engineEmitAt[owner];
+    if(engineTrailHidden[owner]||emissionGap<ENGINE_FX_INTERVAL)return;
+    const spread=emissionGap>250?0:Math.min(80,emissionGap)/1000;
     engineEmitAt[owner]=now;
 
     const rr=rot*Math.PI/180;
     // Frente = (-sin,-cos); por tanto la parte trasera apunta a (sin,cos).
     const backX=Math.sin(rr),backY=Math.cos(rr);
     const sideX=Math.cos(rr),sideY=-Math.sin(rr);
-    // Use the same bounded pool and fire palette; accelerating emits a denser pair.
-    for(let emitted=0;emitted<(thrusting?2:1);emitted++){
+    // Existing speed levels are 1, 1.5 and 2. Read them only for local density;
+    // held thrust keeps emitting even after physical acceleration reaches zero.
+    const upgrades=Math.max(0,Math.min(2,Math.round(((Number(player&&player.spd)||1)-1)*2)));
+    const amount=thrusting?3+upgrades*2+(upgrades===2?1:0):1+upgrades;
+    for(let emitted=0;emitted<amount;emitted++){
       const jitter=(Math.random()-.5)*10;
       const exhaust=45+Math.random()*45;
       const particle=engineParticles[engineFxCursor];
@@ -625,7 +629,12 @@
       particle.vx=(Number(vx)||0)*.18+backX*exhaust+sideX*(Math.random()-.5)*16;
       particle.vy=(Number(vy)||0)*.18+backY*exhaust+sideY*(Math.random()-.5)*16;
       particle.maxLife=.42+Math.random()*.34;
-      particle.life=particle.maxLife;
+      // Reconstruct the short emission window along the drawn motion, so a
+      // fast ship leaves a continuous stream instead of separated clumps.
+      const birthAge=spread*emitted/amount;
+      particle.x+=(particle.vx-(Number(vx)||0))*birthAge;
+      particle.y+=(particle.vy-(Number(vy)||0))*birthAge;
+      particle.life=particle.maxLife-birthAge;
 
       // Algo mas pequenas de salida que antes, pero con variedad organica:
       // la mayoria son medias, algunas son motas pequenas y unas pocas mayores.
@@ -633,7 +642,7 @@
       const baseSize=(isMobile?2.35:1.95)+Math.random()*(isMobile?3.15:2.85);
       particle.size=baseSize*(sizeRoll<.20?.64:(sizeRoll>.86?1.24:1));
 
-      // La gama se decide una sola vez al nacer: amarillo-negro o rojo-negro.
+      // La variante azul se decide una sola vez al nacer.
       particle.palette=Math.random()<.5?0:1;
     }
   }
@@ -663,7 +672,7 @@
 
     ctx.save();
 
-    // Cola fria: rojo muy oscuro hasta negro, dibujada en source-over para
+    // Cola fria: azul oscuro, dibujada en source-over para
     // que los tonos oscuros sigan siendo visibles. Con 'lighter' desaparecerian.
     ctx.globalCompositeOperation='source-over';
     for(const particle of engineParticles){
@@ -686,7 +695,7 @@
       ctx.fill();
     }
 
-    // Zona caliente: rojo muy intenso junto a la tobera, perdiendo brillo y
+    // Zona caliente: azul claro junto a la tobera, perdiendo brillo y
     // saturacion al alejarse. 'lighter' conserva el resplandor inicial.
     ctx.globalCompositeOperation='lighter';
     for(const particle of engineParticles){

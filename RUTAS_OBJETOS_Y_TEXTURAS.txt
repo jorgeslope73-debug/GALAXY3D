@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.88
+V23.89
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -282,3 +282,10 @@ AVISO PERSONAL POR IMPACTO DE MISIL PROPIO - V23.88
 - Al recibir un misil propio, en casco o escudo, solo su propietario ve «¡UPSS!» durante aproximadamente un segundo.
 - El impacto confirmado usa el efecto de desintegracion existente con el tipo selfMissile; mantiene las particulas y viaja por el snapshot habitual, sin eventos ni frecuencias de red adicionales.
 - Funciona contra CPU y en red; los IDs existentes evitan repetir el aviso al recibir el mismo efecto en varios estados.
+
+PARTICULAS DE TOBERA AZULES Y DENSIDAD POR VELOCIDAD - V23.89
+- Aceleracion: 3 particulas por emision sin mejoras, 5 con una mejora y 8 con velocidad maxima. El giro sin acelerar conserva emisiones (1, 2 y 3 segun mejoras).
+- Las particulas existentes nacen azul claro y evolucionan a azul oscuro mientras se encogen y desaparecen; dos paletas fijas evitan crear gradientes por fotograma.
+- Se mantienen intervalos y vida; el pool fijo aumenta a 704 en ordenador y 448 en movil para admitir cuatro naves mejoradas sin cortar prematuramente sus colas.
+- Solo se lee spd y aceleracion ya recibidos. No cambia la fisica, el protocolo ni la frecuencia de los mensajes.
+- Se distribuye el nacimiento sobre el intervalo visual recorrido (maximo 80 ms), sin recuperar estelas antiguas al volver a acelerar.
