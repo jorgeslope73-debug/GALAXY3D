@@ -142,8 +142,10 @@
   const pickupVisualBorn=new Map();
   const gameFeelFxSeen=new Set();
   const shipHitFlashUntil=[0,0,0,0];
+  let localRespawnVisual=null;
   let cameraShakeStart=0,cameraShakeUntil=0,cameraShakePower=0,cameraShakeSeed=0;
   function resetGameFeelVisuals(){
+    localRespawnVisual=null;
     pickupVisualBorn.clear();gameFeelFxSeen.clear();
     shipHitFlashUntil.fill(0);
     cameraShakeStart=0;cameraShakeUntil=0;cameraShakePower=0;cameraShakeSeed=0;
@@ -5262,6 +5264,52 @@
       }
     }finally{ctx.restore();}
   }
+  function drawLocalRespawnCountdown(now){
+    const p=state?.players?.find(player=>Number(player.i)===Number(myIndex));
+    if(!inGame||!p||state.finished){localRespawnVisual=null;return;}
+    const round=state.round??localCampaignLevel??0,epoch=state.hostEpoch||0;
+    const same=localRespawnVisual&&localRespawnVisual.code===state.code&&localRespawnVisual.round===round&&localRespawnVisual.epoch===epoch&&localRespawnVisual.death===p.d;
+    if(p.dead&&Number.isFinite(p.spawnX)&&Number.isFinite(p.spawnY)&&Number.isFinite(p.respawn)){
+      const endAt=(lastStateTime||now)+Math.max(0,p.respawn)*1000;
+      if(!same)localRespawnVisual={code:state.code,round,epoch,death:p.d,x:p.spawnX,y:p.spawnY,endAt,snapshot:state,zeroAt:null,revealedAt:null};
+      else if(localRespawnVisual.snapshot!==state){
+        localRespawnVisual.endAt=Math.min(localRespawnVisual.endAt,endAt);
+        localRespawnVisual.snapshot=state;
+      }
+    }else if(!p.dead&&same){
+      if(localRespawnVisual.revealedAt===null)localRespawnVisual.revealedAt=now;
+      if(now-localRespawnVisual.revealedAt>=280){localRespawnVisual=null;return;}
+    }else{localRespawnVisual=null;return;}
+    const view=localRespawnVisual;
+    const left=p.dead?Math.max(0,(view.endAt-now)/1000):0;
+    const digit=Math.min(3,Math.ceil(left));
+    if(digit===0&&view.zeroAt===null)view.zeroAt=now;
+    const age=digit>0?digit-left:(now-view.zeroAt)/1000;
+    const pop=1+.32*Math.exp(-7*Math.max(0,age));
+    const alpha=view.revealedAt===null?1:clamp(1-(now-view.revealedAt)/280,0,1);
+    const [r,g,b]=playerRgb[Number(myIndex)]||playerRgb[0];
+    ctx.save();
+    try{
+      ctx.translate(view.x,view.y);
+      ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle=`rgba(${r},${g},${b},.9)`;
+      ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(0,0,88+3*Math.sin(now*.006),0,Math.PI*2);ctx.stroke();
+      ctx.lineWidth=5;
+      for(let i=0;i<4;i++){
+        const angle=i*Math.PI/2+now*.0006;
+        ctx.beginPath();ctx.arc(0,0,100,angle,angle+.4);ctx.stroke();
+      }
+      ctx.scale(pop,pop);
+      ctx.font=`${isMobile?136:120}px Flashback,Arial`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.lineWidth=10;ctx.strokeStyle='rgba(0,0,0,.92)';
+      ctx.shadowColor=`rgba(${r},${g},${b},.9)`;ctx.shadowBlur=20;
+      ctx.fillStyle='#f2fbff';
+      ctx.strokeText(String(digit),0,0);ctx.fillText(String(digit),0,0);
+    }finally{ctx.restore();}
+  }
   function lerp(a,b,t){return a+(b-a)*t;}
   function lerpAngle(a,b,t){
     const delta=((b-a+540)%360)-180;
@@ -6950,6 +6998,7 @@
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
+    drawLocalRespawnCountdown(now);
     if(perfStats){
       const r=perfStats.report;
       ctx.save();

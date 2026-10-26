@@ -67,6 +67,7 @@ on:
       - 'tools/check-shower-lifecycle.js'
       - 'tools/check-physics-hot-paths.js'
       - 'tools/check-spawn-scoring.js'
+      - 'tools/check-respawn-countdown.js'
       - 'tools/check-session-regressions.js'
       - 'tools/check-online-protocol.js'
       - 'tools/check-game-invariants.js'
@@ -140,6 +141,7 @@ on:
       - 'tools/check-shower-lifecycle.js'
       - 'tools/check-physics-hot-paths.js'
       - 'tools/check-spawn-scoring.js'
+      - 'tools/check-respawn-countdown.js'
       - 'tools/check-session-regressions.js'
       - 'tools/check-online-protocol.js'
       - 'tools/check-game-invariants.js'
@@ -244,6 +246,8 @@ jobs:
         run: node tools/check-model-texture-cache.js
       - name: Check local engine particle density, blue lifecycle and pool limits
         run: node tools/check-engine-particles.js
+      - name: Check reserved respawn points, three-second delay and private countdown
+        run: node tools/check-respawn-countdown.js
       - name: Check existing gameplay invariants
         run: node tools/check-game-invariants.js
       - name: Run 5-minute simulated gameplay stress

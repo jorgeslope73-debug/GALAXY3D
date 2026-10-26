@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.89
+V23.90
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -289,3 +289,9 @@ PARTICULAS DE TOBERA AZULES Y DENSIDAD POR VELOCIDAD - V23.89
 - Se mantienen intervalos y vida; el pool fijo aumenta a 704 en ordenador y 448 en movil para admitir cuatro naves mejoradas sin cortar prematuramente sus colas.
 - Solo se lee spd y aceleracion ya recibidos. No cambia la fisica, el protocolo ni la frecuencia de los mensajes.
 - Se distribuye el nacimiento sobre el intervalo visual recorrido (maximo 80 ms), sin recuperar estelas antiguas al volver a acelerar.
+
+CUENTA PERSONAL DE REAPARICION - V23.90
+- La nave permanece muerta 3 segundos. El anfitrion reserva desde la muerte el punto exacto, separado de otras reservas y jugadores activos, y lo conserva hasta reaparecer.
+- Cada cliente dibuja un marcador y numeros grandes 3, 2, 1 y 0 sobre su propio punto, con animacion local entre estados. El 0 se desvanece al confirmar la reaparicion.
+- Se reutiliza respawn y se anaden solo spawnX/spawnY mientras la nave esta muerta; no hay mensajes ni temporizadores de red por cada numero. La explosion y el botin conservan el lugar de muerte.
+- Se mantienen la materializacion y la proteccion posteriores; reiniciar o terminar la ronda limpia las reservas y los indicadores.

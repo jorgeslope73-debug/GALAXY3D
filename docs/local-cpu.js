@@ -1244,7 +1244,7 @@
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
-      for(const p of this.players)p.dead=true;
+      for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;
         this.applyTrainingHardLoadout(p,false);
@@ -1467,7 +1467,7 @@
     destroyShip(victim,attacker=null,weaponTheft=false,scorePenalty=false){
       if(victim.dead||this.finished)return;
       if(victim.protection>0||victim.shield>0){this.emitShipImpact(victim,attacker,false);return;}
-      victim.dead=true;victim.respawn=.7;victim.vx=victim.vy=0;victim.deaths++;
+      victim.dead=true;victim.respawn=3;victim.vx=victim.vy=0;victim.deaths++;
       this.noteCpuLoopDeath(victim,attacker);
       // V21.28: una onda pertenece a la vida que la lanzo. Si esa nave muere,
       // su frente deja de tener fisica inmediatamente y no puede matar despues
@@ -1497,24 +1497,34 @@
           this.emit({t:'victory',winner:this.winner});
         }
       }
+      if(!this.finished)this.placeAtSpawn(victim,true);
     }
-    placeAtSpawn(p){
-      const area=spawnArea(PHYSICS_CORE.chooseSpawnSector(p,this.players,W,H));
-      const obstacles=this.asteroids.map(a=>({x:a.x,y:a.y,r:a.r}));
-      for(const m of this.meteors)obstacles.push({x:m.x,y:m.y,r:SMALL_METEOR_RADIUS});
-      if(this.giant)obstacles.push({x:this.giant.x,y:this.giant.y,r:GIANT_RADIUS});
-      for(const other of this.players)if(other.index!==p.index&&!other.dead)obstacles.push({x:other.x,y:other.y,r:shipCollisionRadius(other)});
-      let best=null,bestScore=-Infinity;
-      for(let attempt=0;attempt<24;attempt++){
-        const candidate={x:rand(area.minX,area.maxX),y:rand(area.minY,area.maxY)};
-        let clearance=Infinity;
-        for(const o of obstacles)clearance=Math.min(clearance,Math.hypot(candidate.x-o.x,candidate.y-o.y)-SHIP_RADIUS-o.r-12);
-        const tooSimilar=p.lastSpawn&&dist2(candidate,p.lastSpawn)<28*28;
-        const score=(clearance>=0?10000:0)+Math.min(1000,clearance)-(tooSimilar?1000:0);
-        if(score>bestScore){best=candidate;bestScore=score;}
-        if(clearance>=0&&!tooSimilar){best=candidate;break;}
+    placeAtSpawn(p,reserve=false){
+      let spawn=!reserve&&p.pendingSpawn;
+      if(!spawn){
+        // Reserved dead ships occupy their future sectors until they return.
+        const roster=this.players.map(other=>other.pendingSpawn?{...other,x:other.pendingSpawn.x,y:other.pendingSpawn.y,dead:false}:other);
+        const area=spawnArea(PHYSICS_CORE.chooseSpawnSector(p,roster,W,H));
+        const obstacles=this.asteroids.map(a=>({x:a.x,y:a.y,r:a.r}));
+        for(const m of this.meteors)obstacles.push({x:m.x,y:m.y,r:SMALL_METEOR_RADIUS});
+        if(this.giant)obstacles.push({x:this.giant.x,y:this.giant.y,r:GIANT_RADIUS});
+        for(const other of roster)if(other.index!==p.index&&!other.dead)obstacles.push({x:other.x,y:other.y,r:shipCollisionRadius(other)});
+        let best=null,bestScore=-Infinity;
+        for(let attempt=0;attempt<24;attempt++){
+          const candidate={x:rand(area.minX,area.maxX),y:rand(area.minY,area.maxY)};
+          let clearance=Infinity;
+          for(const o of obstacles)clearance=Math.min(clearance,Math.hypot(candidate.x-o.x,candidate.y-o.y)-SHIP_RADIUS-o.r-12);
+          const tooSimilar=p.lastSpawn&&dist2(candidate,p.lastSpawn)<28*28;
+          const score=(clearance>=0?10000:0)+Math.min(1000,clearance)-(tooSimilar?1000:0);
+          if(score>bestScore){best=candidate;bestScore=score;}
+          if(clearance>=0&&!tooSimilar){best=candidate;break;}
+        }
+        spawn={x:best.x,y:best.y,rot:rand(0,360)};
       }
-      p.x=best.x;p.y=best.y;p.px=p.x;p.py=p.y;p.rot=rand(0,360);p.pr=p.rot;p.bank=0;p.pbank=0;p.vx=0;p.vy=0;p.lastSpawn={x:p.x,y:p.y};p.spawnAnchorX=p.x;p.spawnAnchorY=p.y;
+      if(reserve){p.pendingSpawn=spawn;return;}
+      p.pendingSpawn=null;
+
+      p.x=spawn.x;p.y=spawn.y;p.px=p.x;p.py=p.y;p.rot=spawn.rot;p.pr=p.rot;p.bank=0;p.pbank=0;p.vx=0;p.vy=0;p.lastSpawn={x:p.x,y:p.y};p.spawnAnchorX=p.x;p.spawnAnchorY=p.y;
       p.openingFleeUntil=p.cpu&&Math.random()<.45?(Number(this.fxClock)||0)+SPAWN_MATERIALIZE_SECONDS+rand(1.5,3.5):0;
       p.aiControl=null;p.easyControl=null;
     }
@@ -2386,7 +2396,7 @@
         p.previousPoseTime=Number.isFinite(p.poseTime)?p.poseTime:this.fxClock-dt;p.poseTime=this.fxClock;
         if((Number(p.spawnFx)||0)>0){p.spawnFx=Math.max(0,p.spawnFx-dt);p.protection=SPAWN_PROTECTION_SECONDS;}else p.protection=p.protection-dt>1e-9?p.protection-dt:0;
         p.shield=Math.max(0,p.shield-dt);p.camo=Math.max(0,p.camo-dt);p.reload=Math.max(0,p.reload-dt);
-        if(p.dead){p.thrust=false;p.respawn-=dt;if(p.respawn<=0)this.respawnPlayer(p);continue;}
+        if(p.dead){p.thrust=false;p.respawn=Math.max(0,p.respawn-dt);if(p.respawn<=1e-9)this.respawnPlayer(p);continue;}
         if((Number(p.spawnFx)||0)>0){p.thrust=false;p.vx=0;p.vy=0;p.x=Number(p.spawnAnchorX)||p.x;p.y=Number(p.spawnAnchorY)||p.y;p.px=p.x;p.py=p.y;continue;}
         if(p.cpu){
           // V20.10: la CPU queda visualmente ARMADA durante 1 segundo antes
@@ -3351,7 +3361,7 @@
         t:'state',seq:++this.seq,code:'LOCAL',mode:'cpu',started:this.started,finished:this.finished,winner:this.winner,
         w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,simTime:round3(this.fxClock),
         fx:this.fxEvents.map(e=>({id:e.id,i:e.i,x:e.x,y:e.y,kind:e.kind,hidden:e.hidden,age:Math.max(0,Math.round((this.fxClock-e.at)*1000))})),
-        players:this.players.map(p=>({i:p.index,n:p.name,cpu:p.cpu,x:round1(p.x),y:round1(p.y),r:round1(p.rot),b:round3(Number(p.bank)||0),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn)})),
+        players:this.players.map(p=>({i:p.index,n:p.name,cpu:p.cpu,x:round1(p.x),y:round1(p.y),r:round1(p.rot),b:round3(Number(p.bank)||0),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn),...(p.dead&&p.pendingSpawn?{spawnX:round1(p.pendingSpawn.x),spawnY:round1(p.pendingSpawn.y)}:{})})),
         asteroids:this.asteroids.map(a=>({id:a.id,x:round1(a.x),y:round1(a.y),type:a.type,s:round3(Number(a.spin)||0),r:round3(Number(a.r)||ASTEROID_RADIUS),fragment:!!a.fragment})),
         bullets:this.bullets.map(b=>({id:b.id,o:b.owner,owner:b.owner,x:round1(b.x),y:round1(b.y),vx:round1(b.vx),vy:round1(b.vy),g:!!b.guided,guided:!!b.guided,gt:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,target:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,wt:(!b.decoyed&&b.guided&&Number.isInteger(b.target))?b.target:-1})),
         flares:this.flares.map(f=>({id:f.id,o:f.owner,x:round1(f.x),y:round1(f.y),a:round1(f.angle),life:round2(Math.max(0,f.life))})),
