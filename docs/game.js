@@ -5293,6 +5293,9 @@
     ctx.save();
     try{
       ctx.translate(x,y);
+      const edge=Math.max(1,Math.min(x,W-x,y,H-y));
+      const fit=Math.min(1,edge/((isMobile?100:90)*pop+24));
+      ctx.scale(fit,fit);
       ctx.globalCompositeOperation='source-over';
       ctx.globalAlpha=alpha;
       ctx.strokeStyle=`rgba(${r},${g},${b},.9)`;

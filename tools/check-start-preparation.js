@@ -35,7 +35,7 @@ function extract(name){const a=source.indexOf('  function '+name+'('),b=source.i
 for(const index of [0,1]){
   const text=[],points=[],ctx={save(){},restore(){},translate(x,y){points.push([x,y]);},scale(){},beginPath(){},arc(){},stroke(){},strokeText(){},fillText(v){text.push(v);}};
   const players=[{i:0,x:450,y:400},{i:1,x:1450,y:750}],snapshot={players,finished:false};
-  const view=vm.createContext({ctx,inGame:true,myIndex:index,state:snapshot,localEntryVisual:null,isMobile:false,playerRgb:[[0,180,255],[255,30,180]],clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),matchStartGate:{key:'ROOM:6',phase:'countdown',deadline:4000,goAt:0}});
+  const view=vm.createContext({ctx,W:1920,H:1080,inGame:true,myIndex:index,state:snapshot,localEntryVisual:null,isMobile:false,playerRgb:[[0,180,255],[255,30,180]],clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),matchStartGate:{key:'ROOM:6',phase:'countdown',deadline:4000,goAt:0}});
   vm.runInContext(extract('drawSpawnCountdownMarker')+extract('drawLocalEntryCountdown'),view);
   for(const t of [1000,2000,3000,4000])view.drawLocalEntryCountdown(t);
   assert.deepEqual(text,['3','2','1','0']);assert.ok(points.every(([x,y])=>x===players[index].x&&y===players[index].y),'each machine draws only its own initial position');
