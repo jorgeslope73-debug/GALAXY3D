@@ -45,7 +45,7 @@ const start=source.indexOf('  function drawLocalRespawnCountdown('),end=source.i
 function view(index=0){
   const draws=[],moves=[],scales=[],ctx={save(){},restore(){},translate(x,y){moves.push([x,y]);},scale(x){scales.push(x);},beginPath(){},arc(){},stroke(){},strokeText(){},fillText(t){draws.push(t);}};
   const c=vm.createContext({myIndex:index,inGame:true,state:{code:'TEST',round:1,hostEpoch:1,simTime:1,players:[{i:0,d:1,dead:true,respawn:3,spawnX:600,spawnY:700},{i:1,d:0,dead:false}]},localRespawnVisual:null,lastStateTime:1000,localCampaignLevel:0,playerRgb:[[0,180,255],[255,0,180]],isMobile:false,ctx,clamp:(v,a,b)=>Math.max(a,Math.min(b,v))});
-  vm.runInContext(source.slice(start,end),c);return {c,draws,moves,scales};
+  const markerStart=source.indexOf('  function drawSpawnCountdownMarker('),markerEnd=source.indexOf('  function drawLocalRespawnCountdown(',markerStart);vm.runInContext(source.slice(markerStart,markerEnd)+source.slice(start,end).split('  function drawLocalEntryCountdown(')[0],c);return {c,draws,moves,scales};
 }
 const own=view();
 for(const t of [1000,2000,3000,4000])own.c.drawLocalRespawnCountdown(t);

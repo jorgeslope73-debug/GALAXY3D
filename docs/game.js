@@ -300,7 +300,8 @@
   let brutalTitleCache=null,brutalTitleCacheText='',brutalTitleCacheMobile=null;
   // V19.56: cuenta atras online prerenderizada. PREPARADOS sirve de colchon
   // para estabilizar WebRTC/recursos; al aparecer VAMOS arrancan fisica y controles.
-  const ONLINE_READY_MS=2000,ONLINE_GO_MS=900;
+  const ONLINE_READY_MS=3000,ONLINE_ENTRY_MS=3000,ONLINE_GO_MS=900;
+  let matchStartGate=null,startReadyRetryTimer=null,localEntryVisual=null;
   let onlineStartAt=0,onlineGoAt=0,onlineStartEndAt=0,onlineStartTimer=null,onlineStartRankRound=1;
   let onlineStartPending=false,onlineStartGeneration=0,lastRestartedRound=0;
   let onlineReadyRedCache=null,onlineReadyOrangeCache=null,onlineGoCache=null;
@@ -1368,6 +1369,7 @@
       g.fillStyle='#fff';g.fillText('GALAXY 0123456789',4,238);
       g.shadowColor='rgba(90,225,255,.95)';g.shadowBlur=48;
       g.fillText('READY',120,238);
+      g.font='120px Flashback,Arial';g.fillText('3210',4,180);
       g.shadowBlur=0;
       g.globalCompositeOperation='screen';g.fillRect(0,0,8,8);
       g.globalCompositeOperation='lighter';g.fillRect(10,0,8,8);
@@ -1385,12 +1387,15 @@
         document.fonts.load('180px Flashback')
       ])
       :Promise.resolve();
-    gameAssetsPromise=Promise.allSettled([...Object.values(imageDecodePromises),fontPromise]).then(()=>{
+    gameAssetsPromise=Promise.allSettled([...Object.values(imageDecodePromises),fontPromise]).then(async()=>{
       // Construye la cache grande del fondo mientras aun estamos en menu/lobby,
       // no durante los primeros frames de la partida.
       updateCanvasResolution();
       warmRendererCaches();
       warmOnlineStartCaches(true);
+      await window.Galaxy3D?.ready;
+      if(window.Galaxy3D?.prepareMatch)await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
+      if(window.GalaxyStartPreparation?.warmSimulation)await window.GalaxyStartPreparation.warmSimulation(window.GalaxyLocalCpu,{difficulty:document.getElementById('difficulty')?.value||'facil'});
       gameAssetsReady=true;
       return true;
     });
@@ -2597,7 +2602,7 @@
     if(p2p||typeof window.GalaxyP2P!=='function')return p2p;
     p2p=new window.GalaxyP2P({
       sendSignal:o=>sendSocketRaw(ws,JSON.stringify(o)),
-      onControl:(i,m)=>{if(hostPhysics&&isCurrentOnlinePacket(m))hostPhysics.setControl(i,m.turn,m.thrust,m.fire,m);},
+      onControl:(i,m)=>{if(hostPhysics&&isCurrentOnlinePacket(m)&&!(typeof matchStartGate!=='undefined'&&matchStartGate?.blocked))hostPhysics.setControl(i,m.turn,m.thrust,m.fire,m);},
       onState:m=>{
         const now=performance.now();
         const gap=lastP2PStateAt?now-lastP2PStateAt:Infinity;
@@ -2616,6 +2621,8 @@
       onEvent:m=>{
         if(m&&m.t==='p2p-input-action'&&isHost&&hostPhysics){
           applyOnlineInputAction(Number(m.from),m);
+        }else if(m&&m.t==='p2p-action'&&m.action==='start-ready'){
+          receiveStartPreparationReady(Number(m.from),m);
         }else if(m&&m.t==='p2p-action'&&isHost&&m.action==='restart'&&hostPhysics){
           restartOnlineRoundAuthoritatively(m.rankRound,m.hostEpoch);
         }else receiveOnlineEvent(m);
@@ -3061,8 +3068,8 @@
       if(m&&m.t==='fallback-state'){
         // Puede quedar un estado en vuelo despues de fallback-clear.
         // No reactivar el respaldo cuando el enlace directo ya se recupero.
-        if(!isHost&&m.state&&isCurrentOnlinePacket(m.state,{futureRound:true})&&(fallbackActive||clientNeedsFallback())){
-          fallbackActive=true;handle(m.state);
+        if(!isHost&&m.state&&isCurrentOnlinePacket(m.state,{futureRound:true})&&(m.state.startGate?.v===1||fallbackActive||clientNeedsFallback())){
+          if(!m.state.startGate)fallbackActive=true;handle(m.state);
         }
         return;
       }
@@ -3072,7 +3079,7 @@
         return;
       }
       if(m&&m.t==='fallback-ctrl'){
-        if(isHost&&hostPhysics&&isCurrentOnlinePacket(m))hostPhysics.setControl(Number(m.from),Number(m.turn)||0,!!m.thrust,!!m.fire,m);
+        if(isHost&&hostPhysics&&isCurrentOnlinePacket(m)&&!matchStartGate?.blocked)hostPhysics.setControl(Number(m.from),Number(m.turn)||0,!!m.thrust,!!m.fire,m);
         return;
       }
       if(m&&m.t==='fallback-input-action'){
@@ -3081,7 +3088,8 @@
       }
       if(m&&m.t==='input-ack'){acknowledgeInputAction(m);return;}
       if(m&&m.t==='fallback-action'){
-        if(isHost&&m.action==='restart'&&hostPhysics)restartOnlineRoundAuthoritatively(m.rankRound,m.hostEpoch);
+        if(m.action==='start-ready')receiveStartPreparationReady(Number(m.from),m);
+        else if(isHost&&m.action==='restart'&&hostPhysics)restartOnlineRoundAuthoritatively(m.rankRound,m.hostEpoch);
         return;
       }
       if(m&&m.t==='critical-ack'){
@@ -3885,6 +3893,7 @@
       // El roster es la autoridad sobre si cada plaza es HUMANO o CPU,
       // tambien durante la victoria/espera entre partidas.
       if(isHost&&hostPhysics&&typeof hostPhysics.syncRoster==='function')hostPhysics.syncRoster(lobbyPlayers);
+      if(matchStartGate?.authority&&matchStartGate.phase==='preparing')matchStartGate.setPeers(startPreparationPeers());
       syncVoicePlayers(m.players,true);roomCodeEl.textContent=m.code;
       playersEl.innerHTML=m.players.map(p=>`<div style="color:${playerColors[p.i]||'#fff'}">J${p.i+1} · ${escapeHtml(sinTildes(p.n))}${p.registered?' · ✓':''}${p.cpu?' · CPU':''}${p.champion?' · 🏆':''}${Number(p.i)===Number(hostIndex)?' · HOST':''}</div>`).join('');
       updateLobbyStartButton(!!m.canStart);updateCpuFillButton(cpuFillEnabled);updateWaitingPlayers(m.players);
@@ -4046,6 +4055,7 @@
       previousStateTime=lastStateTime;
       rebuildPreviousLookup(previousState);
       state=m;lastStateTime=now;
+      applyStartPreparationState(m);
       if(typeof networkPlayback!=='undefined'&&networkPlayback&&!isHost&&!localCpuActive)networkPlayback.push(m,now);
       if(netDebug){
         if(netMetrics.lastState)netMetrics.maxGap=Math.max(netMetrics.maxGap,now-netMetrics.lastState);
@@ -4381,7 +4391,7 @@
     if(roomCode==='LOCAL')selectLocalCampaignBackground(localCampaignLevel);
     else if(Number(backgroundRound)>0)selectMatchBackgroundForRound(backgroundRound);
     else if(!roomCode)selectNextMatchBackground();
-    stopMusic();updateMobileControlUi();resetLocalVisual();resetRemoteVisuals();lastControlThrust=false;lastControlSentAt=0;lastSentControlTurn=NaN;lastSentControlThrust=false;lastSentControlFire=false;inGame=true;menu.classList.add('hidden');lobby.classList.add('hidden');victory.classList.remove('winner-celebration');victory.classList.add('hidden');if(preparingOnline){topbar.classList.add('hidden');mobileControls.classList.add('hidden');if(mobileExit)mobileExit.classList.add('hidden');}else activateGameUi();scheduleCanvasResolution();}
+    stopMusic();updateMobileControlUi();resetLocalVisual();resetRemoteVisuals();lastControlThrust=false;lastControlSentAt=0;lastSentControlTurn=NaN;lastSentControlThrust=false;lastSentControlFire=false;inGame=true;menu.classList.add('hidden');lobby.classList.add('hidden');victory.classList.remove('winner-celebration');victory.classList.add('hidden');if(preparingOnline){topbar.classList.remove('hidden');mobileControls.classList.add('hidden');if(mobileExit)mobileExit.classList.remove('hidden');}else activateGameUi();scheduleCanvasResolution();}
   function queueVictory(i){
     const winnerIndex=Number(i);
     if(!inGame||!Number.isInteger(winnerIndex)||winnerIndex<0||winnerIndex>3)return;
@@ -5277,6 +5287,31 @@
       }
     }finally{ctx.restore();}
   }
+  function drawSpawnCountdownMarker(x,y,index,digit,age,alpha,now){
+    const pop=1+.32*Math.exp(-7*Math.max(0,age));
+    const [r,g,b]=playerRgb[index]||playerRgb[0];
+    ctx.save();
+    try{
+      ctx.translate(x,y);
+      ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle=`rgba(${r},${g},${b},.9)`;
+      ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(0,0,88+3*Math.sin(now*.006),0,Math.PI*2);ctx.stroke();
+      ctx.lineWidth=5;
+      for(let i=0;i<4;i++){
+        const angle=i*Math.PI/2+now*.0006;
+        ctx.beginPath();ctx.arc(0,0,100,angle,angle+.4);ctx.stroke();
+      }
+      ctx.scale(pop,pop);
+      ctx.font=`${isMobile?136:120}px Flashback,Arial`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.lineWidth=10;ctx.strokeStyle='rgba(0,0,0,.92)';
+      ctx.shadowColor=`rgba(${r},${g},${b},.9)`;ctx.shadowBlur=20;
+      ctx.fillStyle='#f2fbff';
+      ctx.strokeText(String(digit),0,0);ctx.fillText(String(digit),0,0);
+    }finally{ctx.restore();}
+  }
   function drawLocalRespawnCountdown(now){
     const p=state?.players?.find(player=>Number(player.i)===Number(myIndex));
     if(!inGame||!p||state.finished){localRespawnVisual=null;return;}
@@ -5298,31 +5333,23 @@
     const digit=Math.min(3,Math.ceil(left));
     if(digit===0&&view.zeroAt===null)view.zeroAt=now;
     const age=digit>0?digit-left:(now-view.zeroAt)/1000;
-    const pop=1+.32*Math.exp(-7*Math.max(0,age));
     const alpha=view.revealedAt===null?1:clamp(1-(now-view.revealedAt)/280,0,1);
-    const [r,g,b]=playerRgb[Number(myIndex)]||playerRgb[0];
-    ctx.save();
-    try{
-      ctx.translate(view.x,view.y);
-      ctx.globalCompositeOperation='source-over';
-      ctx.globalAlpha=alpha;
-      ctx.strokeStyle=`rgba(${r},${g},${b},.9)`;
-      ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(0,0,88+3*Math.sin(now*.006),0,Math.PI*2);ctx.stroke();
-      ctx.lineWidth=5;
-      for(let i=0;i<4;i++){
-        const angle=i*Math.PI/2+now*.0006;
-        ctx.beginPath();ctx.arc(0,0,100,angle,angle+.4);ctx.stroke();
-      }
-      ctx.scale(pop,pop);
-      ctx.font=`${isMobile?136:120}px Flashback,Arial`;
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.lineWidth=10;ctx.strokeStyle='rgba(0,0,0,.92)';
-      ctx.shadowColor=`rgba(${r},${g},${b},.9)`;ctx.shadowBlur=20;
-      ctx.fillStyle='#f2fbff';
-      ctx.strokeText(String(digit),0,0);ctx.fillText(String(digit),0,0);
-    }finally{ctx.restore();}
+    drawSpawnCountdownMarker(view.x,view.y,Number(myIndex),digit,age,alpha,now);
   }
+  function drawLocalEntryCountdown(now){
+    const gate=matchStartGate;
+    if(!inGame||!gate||!['countdown','go'].includes(gate.phase)||!state||state.finished)return;
+    if(gate.phase==='go'&&now-gate.goAt>=280)return;
+    const player=(state.players||[]).find(p=>Number(p.i)===Number(myIndex));
+    if(!player||!Number.isFinite(player.x)||!Number.isFinite(player.y))return;
+    if(!localEntryVisual||localEntryVisual.key!==gate.key)localEntryVisual={key:gate.key,x:player.x,y:player.y};
+    const left=gate.phase==='go'?0:Math.max(0,(gate.deadline-now)/1000);
+    const digit=Math.min(3,Math.ceil(left));
+    const age=digit>0?digit-left:Math.max(0,(now-(gate.goAt||gate.deadline))/1000);
+    const alpha=gate.phase==='go'?clamp(1-(now-gate.goAt)/280,0,1):1;
+    drawSpawnCountdownMarker(localEntryVisual.x,localEntryVisual.y,Number(myIndex),digit,age,alpha,now);
+  }
+
   function lerp(a,b,t){return a+(b-a)*t;}
   function lerpAngle(a,b,t){
     const delta=((b-a+540)%360)-180;
@@ -5582,7 +5609,7 @@
       }
     }
     // The short explosion is drawn by impactFX, never from a PNG download.
-    if(p.dead)return;
+    if(p.dead||onlinePreparing(now))return;
     const spawnFxLeft=Math.max(0,Number(p.spawnFx)||0);
     if(spawnFxLeft>0)drawSpawnMaterializeFx(x,y,p.i,spawnFxLeft,now);
     const localizedOwner=localizedTargetOwners[Number(p.i)];
@@ -6117,27 +6144,58 @@
       ctx.clearRect(0,0,canvas.width,canvas.height);
     }finally{ctx.restore();}
   }
+  function clearStartReadyRetry(){
+    if(startReadyRetryTimer!==null){clearTimeout(startReadyRetryTimer);startReadyRetryTimer=null;}
+  }
   function resetOnlineStartCountdown(){
     onlineStartGeneration++;onlineStartPending=false;
+    matchStartGate?.cancel();matchStartGate=null;localEntryVisual=null;clearStartReadyRetry();
     if(onlineStartTimer){clearTimeout(onlineStartTimer);onlineStartTimer=null;}
     onlineStartAt=0;onlineGoAt=0;onlineStartEndAt=0;onlineStartRankRound=1;
   }
-  function onlinePreparing(now=performance.now()){return onlineStartPending||(onlineGoAt>0&&now<onlineGoAt);}
+  function onlinePreparing(now=performance.now()){
+    return onlineStartPending||!!matchStartGate?.blocked||(onlineGoAt>0&&now<onlineGoAt);
+  }
   function activateGameUi(){
     topbar.classList.remove('hidden');
-    if(isMobile){
-      mobileControls.classList.remove('hidden');
-      if(mobileExit)mobileExit.classList.remove('hidden');
-    }
+    if(isMobile){mobileControls.classList.remove('hidden');if(mobileExit)mobileExit.classList.remove('hidden');}
   }
   function launchOnlineAfterReady(){
     onlineStartTimer=null;
     if(!inGame||!onlineGoAt)return;
-    // V19.57: VAMOS es tambien la salida real en CPU local. Hasta este
-    // instante ni la IA ni la fisica local han avanzado un solo tick.
-    activateGameUi();
-    if(roomCode!=='LOCAL'&&isHost&&!hostPhysics)startHostPhysics(lobbyPlayers,onlineStartRankRound);
-    playSound('start');
+    if(roomCode!=='LOCAL'&&isHost&&!hostPhysics){
+      startHostPhysics(lobbyPlayers,onlineStartRankRound);
+      if(typeof matchStartGate!=='undefined'&&matchStartGate)publishStartPreparation();
+    }
+    activateGameUi();playSound('start');
+  }
+  function publishStartPreparation(){
+    if(roomCode==='LOCAL'||!isHost||!hostPhysics||!matchStartGate)return;
+    const packet={...hostPhysics.publicState(),startGate:matchStartGate.snapshot()};
+    handle(packet);p2p?.broadcastState?.(packet);
+    // Three reliable phase snapshots also cover peers whose direct channel is
+    // still opening. The existing relay accepts these states unchanged.
+    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-state',to:[],state:packet})));
+  }
+  function startPreparationPeers(){
+    return lobbyPlayers.filter(p=>!p.cpu&&Number(p.i)!==Number(myIndex)).map(p=>Number(p.i));
+  }
+  function receiveStartPreparationReady(index,message){
+    if(!isHost||!matchStartGate?.authority||!matchStartGate.blocked||!isCurrentOnlinePacket(message))return false;
+    if(!startPreparationPeers().includes(Number(index)))return false;
+    matchStartGate.peerReady(Number(index));return true;
+  }
+  function sendStartPreparationReady(){
+    clearStartReadyRetry();
+    if(isHost||roomCode==='LOCAL'||!matchStartGate?.localReady||matchStartGate.phase!=='preparing')return;
+    ensureP2P()?.sendAction?.('start-ready',onlineStartRankRound);
+    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-action',action:'start-ready',rankRound:onlineStartRankRound})));
+    startReadyRetryTimer=setTimeout(sendStartPreparationReady,400);
+  }
+  function applyStartPreparationState(packet){
+    if(isHost||roomCode==='LOCAL'||!matchStartGate)return;
+    if(packet.startGate)matchStartGate.apply(packet.startGate);
+    else if(matchStartGate.localReady&&Number(packet.simTime)>0)matchStartGate.apply({v:1,key:matchStartGate.key,phase:'go',remainingMs:0});
   }
   function prepareMatchBackground(rankRound){
     const index=roomCode==='LOCAL'
@@ -6160,30 +6218,54 @@
   }
   async function beginOnlineStartCountdown(rankRound=1){
     resetOnlineStartCountdown();
-    if(roomCode!=='LOCAL')updateOnlineSeriesRoundUi(Math.max(1,Number(rankRound)||1));
     const generation=onlineStartGeneration,startingRoom=roomCode;
-    onlineStartPending=true;
-    await Promise.all([prepareGameAssets(),prepareMatchBackground(rankRound)]);
-    if(generation!==onlineStartGeneration)return;
-    if(roomCode!==startingRoom){onlineStartPending=false;return;}
-    onlineStartPending=false;
-    const now=performance.now();
-    onlineStartAt=now;onlineGoAt=now+ONLINE_READY_MS;onlineStartEndAt=onlineGoAt+ONLINE_GO_MS;
     onlineStartRankRound=Math.max(1,Number(rankRound)||1);
-    netStartAt=roomCode==='LOCAL'?0:onlineGoAt;
-    warmOnlineStartCaches(true);
-    beginGame(true,onlineStartRankRound);
-    onlineStartTimer=setTimeout(launchOnlineAfterReady,ONLINE_READY_MS);
+    if(roomCode!=='LOCAL')updateOnlineSeriesRoundUi(onlineStartRankRound);
+    onlineStartPending=true;onlineStartAt=performance.now();onlineStartEndAt=Infinity;onlineGoAt=Infinity;
+    warmOnlineStartCaches();beginGame(true,onlineStartRankRound);
+    const authority=roomCode==='LOCAL'||isHost;
+    matchStartGate=new window.GalaxyStartPreparation({
+      key:[roomCode,onlineSeriesId||'',hostEpoch||0,onlineStartRankRound].join(':'),
+      authority,peers:authority&&roomCode!=='LOCAL'?startPreparationPeers():[],minimum:ONLINE_READY_MS,countdown:ONLINE_ENTRY_MS,
+      onChange:gate=>{
+        if(generation!==onlineStartGeneration)return;
+        onlineStartPending=gate.phase==='preparing';
+        onlineGoAt=gate.phase==='go'?gate.goAt:gate.deadline;
+        onlineStartEndAt=gate.phase==='go'?gate.goAt+ONLINE_GO_MS:Infinity;
+        netStartAt=roomCode==='LOCAL'?0:onlineGoAt;
+        if(gate.phase!=='preparing')clearStartReadyRetry();
+        if(gate.authority)publishStartPreparation();
+      },
+      onGo:()=>{if(generation===onlineStartGeneration)launchOnlineAfterReady();}
+    });
+    matchStartGate.start();
+    if(roomCode!=='LOCAL'&&isHost&&!hostPhysics)startHostPhysics(lobbyPlayers,onlineStartRankRound);
+    if(isHost)publishStartPreparation();
+    try{
+      await Promise.all([prepareGameAssets(),prepareMatchBackground(rankRound),gameAudioEnabled?loadWebAudio():Promise.resolve()]);
+      if(webMusicLoadPromise)await webMusicLoadPromise;
+      if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
+      await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
+      await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
+      await window.GalaxyStartPreparation.warmSimulation(roomCode==='LOCAL'?window.GalaxyLocalCpu:window.GalaxyHostPhysics,{
+        mode:roomCode==='LOCAL'?'cpu':'host',difficulty:roomCode==='LOCAL'?activeLocalDifficulty:'dificil',
+        valid:()=>generation===onlineStartGeneration&&roomCode===startingRoom
+      });
+      if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
+      matchStartGate.markLocalReady();
+      if(!authority)sendStartPreparationReady();
+    }catch(error){console.warn('[GALAXY3D] Preparacion de partida pendiente:',error?.message||error);}
   }
   function drawOnlineStartAnnouncement(now){
     if(!inGame||!menu.classList.contains('hidden')||!lobby.classList.contains('hidden')||!onlineStartAt||now<onlineStartAt||now>=onlineStartEndAt)return;
+    if(matchStartGate?.phase==='countdown')return;
     warmOnlineStartCaches();
     const age=now-onlineStartAt;
     ctx.save();
     try{
       ctx.translate(W/2,H*.48);
       ctx.textAlign='center';ctx.textBaseline='middle';
-      if(age<ONLINE_READY_MS){
+      if(matchStartGate?.phase==='preparing'||!matchStartGate&&age<ONLINE_READY_MS){
         const t=clamp(age/ONLINE_READY_MS,0,1);
         const intro=clamp(age/240,0,1);
         const ease=1-Math.pow(1-intro,3);
@@ -6217,7 +6299,7 @@
           ctx.shadowBlur=0;
         }
       }else{
-        const goAge=age-ONLINE_READY_MS;
+        const goAge=now-onlineGoAt;
         const intro=clamp(goAge/180,0,1);
         const ease=1-Math.pow(1-intro,3);
         const remaining=ONLINE_GO_MS-goAge;
@@ -6802,7 +6884,7 @@
       ctx.fillStyle='#020714';ctx.fillRect(0,0,W,H);
     }
     if((MATCH_BACKGROUNDS[currentMatchBackground]||MATCH_BACKGROUNDS[0]).stars)drawDecorativeStars(now);
-    if(!state){drawOnlineStartAnnouncement(now);return;}
+    if(onlineStartPending||!state){drawOnlineStartAnnouncement(now);return;}
     const playback=!localCpuActive&&!isHost&&networkPlayback?networkPlayback.sample(now):null;
     const ownPilot=playback?(state.players||[]).find(p=>p.i===myIndex):null;
     const ownShots=playback&&guestMotion?.ready&&typeof guestMotion.projectiles==='function'?guestMotion.projectiles(ownPilot,state.bullets||[],now):null;
@@ -7012,6 +7094,7 @@
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
     drawLocalRespawnCountdown(now);
+    drawLocalEntryCountdown(now);
     if(perfStats){
       const r=perfStats.report;
       ctx.save();

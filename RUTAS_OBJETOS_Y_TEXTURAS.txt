@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.91
+V23.92
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -300,3 +300,11 @@ COLORES DE TOBERA SEGUN MEJORAS - V23.91
 - Sin mejoras: se restauran las dos paletas originales de llama amarilla/blanca y roja hasta rojo oscuro, con 2 particulas por emision al acelerar y 1 al girar.
 - Una mejora: azul claro a azul oscuro, 5 particulas por emision al acelerar. Mejora maxima: la misma gama azul, 8 particulas por emision.
 - Cada particula conserva la paleta elegida al nacer. Se mantienen la continuidad visual, el pool reutilizado y los datos de red existentes.
+
+PRECARGA Y CUENTA DE SALIDA PERSONAL - V23.92
+- Desde el menu se preparan los modelos, texturas y programas de GPU, incluidas balas, fragmentos, recogibles y estados transparentes. La preparacion se repite si cambia la resolucion de juego.
+- PREPARADOS dura al menos 3 segundos y espera a recursos, audio y jugadores humanos. Luego hay una cuenta local de 3 a 0 sobre la posicion inicial de cada jugador.
+- La simulacion y los controles permanecen detenidos hasta la salida confirmada. La autoridad comunica solo las fases; cada cliente anima sus propios numeros sin mensajes por digito.
+- Las fases y la disponibilidad usan los canales P2P y el relay existentes. No requiere despliegue ni cambios de base de datos en Render.
+- El precache offline se limita a tres descargas simultaneas para reducir la competencia de recursos durante el arranque.
+- Se ejecutan calculos iniciales en una simulacion aislada por lotes entre fotogramas. No avanza la partida real ni consume sus identificadores o numeros aleatorios.

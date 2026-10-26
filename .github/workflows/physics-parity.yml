@@ -13,6 +13,7 @@ on:
       - 'docs/network-playback.js'
       - 'docs/motion-prediction.js'
       - 'docs/game.js'
+      - 'docs/startup-preparation.js'
       - 'docs/render-3d.js'
       - 'docs/projectile-lighting.js'
       - 'docs/ship-model.js'
@@ -72,6 +73,8 @@ on:
       - 'tools/check-online-protocol.js'
       - 'tools/check-game-invariants.js'
       - 'tools/check-startup-graphics.js'
+      - 'tools/check-start-preparation.js'
+      - 'tools/check-graphics-prewarm.js'
       - 'tools/check-model-texture-cache.js'
       - 'tools/stress-game.js'
       - '.github/workflows/physics-parity.yml'
@@ -87,6 +90,7 @@ on:
       - 'docs/network-playback.js'
       - 'docs/motion-prediction.js'
       - 'docs/game.js'
+      - 'docs/startup-preparation.js'
       - 'docs/render-3d.js'
       - 'docs/projectile-lighting.js'
       - 'docs/ship-model.js'
@@ -146,6 +150,8 @@ on:
       - 'tools/check-online-protocol.js'
       - 'tools/check-game-invariants.js'
       - 'tools/check-startup-graphics.js'
+      - 'tools/check-start-preparation.js'
+      - 'tools/check-graphics-prewarm.js'
       - 'tools/check-model-texture-cache.js'
       - 'tools/stress-game.js'
       - '.github/workflows/physics-parity.yml'
@@ -248,6 +254,10 @@ jobs:
         run: node tools/check-engine-particles.js
       - name: Check reserved respawn points, three-second delay and private countdown
         run: node tools/check-respawn-countdown.js
+      - name: Check readiness phases and private first-spawn countdown
+        run: node tools/check-start-preparation.js
+      - name: Check shader and GPU prewarming before match readiness
+        run: node tools/check-graphics-prewarm.js
       - name: Check existing gameplay invariants
         run: node tools/check-game-invariants.js
       - name: Run 5-minute simulated gameplay stress

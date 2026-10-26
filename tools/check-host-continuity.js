@@ -228,6 +228,11 @@ function resumeTrackingFixture(){
 }
 function playableClientFixture(){
   const f=resumeTrackingFixture(),{ctx}=f,engines=engineContext(),noop=()=>{};
+  let prepNow=1000,prepId=0;const prepTimers=new Map();
+  const Gate=require('../docs/startup-preparation.js');
+  engines.window.GalaxyStartPreparation=class extends Gate{constructor(options){super({...options,now:()=>prepNow,schedule:(fn,ms)=>{prepTimers.set(++prepId,{fn,at:prepNow+ms});return prepId;},cancel:id=>prepTimers.delete(id)});}};
+  engines.window.GalaxyStartPreparation.warmSimulation=async()=>true;
+  engines.window.Galaxy3D={ready:Promise.resolve({ok:true}),prepareMatch:async()=>({})};
   const ui=()=>{const classes=new Set();return {textContent:'',classList:{add:k=>classes.add(k),remove:k=>classes.delete(k),contains:k=>classes.has(k)}};};
   const elements=new Map();
   const element=key=>{if(!elements.has(key))elements.set(key,{...ui(),value:key==='difficulty'?'medio':'1'});return elements.get(key);};
@@ -235,7 +240,9 @@ function playableClientFixture(){
     window:engines.window,document:{getElementById:element},campoNombre:{value:'Local pilot'},
     startMusic:noop,prepareMobileControls:async()=>{},updateBuildVersionLearningState:noop,postAnalyticsEvent:noop,
     cpuLearningControl:{localHardEnabled:false},activeLocalDifficulty:'',localCampaignLevel:1,
-    onlineStartTimer:null,ONLINE_READY_MS:1200,ONLINE_GO_MS:700,warmOnlineStartCaches:noop,
+    onlineStartTimer:null,ONLINE_READY_MS:1200,ONLINE_ENTRY_MS:3000,ONLINE_GO_MS:700,warmOnlineStartCaches:noop,
+    matchStartGate:null,startReadyRetryTimer:null,localEntryVisual:null,gameAudioEnabled:false,webMusicLoadPromise:null,
+    requestAnimationFrame:fn=>{queueMicrotask(()=>fn(performance.now()));return 1;},updateCanvasResolution:noop,canvas:{width:1280,height:720},
     inputActionHeld:{rocket:false,flare:false,shock:false},currentMatchBackgroundRound:1,
     invisibleHudUntil:[0,0,0,0],nearWinActive:new Set(),shockwaveFx:[],lastLocalKillAt:0,netDebug:false,
     consumeGameFeelFx:noop,detectLocalMissileEvasion:noop,updatePickupVisualBirths:noop,updateLeaderAnnouncement:noop,
@@ -247,14 +254,15 @@ function playableClientFixture(){
     i18n:null,authToken:()=>'',roomClientId:()=>ctx.inputSessionId,testRoomPermitToken:()=>'',renderPublicRooms:noop,
     loadLobbyChatHistory:noop,showPlayerJoinedNotice:noop
   });
-  for(const name of ['stopP2P','stopLocalCpu','startLocalCpu','resetOnlineStartCountdown','beginOnlineStartCountdown','beginGame','returnToMainMenu','createOnlineRoom','joinRoomByCode','prepareOnlineView','flushPendingState'])vm.runInContext(source(name),ctx);
-  return {...f,engines};
+  for(const name of ['stopP2P','stopLocalCpu','startLocalCpu','clearStartReadyRetry','resetOnlineStartCountdown','beginOnlineStartCountdown','beginGame','returnToMainMenu','createOnlineRoom','joinRoomByCode','prepareOnlineView','flushPendingState'])vm.runInContext(source(name),ctx);
+  const advanceStart=ms=>{const end=prepNow+ms;while(true){const next=[...prepTimers].filter(([,t])=>t.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;prepNow=next[1].at;prepTimers.delete(next[0]);next[1].fn();}prepNow=end;};
+  return {...f,engines,advanceStart};
 }
 async function checkLocalCpuStartup(){
   const f=playableClientFixture(),{ctx,engines}=f;
   const connection=f.attach(),previousOnlineMotor=ctx.hostPhysics;
   await ctx.startLocalCpu();
-  for(let i=0;i<6;i++)await Promise.resolve();
+  for(let i=0;i<20;i++)await Promise.resolve();
   const cpu=ctx.localCpu;
   assert.ok(cpu instanceof engines.window.GalaxyLocalCpu,'JUGAR creates the real CPU simulation');
   assert.equal(ctx.localCpuActive,true);assert.equal(cpu.started,true);
@@ -263,6 +271,10 @@ async function checkLocalCpuStartup(){
   assert.equal(ctx.roomCode,'LOCAL','the real created event is accepted from the current local engine');
   assert.equal(ctx.myIndex,0);assert.equal(ctx.roomCodeEl.textContent,'LOCAL');
   assert.equal(ctx.inGame,true,'the real start event reaches countdown and beginGame');
+  assert.equal(ctx.onlineStartPending,true,'PREPARADOS holds until preparation and the minimum ready period finish');
+  assert.equal(cpu.fxClock,0,'preparation does not advance the real CPU simulation');
+  f.advanceStart(ctx.ONLINE_READY_MS);assert.equal(ctx.matchStartGate.phase,'countdown');
+  f.advanceStart(ctx.ONLINE_ENTRY_MS);assert.equal(ctx.matchStartGate.phase,'go');
   assert.equal(ctx.onlineStartPending,false);assert.ok(ctx.onlineStartAt>0);
   assert.equal(ctx.menu.classList.contains('hidden'),true);assert.equal(ctx.lobby.classList.contains('hidden'),true);
   assert.equal(ctx.state.started,true);assert.equal(ctx.state.players.length,2,'the first real CPU snapshot reaches the state dispatcher');
@@ -293,7 +305,7 @@ async function checkLocalCpuStartup(){
 }
 async function checkBackendMembershipFlow(){
   const server=serverFixture(),host=playableClientFixture(),guest=playableClientFixture();
-  const drain=async()=>{for(let i=0;i<6;i++)await Promise.resolve();};
+  const drain=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
   host.ctx.returnToMainMenu(false);
   await guest.ctx.startLocalCpu();await drain();
   const retiredCpu=guest.ctx.localCpu;
@@ -332,13 +344,22 @@ async function checkBackendMembershipFlow(){
   for(const client of [host,guest]){
     assert.equal(client.ctx.onlineSeriesId,start.seriesId);assert.equal(client.ctx.hostEpoch,start.hostEpoch);
     assert.equal(client.ctx.inGame,true,'actual WS start reaches countdown/beginGame for both host and guest');
-    assert.equal(client.ctx.lobby.classList.contains('hidden'),true);assert.equal(client.ctx.onlineStartPending,false);
+    assert.equal(client.ctx.lobby.classList.contains('hidden'),true);assert.equal(client.ctx.onlineStartPending,true,'loading and readiness retain PREPARADOS');
     const generation=client.ctx.onlineStartGeneration;client.receive(client.ctx.ws,start);
     assert.equal(client.ctx.onlineStartGeneration,generation,'a repeated start cannot reset the ready countdown');
     client.receive(client.ctx.ws,{...start,seriesId:lobbySeries,hostEpoch:lobbyEpoch});
     assert.equal(client.ctx.onlineSeriesId,start.seriesId,'old series packets cannot restore the previous authority');
-    client.ctx.launchOnlineAfterReady();
   }
+  const ready=guest.wire.filter(m=>m.t==='fallback-action'&&m.action==='start-ready').at(-1);assert.ok(ready,'the prepared guest sends readiness through the existing relay');
+  await server.receive(g.backend,ready);h.flush();host.advanceStart(host.ctx.ONLINE_READY_MS);
+  assert.equal(host.ctx.matchStartGate.phase,'countdown');
+  const preview=host.wire.filter(m=>m.t==='fallback-state'&&m.state.startGate?.phase==='countdown').at(-1);assert.ok(preview);
+  await server.receive(h.backend,preview);g.flush();assert.equal(guest.ctx.matchStartGate.phase,'countdown');
+  assert.equal(guest.ctx.fallbackActive,false,'the reliable startup preview does not change the playing transport');
+  assert.equal(host.ctx.hostPhysics.fxClock,0,'the authoritative simulation stays frozen throughout preparation');
+  host.advanceStart(host.ctx.ONLINE_ENTRY_MS);
+  const go=host.wire.filter(m=>m.t==='fallback-state'&&m.state.startGate?.phase==='go').at(-1);assert.ok(go);
+  await server.receive(h.backend,go);g.flush();assert.equal(guest.ctx.matchStartGate.phase,'go');
   assert.ok(host.ctx.hostPhysics&&host.ctx.hostPhysics.started,'the real start transition launches authoritative host physics');
   const state=host.ctx.hostPhysics.publicState();host.ctx.handle(state);
   guest.ctx.fallbackActive=true;guest.receive(g.connection,{t:'fallback-state',state});

@@ -54,6 +54,7 @@ const SHELL_FILES = [
   './net-state-codec.js',
   './p2p-network.js',
   './network-playback.js',
+  './startup-preparation.js',
   './game.js',
   './pwa.js',
   './manifest.webmanifest',
@@ -88,14 +89,19 @@ async function cacheShellFile(cache, path) {
 self.addEventListener('install', event => {
   event.waitUntil((async()=>{
     const cache=await caches.open(SHELL_CACHE);
-    const results=await Promise.allSettled(SHELL_FILES.map(path=>cacheShellFile(cache,path)));
+    // Keep background cache installation from flooding the first match with
+    // dozens of simultaneous downloads and cache writes.
+    const results=new Array(SHELL_FILES.length);let next=0;
+    await Promise.all(Array.from({length:3},async()=>{
+      while(next<SHELL_FILES.length){const index=next++;results[index]=await cacheShellFile(cache,SHELL_FILES[index]);}
+    }));
 
     // La navegacion offline necesita al menos el documento principal. El resto
     // puede recuperarse bajo demanda mediante networkFirst/cacheFirst.
     const indexCached=await cache.match('./index.html');
     if(!indexCached)throw new Error('[PWA] index.html no pudo precachearse');
 
-    const failed=results.reduce((count,result)=>count+(result.status==='rejected'||result.value===false?1:0),0);
+    const failed=results.filter(result=>!result).length;
     if(failed)console.warn('[PWA] Instalacion completada con '+failed+' recurso(s) pendientes de cache.');
 
     await self.skipWaiting();

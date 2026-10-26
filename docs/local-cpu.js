@@ -122,6 +122,12 @@
   }
 
   class GalaxyLocalCpu{
+    static withPreparationIds(cursor,work){
+      const saved=nextEntityId;nextEntityId=Math.max(1,Math.floor(Number(cursor)||1));
+      try{const value=work();return {value,cursor:nextEntityId};}
+      finally{nextEntityId=saved;}
+    }
+
     constructor({onState,onEvent,renderEveryStep=false}={}){
       this.onState=typeof onState==='function'?onState:()=>{};
       this.onEvent=typeof onEvent==='function'?onEvent:()=>{};

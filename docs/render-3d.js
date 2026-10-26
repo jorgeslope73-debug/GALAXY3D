@@ -29,12 +29,18 @@
     get requested(){return true;},
     get active(){return !!(assetsComplete&&world&&!world.lost&&!failed);},
     get rocketTailOffset(){return world?.rocketTailOffset||10;},
+    async prepareMatch(width,height){
+      const loaded=await assetsReady;
+      if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
+      try{return await world.prepareMatch(width,height);}catch(error){fallback(error);throw error;}
+    },
     begin(ctx,now,snapshot,localIndex){
-      if(!this.active)return null;
+      if(!this.active||world.preparing)return null;
       try{world.begin(ctx,now,snapshot,localIndex);return world;}catch(error){fallback(error);return null;}
     },
     menu(ctx,now){
       if(!this.active)return false;
+      if(world.preparing)return true;
       try{world.menu(ctx,now);return true;}catch(error){fallback(error);return false;}
     },
     flush(ctx){
@@ -215,7 +221,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.91';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.92';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -514,24 +520,71 @@
         this.flush(ctx);
       }
     };
-    api.ready=Promise.all(modelLoads).then(()=>{
-      // Upload textures and compile the actual models behind the loading screen.
-      const cache=document.createElement('canvas');cache.width=256;cache.height=144;
-      const ctx=cache.getContext('2d');
-      ctx.setTransform(256/W,0,0,144/H,0,0);
-      for(let pass=0;pass<3;pass++){
-        api.begin(ctx,pass*16,{code:'graphics-warmup',round:0,seq:pass,fx:[]},-1);
+    async function waitForGpu(){
+      const gl=renderer.getContext();
+      const frame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+      if(!gl.fenceSync||!gl.clientWaitSync){await frame();await frame();return;}
+      const fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);
+      if(!fence){await frame();return;}
+      gl.flush();const until=performance.now()+4000;
+      try{
+        while(true){
+          if(gl.isContextLost())throw new Error('Contexto 3D perdido durante la preparacion');
+          const status=gl.clientWaitSync(fence,0,0);
+          if(status===gl.ALREADY_SIGNALED||status===gl.CONDITION_SATISFIED)return;
+          if(status===gl.WAIT_FAILED||performance.now()>=until){await frame();return;}
+          await frame();
+        }
+      }finally{gl.deleteSync(fence);}
+    }
+    async function warmScene(width,height){
+      const cache=document.createElement('canvas');cache.width=width;cache.height=height;
+      const ctx=cache.getContext('2d');ctx.setTransform(width/W,0,0,height/H,0,0);
+      const players=Array.from({length:4},(_,i)=>({i,x:240+i*480,y:540,shield:1}));
+      for(let pass=0;pass<4;pass++){
+        api.begin(ctx,pass*16,{code:'graphics-warmup',round:0,seq:pass+1,players,asteroids:[],fx:[
+          {id:1,i:0,x:760,y:500,kind:'explosion',age:0},
+          {id:2,i:1,x:1160,y:500,kind:'hit',age:0}
+        ]},-1);
         for(let team=0;team<4;team++){
           api.ship(team,240+team*480,540,0,100,pass===2?.4:1,false,true,1,true,true,true,0,false,2,pass!==1);
           api.rocket('warm-rocket-'+team,240+team*480,800,0,team);
+          api.bolt(230+team*480,570,0,-300,'warm-bolt-'+team);
         }
-        for(const role of ['fragment','medium','large'])api.rock('warm-rock-'+role,960,230,100,1,0,role);
+        for(let i=0;i<5;i++)api.rock('warm-medium-'+i,220+i*340,230,103.5,1,0,'medium');
+        for(let i=0;i<6;i++)api.rock('warm-fragment-'+i,220+i*260,900,28,1,0,'fragment');
+        api.rock('warm-large',960,230,378,1,0,'large');
+        for(const [i,type]of ['ammo1','ammo3','cadence','speed','mira','flare','shockwave','shield','camo'].entries())api.pickup('warm-pickup-'+i,160+i*180,420,type,0);
         api.ufo('warm-ufo',960,420,pass*30);
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
+        boltMesh.count=bolts;updateEffects();
+        // The bundled Three.js compileAsync reads currentProgram before the
+        // first render. Compile here, render each variant, then await the GPU fence.
+        renderer.compile(scene,camera);
         api.flush(ctx);
+        await new Promise(resolve=>requestAnimationFrame(resolve));
       }
-      // Leave the pool in its normal menu state before exposing the first frame.
-      api.menu(ctx,0);
+      await waitForGpu();
+      return {width,height,programs:renderer.info.programs?.length||0};
+    }
+    let preparationQueue=Promise.resolve(),preparedViewport='';
+    api.preparing=false;
+    api.prepareMatch=(width,height)=>{
+      width=Math.max(256,Math.min(mobile?1280:1920,Math.round(Number(width)||W)));
+      height=Math.round(width*H/W);const key=width+'x'+height;
+      preparationQueue=preparationQueue.then(async()=>{
+        if(preparedViewport===key&&surface.width===width)return {width,height,programs:renderer.info.programs?.length||0};
+        api.preparing=true;
+        try{const result=await warmScene(width,height);preparedViewport=key;return result;}
+        finally{api.preparing=false;}
+      });
+      return preparationQueue;
+    };
+    api.ready=Promise.all(modelLoads).then(async()=>{
+      api.preparing=true;
+      try{await warmScene(256,144);}finally{api.preparing=false;}
+      const cache=document.createElement('canvas');cache.width=256;cache.height=144;
+      const ctx=cache.getContext('2d');ctx.setTransform(256/W,0,0,144/H,0,0);api.menu(ctx,0);
     });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
