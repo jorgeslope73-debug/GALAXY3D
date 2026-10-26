@@ -530,9 +530,22 @@
   // No forman parte del estado, fisicas, colisiones ni mensajes P2P.
   const ENGINE_FX_MAX=isMobile?448:704;
   const ENGINE_FX_INTERVAL=isMobile?55:38;
-  // Azul claro al nacer; azul oscuro al agotar su vida.
+  // Sin mejoras: combustion original amarilla/roja. Con mejoras: azul claro
+  // al nacer y azul oscuro al agotar su vida.
   // Las paletas son fijas para evitar gradientes/strings nuevos cada frame.
   const ENGINE_FIRE_PALETTES=[
+    [
+      '#fff3a0','#ffe56a','#ffd33d','#ffb52a',
+      '#ff9220','#e9681b','#c94b19','#9f3518',
+      '#792818','#571e16','#3b1713','#26110f',
+      '#170d0c','#0e0908','#080606','#050505'
+    ],
+    [
+      '#ff2a16','#ff1b0d','#ff0d08','#f00000',
+      '#dc0000','#c60000','#b00000','#990000',
+      '#820000','#6b0000','#550000','#410000',
+      '#300000','#210000','#120000','#050505'
+    ],
     [
       '#efffff','#d5f9ff','#b1efff','#8ee1ff',
       '#65ccff','#43b4ff','#2998f4','#1d7cdd',
@@ -617,7 +630,7 @@
     // Existing speed levels are 1, 1.5 and 2. Read them only for local density;
     // held thrust keeps emitting even after physical acceleration reaches zero.
     const upgrades=Math.max(0,Math.min(2,Math.round(((Number(player&&player.spd)||1)-1)*2)));
-    const amount=thrusting?3+upgrades*2+(upgrades===2?1:0):1+upgrades;
+    const amount=thrusting?(upgrades===0?2:upgrades===1?5:8):1+upgrades;
     for(let emitted=0;emitted<amount;emitted++){
       const jitter=(Math.random()-.5)*10;
       const exhaust=45+Math.random()*45;
@@ -644,8 +657,8 @@
       const baseSize=(isMobile?2.35:1.95)+Math.random()*(isMobile?3.15:2.85);
       particle.size=baseSize*(sizeRoll<.20?.64:(sizeRoll>.86?1.24:1));
 
-      // La variante azul se decide una sola vez al nacer.
-      particle.palette=Math.random()<.5?0:1;
+      // Cada particula conserva su gama hasta morir, incluso al recoger mejoras.
+      particle.palette=(upgrades>0?2:0)+(Math.random()<.5?0:1);
     }
   }
   function drawEngineParticles(now){
@@ -674,7 +687,7 @@
 
     ctx.save();
 
-    // Cola fria: azul oscuro, dibujada en source-over para
+    // Cola fria: rojo oscuro sin mejoras o azul oscuro con mejoras, en source-over para
     // que los tonos oscuros sigan siendo visibles. Con 'lighter' desaparecerian.
     ctx.globalCompositeOperation='source-over';
     for(const particle of engineParticles){
@@ -697,7 +710,7 @@
       ctx.fill();
     }
 
-    // Zona caliente: azul claro junto a la tobera, perdiendo brillo y
+    // Zona caliente: llama original o azul claro junto a la tobera, perdiendo brillo y
     // saturacion al alejarse. 'lighter' conserva el resplandor inicial.
     ctx.globalCompositeOperation='lighter';
     for(const particle of engineParticles){

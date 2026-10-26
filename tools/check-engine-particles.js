@@ -56,17 +56,34 @@ for(const mobile of [false,true]){
     fx.draw(8000);assert.equal(live(fx),0,'a background/menu gap clears stale particles');
     console.log('OK: '+(mobile?'mobile':'desktop')+' '+fps+'Hz, peak '+peak+'/'+fx.limit+', no live recycling');
   }
-  const {fx,fills}=fixture(mobile);fx.draw(1000);fx.emit({i:0,spd:2},960,540,0,1000,0,0,true);
-  for(let t=1016;t<=1848;t+=16)fx.draw(t);
-  assert.equal(live(fx),0,'particles finish their lifetime');assert.ok(fills.length>0);
   const rgb=color=>color.slice(1).match(/../g).map(x=>parseInt(x,16));
-  for(const fill of fills){const [r,g,b]=rgb(fill.color);assert.ok(b>=g&&g>=r,'all lifecycle colors stay blue/cyan');assert.ok(fill.alpha>=0&&fill.alpha<=1);}
-  assert.ok(fills.some(f=>rgb(f.color).every(n=>n>180)),'light blue is visible at birth');
-  assert.ok(fills.some(f=>{const [r,g,b]=rgb(f.color);return b<65&&b>g&&g>r;}),'dark blue is visible before fading');
+  for(const spd of [1,1.5,2]){
+    const {fx,fills}=fixture(mobile);fx.draw(1000);
+    for(let t=1016;t<=2800;t+=16){fx.draw(t);if(t<=1900)fx.emit({i:0,spd},960,540,0,t,0,0,true);}
+    assert.equal(live(fx),0,'particles finish their lifetime');assert.ok(fills.length>0);
+    for(const fill of fills){const [r,g,b]=rgb(fill.color);assert.ok(spd===1?r>=g&&g>=b:b>=g&&g>=r,'normal stays warm; both upgrades stay blue');assert.ok(fill.alpha>=0&&fill.alpha<=1);}
+    if(spd===1){
+      assert.ok(fills.some(f=>{const [r,g,b]=rgb(f.color);return r>220&&g>180&&b>100;}),'original pale yellow/white flame appears at birth');
+      assert.ok(fills.some(f=>{const [r,g,b]=rgb(f.color);return r<180&&r>g+b;}),'original dark red appears before fading');
+    }else{
+      assert.ok(fills.some(f=>rgb(f.color).every(n=>n>180)),'light blue is visible at birth');
+      assert.ok(fills.some(f=>{const [r,g,b]=rgb(f.color);return b<65&&b>g&&g>r;}),'dark blue is visible before fading');
+    }
+  }
+  {
+    const {fx}=fixture(mobile);fx.emit({i:0,spd:1},960,540,0,1000,0,0,true);
+    const original=fx.particles.filter(p=>p.life>0).map(p=>({p,palette:p.palette}));
+    assert.equal(original.length,2,'normal acceleration restores the original emission amount');
+    assert.ok(original.every(({palette})=>palette<2));const start=fx.cursor;
+    fx.emit({i:0,spd:1.5},960,540,0,1060,0,0,true);
+    assert.ok(fx.particles.slice(start,fx.cursor).every(p=>p.palette>=2),'collecting an upgrade makes new particles blue');
+    assert.ok(original.every(({p,palette})=>p.palette===palette),'existing particles finish in their original colors');
+  }
+  const {fx}=fixture(mobile);
   fx.emit({i:0,spd:2},960,540,0,2000,0,0,true);fx.emit({i:1,spd:2},1200,540,0,2000,0,0,true);
   fx.hide(0,true);assert.equal(fx.particles.some(p=>p.life>0&&p.owner===0),false);assert.ok(fx.particles.some(p=>p.life>0&&p.owner===1));
   const before=fx.cursor;fx.emit({i:0,spd:2},960,540,0,2100,0,0,true);assert.equal(fx.cursor,before,'an invisible rival cannot leak a new trail');
   fx.hide(0,false);fx.emit({i:0,spd:2},960,540,0,2200,0,0,true);assert.ok(fx.particles.some(p=>p.life>0&&p.owner===0));
-  console.log('OK: '+(mobile?'mobile':'desktop')+' density '+thrust.join('/')+'; turn '+turn.join('/')+'; blue lifecycle, invisibility and cleanup');
+  console.log('OK: '+(mobile?'mobile':'desktop')+' density '+thrust.join('/')+'; turn '+turn.join('/')+'; warm normal, blue upgrades, invisibility and cleanup');
 }
-console.log('Engine particles OK: increasing upgrade density at sustained top speed; fixed reusable pools, blue-to-dark-blue lifetime, local-only inputs.');
+console.log('Engine particles OK: original warm normal flame; blue upgrades with increasing density at sustained top speed; fixed reusable pools, lifetime colors and local-only inputs.');

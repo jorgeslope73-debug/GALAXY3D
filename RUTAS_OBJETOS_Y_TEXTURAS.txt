@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.90
+V23.91
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -295,3 +295,8 @@ CUENTA PERSONAL DE REAPARICION - V23.90
 - Cada cliente dibuja un marcador y numeros grandes 3, 2, 1 y 0 sobre su propio punto, con animacion local entre estados. El 0 se desvanece al confirmar la reaparicion.
 - Se reutiliza respawn y se anaden solo spawnX/spawnY mientras la nave esta muerta; no hay mensajes ni temporizadores de red por cada numero. La explosion y el botin conservan el lugar de muerte.
 - Se mantienen la materializacion y la proteccion posteriores; reiniciar o terminar la ronda limpia las reservas y los indicadores.
+
+COLORES DE TOBERA SEGUN MEJORAS - V23.91
+- Sin mejoras: se restauran las dos paletas originales de llama amarilla/blanca y roja hasta rojo oscuro, con 2 particulas por emision al acelerar y 1 al girar.
+- Una mejora: azul claro a azul oscuro, 5 particulas por emision al acelerar. Mejora maxima: la misma gama azul, 8 particulas por emision.
+- Cada particula conserva la paleta elegida al nacer. Se mantienen la continuidad visual, el pool reutilizado y los datos de red existentes.
