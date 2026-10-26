@@ -6883,7 +6883,7 @@
       const sp=Math.hypot(b.vx,b.vy)||1;
       if(scene3D){
         if(b.g)scene3D.rocket(b.id,x,y,Math.atan2(-b.vx,-b.vy)*180/Math.PI,b.o);
-        else scene3D.bolt(x,y,b.vx,b.vy);
+        else scene3D.bolt(x,y,b.vx,b.vy,b.id);
         continue;
       }
       if(b.g){

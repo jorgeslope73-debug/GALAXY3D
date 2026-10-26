@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.84
+V23.85
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -262,3 +262,8 @@ ACABADO METALICO DEL COHETE - V23.82
 ILUMINACION LIGERAMENTE MAYOR - V23.84
 - Exposicion del render3D de0.85 a0.95, un aumento suave para ver mejor los objetos y sus reflejos.
 - Se conservan los materiales y colores del GLB, la iluminacion direccional y el entorno compartido de reflejos.
+
+LUZ VERDE LOCAL DE LAS BALAS - V23.85
+- Las balas normales visibles iluminan suavemente los modelos3D cercanos con luz verde y alcance limitado.
+- Se reutilizan cuatro luces puntuales en ordenador y dos en movil, sin sombras. Se priorizan los tiros cercanos a objetos y se agrupan los disparos muy juntos.
+- La luz usa las posiciones que se dibujan y se apaga al desaparecer la bala o cambiar de ronda. No se anaden mensajes ni calculos de fisica por red.

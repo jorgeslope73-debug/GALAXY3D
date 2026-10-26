@@ -215,8 +215,12 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.84';
+    const assetVersion=window.GALAXY_BUILD?.version||'V23.85';
+    let projectileLighting=null;
     const modelLoads=[];
+    modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
+      projectileLighting=assets.createProjectileLighting(T,scene,{mobile});
+    }));
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
     }));
@@ -373,6 +377,7 @@
       begin(ctx,time,snapshot,localIndex){
         now=time;bolts=0;
         poseContext=snapshot?[snapshot.code,snapshot.seriesId,snapshot.hostEpoch,snapshot.round].join(':'):'menu';
+        projectileLighting?.begin(snapshot,poseContext,window.GalaxyPhysicsCore?.GIANT_RADIUS);
         const width=Math.min(ctx.canvas.width,mobile?1280:1920);
         const height=Math.round(width*H/W);
         if(surface.width!==width||surface.height!==height)renderer.setSize(width,height,false);
@@ -456,12 +461,13 @@
         record.trim.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
         record.paint.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
       },
-      bolt(x,y,vx,vy){
+      bolt(x,y,vx,vy,id){
         if(bolts>=256)return;
         position.set(x-W/2,H/2-y,16);
         euler.set(0,0,Math.atan2(-vx,-vy));quaternion.setFromEuler(euler);
         scale.set(1.8,15,1.8);matrix.compose(position,quaternion,scale);
         boltMesh.setMatrixAt(bolts++,matrix);
+        projectileLighting?.addBolt(id,x,y);
       },
       pickup(id,x,y,type){
         const record=take('pickup',id);place(record.root,x,y,-8);
@@ -477,6 +483,7 @@
           if(!spares.has(record.kind))spares.set(record.kind,[]);
           spares.get(record.kind).push(record);
         }
+        projectileLighting?.update(now);
         renderer.render(scene,camera);
         ctx.drawImage(surface,0,0,W,H);
         // Diagnostics describe the rendered scene, without exposing game authority.
@@ -488,6 +495,8 @@
         ctx.canvas.dataset.rockMaterial=createImportedMeteor?'meteor-glb':'loading';
         ctx.canvas.dataset.rockModel=createImportedMeteor?'meteor-glb':'loading';
         ctx.canvas.dataset.rocketModel=createImportedRocket?'cohete-glb':'procedural';
+        ctx.canvas.dataset.boltLights=String(projectileLighting?.activeCount||0);
+        ctx.canvas.dataset.boltLightLimit=String(projectileLighting?.limit||0);
         ctx.canvas.dataset.ufoModel=createImportedUfo?'ovni-glb':'loading';
       },
       menu(ctx,time){
@@ -526,7 +535,7 @@
     });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
-    window.addEventListener('beforeunload',()=>renderer.dispose(),{once:true});
+    window.addEventListener('beforeunload',()=>{projectileLighting?.dispose();renderer.dispose();},{once:true});
     return api;
   }
 })();

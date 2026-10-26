@@ -14,6 +14,7 @@ on:
       - 'docs/motion-prediction.js'
       - 'docs/game.js'
       - 'docs/render-3d.js'
+      - 'docs/projectile-lighting.js'
       - 'docs/ship-model.js'
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
@@ -25,6 +26,7 @@ on:
       - 'tools/check-ship-model.mjs'
       - 'tools/check-ship-inertia.mjs'
       - 'tools/check-rocket-model.mjs'
+      - 'tools/check-projectile-lighting.mjs'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
       - 'tools/check-medium-outline.mjs'
@@ -83,6 +85,7 @@ on:
       - 'docs/motion-prediction.js'
       - 'docs/game.js'
       - 'docs/render-3d.js'
+      - 'docs/projectile-lighting.js'
       - 'docs/ship-model.js'
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
@@ -94,6 +97,7 @@ on:
       - 'tools/check-ship-model.mjs'
       - 'tools/check-ship-inertia.mjs'
       - 'tools/check-rocket-model.mjs'
+      - 'tools/check-projectile-lighting.mjs'
       - 'tools/check-meteor-model.mjs'
       - 'tools/check-giant-outline.mjs'
       - 'tools/check-medium-outline.mjs'
@@ -202,6 +206,8 @@ jobs:
         run: node tools/check-ship-projectile-collisions.js
       - name: Check 3D presentation syntax
         run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js
+      - name: Check bounded local green projectile lights
+        run: node tools/check-projectile-lighting.mjs
       - name: Check ship GLB orientation and embedded resources
         run: node tools/check-ship-model.mjs
       - name: Check local visual ship pitch and damped throttle inertia

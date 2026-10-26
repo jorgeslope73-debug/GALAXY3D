@@ -11,6 +11,7 @@ const SHELL_FILES = [
   './style.css',
   './view-3d.css',
   './render-3d.js',
+  './projectile-lighting.js',
   './ship-model.js',
   './rocket-model.js',
   './meteor-model.js',
