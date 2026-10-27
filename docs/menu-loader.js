@@ -30,7 +30,7 @@
     if(!finished&&modelsState!=='error'&&labelEl&&actions?.hidden!==false)labelEl.textContent='CARGANDO GRAFICOS... ESPERA UN MOMENTO';
   },8000);
   // A slow download offers a retry without exposing incomplete graphics.
-  // Sprite/decode requests retain their own bounded waits below.
+  // Registered game resources retain their own bounded image/decode waits.
   const watchdogTimer=window.setTimeout(()=>{
     if(finished||modelsState==='error')return;
     if(labelEl)labelEl.textContent='LA CARGA SIGUE EN CURSO. PUEDES REINTENTAR';
@@ -90,37 +90,6 @@
     },modelFailure));
   }catch(_){modelFailure();}
   document.getElementById('menuFirstLoaderRetry')?.addEventListener('click',()=>window.location.reload());
-  const assets=window.Galaxy3D?.requested?[]:[
-    isMobile?'assets/sprites/INTRO_MOBILE.png':'assets/sprites/INTRO.png',
-    'assets/sprites/asteroide1.png','assets/sprites/asteroide2.png',
-    'assets/sprites/asteroide3.png','assets/sprites/asteroide5.png',
-    'assets/sprites/asteroide6.png','assets/sprites/asteroidegrande_270.png'
-  ];
-  function decodeWithTimeout(im,timeoutMs){
-    return new Promise(resolve=>{
-      let settled=false;
-      const done=()=>{if(settled)return;settled=true;window.clearTimeout(timer);resolve();};
-      const timer=window.setTimeout(done,timeoutMs);
-      try{
-        if(typeof im.decode!=='function'){done();return;}
-        const p=im.decode();
-        if(p&&typeof p.then==='function')p.then(done,done);
-        else done();
-      }catch(_){done();}
-    });
-  }
-  for(const src of assets){
-    track(new Promise(resolve=>{
-      const im=new Image();
-      im.decoding='async';
-      let settled=false;
-      const done=()=>{if(settled)return;settled=true;window.clearTimeout(loadTimer);resolve();};
-      const loadTimer=window.setTimeout(done,isMobile?8000:12000);
-      im.onload=()=>{if(isMobile)done();else decodeWithTimeout(im,2500).then(done,done);};
-      im.onerror=done;
-      im.src=src;
-    }));
-  }
   function completeRegistration(){registrationComplete=true;finishIfReady();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',completeRegistration,{once:true});
   else completeRegistration();

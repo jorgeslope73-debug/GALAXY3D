@@ -151,22 +151,30 @@ for(let i=0;i<meshes.length;i++){
 }
 const painted=[0,1,2,3].map(index=>collect(litFactory(index)));
 // The replacement user GLB has no COLOR_0: its fuchsia is a PBR material.
-// Current runtime preserves that authored material for every team. Do not claim
-// that this actual asset recolours; exercise vertex paint separately below.
+// Check its real body/cone/fins material, not just a synthetic vertex fixture.
 assert.ok(primitives.every(part=>part.attributes.COLOR_0===undefined),'The replacement GLB uses authored material paint, not vertex paint');
+const bodyGroup=groups.indexOf(body.group),bodyMaterial=meshes[bodyGroup].material;
+assert.deepEqual(body.group.parts.map(part=>part.range.name).sort(),['Cone_1','Cube','Cube002','Cube003','Cylinder'].sort(),'The body, nose and all three fins share one paint material');
+const authoredPaint=materialState(bodyMaterial),paintShade=authoredPaint.color[0]/teamColours[1].r;
+assert.equal(bodyMaterial.map,null,'The actual paint is a base colour, not a texture');
+assert.equal(bodyMaterial.metalness,.5,'Keep the authored metallic paint');
+assert.equal(bodyMaterial.roughness,.5,'Keep the authored paint roughness');
+const expectedPaint=team=>({...authoredPaint,color:teamColours[team].clone().multiplyScalar(paintShade).toArray()});
+assert.equal(new Set(painted.map(visual=>visual[bodyGroup].material.color.getHexString())).size,4,'The actual imported missile has four distinct team paints');
 let paintedVertices=0,detailVertices=0;
 for(const [team,visual] of painted.entries()){
   const repeat=collect(litFactory(team));
   for(let i=0;i<meshes.length;i++){
     const authored=meshes[i].geometry,coloured=visual[i].geometry;
     assert.strictEqual(coloured,repeat[i].geometry,'Repeated team rockets share cached geometry');
-    assert.notStrictEqual(coloured,painted[(team+1)%4][i].geometry,'Team colour buffers remain independent');
+    assert.strictEqual(coloured,authored,'A material-painted missile shares the original geometry across teams');
     assert.notStrictEqual(visual[i].material,repeat[i].material,'Cached team geometry never shares mutable opacity');
-    samePbr(visual[i].material,materialState(meshes[i].material),'Team'+team+' material'+i,environment);
+    const expected=i===bodyGroup?expectedPaint(team):materialState(meshes[i].material);
+    samePbr(visual[i].material,expected,'Team'+team+' material'+i,environment);
     const checked=checkPaint(authored,coloured,team,'User GLB team '+team+' mesh '+i);
     paintedVertices+=checked.painted;detailVertices+=checked.details;
     visual[i].material.opacity=.21;visual[i].material.transparent=true;
-    samePbr(repeat[i].material,materialState(meshes[i].material),'Another mounted/team rocket stays opaque',environment);
+    samePbr(repeat[i].material,expected,'Another mounted/team rocket stays opaque',environment);
   }
 }
 assert.equal(paintedVertices+detailVertices,0,'The material-painted user model does not enter the vertex-colour path');
@@ -217,6 +225,30 @@ for(const team of [0,1,2,3]){
 samePbr(physical,originals[0],'Original Physical material');samePbr(standard,originals[1],'Original Standard material');
 assert.deepEqual(geometryState(geometry),syntheticGeometry,'Synthetic input geometry remains untouched');
 
+// Material-painted Physical exports also retain every finish/map property.
+// A magenta image tint or emissive lamp must not be mistaken for body paint.
+const basePaint=physical.clone();basePaint.vertexColors=false;basePaint.map=null;
+basePaint.color.setRGB(.38,.009,.258);basePaint.emissive.setRGB(0,0,0);
+const texturedPaint=basePaint.clone();texturedPaint.map=maps.map;
+const emissivePaint=basePaint.clone();emissivePaint.emissive.setRGB(.2,.02,.1);
+const materialGeometry=geometry.clone();materialGeometry.deleteAttribute('color');
+const materialSource=new T.Group(),materialInputs=[basePaint,texturedPaint,emissivePaint];
+for(const [i,material] of materialInputs.entries()){
+  const mesh=new T.Mesh(materialGeometry,material);mesh.position.x=i*3;materialSource.add(mesh);
+}
+const materialStates=materialInputs.map(materialState),materialTemplate=prepareRocketTemplate(materialSource),materialMeshes=collect(materialTemplate);
+const materialFactory=createRocketFactory(materialTemplate,environment);
+for(const team of [0,1,2,3]){
+  const instance=collect(materialFactory(team));
+  for(let i=0;i<instance.length;i++){
+    const expected={...materialStates[i]};
+    if(i===0)expected.color=teamColours[team].clone().multiplyScalar(materialStates[i].color[0]/teamColours[1].r).toArray();
+    samePbr(instance[i].material,expected,'Material-paint Physical team '+team+' part '+i,environment);
+    assert.strictEqual(instance[i].geometry,materialMeshes[i].geometry,'Material-only paints share geometry');
+    samePbr(materialInputs[i],materialStates[i],'Original material-paint export stays untouched');
+  }
+}
+
 console.log(`Rocket GLB OK: ${sourceMeshes.length} parts -> ${meshes.length} material groups; ${totalVertices} vertices; ${triangles} triangles; length40; nose +Y; stable roll axis`);
 console.log('Rocket PBR OK: actual authored finish/geometry/normals/UVs preserved; shared environments and independent opacity');
-console.log('Rocket paint: user GLB has no COLOR_0 and retains authored material for all teams; separate fixture validates four vertex paints/shades/details and Physical properties/maps');
+console.log('Rocket paint: actual material-painted body/cone/fins use four team colours with shared geometry; black, metal and emissive exhaust retain authored PBR; vertex-paint fixture also passes');

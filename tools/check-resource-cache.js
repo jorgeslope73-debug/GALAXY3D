@@ -24,6 +24,7 @@ function createHarness(){
         const url=href(request);
         for(const [key,value] of entries)if(key===url||(options.ignoreSearch&&new URL(key).pathname===new URL(url).pathname))return value.clone();
       },
+      async delete(request){return entries.delete(href(request));},
       async keys(){return [...entries.keys()].map(url=>new Request(url));}
     };
   }
@@ -68,7 +69,15 @@ async function installAndActivate(){
   await assert.rejects(broken.event('install'),/index.html/);assert.equal(broken.skips,0);
 
   for(const name of ['galaxy3d-shell-oldest','galaxy3d-assets-oldest','galaxy3d-shell-previous','galaxy3d-assets-previous',SHARED,'other-app'])h.seed(name,'placeholder','keep');
+  h.seed(SHARED,'assets/sprites/INTRO.png?v=OLD','retired cover');
+  h.seed('galaxy3d-assets-previous','assets/sprites/ovni.png','retired UFO');
+  h.seed(SHARED,'assets/sprites/coete1f.png','manual illustration');
+  h.seed(SHARED,'assets/models/cohete_galaxy_combat.glb','current missile');
   const writes=h.writes.length;await h.event('activate');
+  assert.equal(await h.cache(SHARED).match('assets/sprites/INTRO.png?v=OLD'),undefined,'activation frees retired shared cover art');
+  assert.equal(await h.cache('galaxy3d-assets-previous').match('assets/sprites/ovni.png'),undefined,'old versioned caches also retire unused sprites');
+  assert.equal(await body(await h.cache(SHARED).match('assets/sprites/coete1f.png')),'manual illustration','active UI art is retained');
+  assert.equal(await body(await h.cache(SHARED).match('assets/models/cohete_galaxy_combat.glb')),'current missile','current 3D assets are retained');
   assert.deepEqual([...h.stores.keys()].sort(),[SHELL,SHARED,'galaxy3d-shell-previous','galaxy3d-assets-previous','other-app'].sort());
   assert.equal(h.writes.length,writes,'activation must not copy large legacy models');assert.equal(h.claims,1);
 }

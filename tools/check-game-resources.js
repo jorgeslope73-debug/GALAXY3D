@@ -34,30 +34,29 @@ function imageFixture(mobile){
     roomCode:'ROOM',localCampaignLevel:1,LOCAL_CAMPAIGN_LEVELS:5,clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
     gameAssetsReady:false,gameAssetsPromise:null,document:{fonts:{load:async()=>{}},getElementById:()=>({value:'facil'})},
     updateCanvasResolution(){},warmRendererCaches(){},warmOnlineStartCaches(){},canvas:{width:1280,height:720,dataset:{}},ctx:{},now:1000,renderState:{},myIndex:0,scene3D:null});
-  vm.runInContext(section('  const SHIP_IMAGE_KEYS=','  const METEOR_DRAW_SIZES=')+
-    section('  const FALLBACK_MATCH_BACKGROUNDS=','  const MATCH_BACKGROUNDS=')+'const MATCH_BACKGROUNDS=FALLBACK_MATCH_BACKGROUNDS;'+
+  vm.runInContext(section('  const FALLBACK_MATCH_BACKGROUNDS=','  const MATCH_BACKGROUNDS=')+'const MATCH_BACKGROUNDS=FALLBACK_MATCH_BACKGROUNDS;'+
     section('  const assetList=','  let rendererWarmed=')+fn('prepareMatchBackground')+fn('prepareGameAssets')+fn('imageReady')+fn('drawImageCentered'),c);
-  const api=vm.runInContext('({assetList,images,imageDecodePromises,imageLoadPromises,legacyGameImageKeys,loadGameImage,loadLegacyGameImages,prepareMatchBackground,prepareGameAssets,imageReady})',c);
+  const api=vm.runInContext('({assetList,images,imageDecodePromises,imageLoadPromises,loadGameImage,prepareMatchBackground,prepareGameAssets,imageReady})',c);
   function settle(image,{error=false}={}){
     if(image.settled)return;image.settled=true;
     if(error){image.onerror();return;}
     image.complete=true;image.naturalWidth=image.naturalHeight=64;image.onload();
   }
-  return {c,api,requests,tracked,timers,settle,render:()=>vm.runInContext(selection,c),
+  return {c,api,requests,tracked,timers,settle,render:()=>vm.runInContext('(function(){'+selection+'return true;})()',c),
     settleEager:()=>{for(const key of Object.keys(api.imageDecodePromises))settle(api.images[key]);}};
 }
 
 async function checkImages(mobile){
   const f=imageFixture(mobile),{api}=f;
-  const eager=['pantA','pantB','pantC','pantD','ammo1','ammo3','cadence','speed','bengala','bengalahud','ojo','mira1','localizaA','localizaB','localizaC','localizaD','ship1','ship2','ship3','ship4'];
+  const eager=['pantA','pantB','pantC','pantD','ammo1','ammo3','cadence','speed','bengala','bengalahud','ojo','mira1','localizaA','localizaB','localizaC','localizaD'];
   if(mobile)eager.push('bg');
-  assert.deepEqual(Object.keys(api.images).sort(),eager.sort(),'all 3D HUD, flares, localization and victory images remain eager');
-  assert.equal(f.requests.length,mobile?21:20);assert.equal(f.tracked.length,f.requests.length);
-  assert.equal(api.legacyGameImageKeys.length,32);
-  assert.equal(api.imageReady(api.images.ship1a),false);
-  assert.equal(f.c.drawImageCentered(api.images.ufo,0,0,56),false,'pending fallback images are safe to access before their first download');
-  for(let i=0;i<10;i++)f.render();
-  assert.equal(f.requests.length,eager.length,'successful 3D frames do not request legacy sprites');
+  assert.deepEqual(Object.keys(api.images).sort(),eager.sort(),'all active 3D HUD, flares and localization images remain eager');
+  assert.equal(f.requests.length,mobile?17:16);assert.equal(f.tracked.length,f.requests.length);
+  assert.deepEqual(Object.keys(api.assetList).sort(),[...eager.filter(key=>key!=='bg'),'bg','bg02','bg03','bg04','bg05'].sort(),'only HUD and round backgrounds remain in the game image manifest');
+  assert.equal(api.imageReady(undefined),false);
+  assert.equal(f.c.drawImageCentered(undefined,0,0,56),false,'a missing overlay icon does not throw');
+  for(let i=0;i<10;i++)assert.equal(f.render(),true);
+  assert.equal(f.requests.length,eager.length,'3D frames do not request extra sprites');
   const startup=api.prepareGameAssets();let ready=false;startup.then(()=>ready=true);await drain();assert.equal(ready,false);
   f.settleEager();await startup;assert.equal(ready,true);
   for(const key of eager)assert.equal(api.imageReady(api.images[key]),true,key+' is decoded for the first frame');
@@ -79,29 +78,25 @@ async function checkImages(mobile){
   }
   f.c.roomCode='LOCAL';f.c.localCampaignLevel=4;
   assert.strictEqual(api.prepareMatchBackground(1),api.imageLoadPromises.bg04,'local campaign level selects the matching round asset');
-  const beforeLegacy=f.requests.length;f.c.window.Galaxy3D.begin=()=>null;f.render();
-  assert.equal(f.requests.length,beforeLegacy+32);assert.equal(f.c.canvas.dataset.view,'2d');
-  const fallback=api.loadLegacyGameImages();
-  for(let i=0;i<20;i++)f.render();
-  assert.strictEqual(api.loadLegacyGameImages(),fallback);assert.equal(f.requests.length,beforeLegacy+32,'fallback frames never start duplicate loads');
-  assert.equal(f.tracked.length,startupTracked,'lazy art is not added to initial graphics readiness');
-  for(const key of api.legacyGameImageKeys)f.settle(api.images[key],{error:key==='ufo'});
-  await fallback;assert.equal(await api.imageLoadPromises.ufo,false,'one failed fallback sprite settles without blocking the rest');
-  for(const key of api.legacyGameImageKeys.filter(key=>key!=='ufo'))assert.equal(api.imageReady(api.images[key]),true,key);
-  assert.strictEqual(api.loadGameImage('ufo'),api.imageLoadPromises.ufo,'even a failed asset has only one request');
+  const preparedRequests=f.requests.length;f.c.window.Galaxy3D.begin=()=>null;
+  for(let i=0;i<20;i++)assert.equal(f.render(),undefined,'missing or temporarily preparing 3D stops the world draw before any fallback');
+  assert.equal(f.requests.length,preparedRequests,'renderer failure never downloads old artwork');
+  assert.equal(f.c.canvas.dataset.view,undefined,'the game cannot switch the canvas to a 2D world');
+  assert.equal(f.tracked.length,startupTracked,'later round backgrounds are not added to initial graphics readiness');
   assert.equal(f.timers.size,0,'completed image/decode timeouts are released');
 
-  const late=imageFixture(mobile);delete late.c.window.Galaxy3D;late.render();
-  const background=late.api.prepareMatchBackground(2),legacy=late.api.loadLegacyGameImages();
+  const late=imageFixture(mobile);delete late.c.window.Galaxy3D;
+  assert.equal(late.render(),undefined,'a missing renderer also stops the draw');
+  const background=late.api.prepareMatchBackground(2);
   const onlyEager=late.api.prepareGameAssets();late.settleEager();await onlyEager;
-  assert.equal(late.c.gameAssetsReady,true,'startup does not wait for pending legacy art or an unrelated later background');
-  assert.equal(late.api.imageReady(late.api.images.ship1a),false);
-  for(const image of late.requests)late.settle(image);await Promise.all([background,legacy]);
+  assert.equal(late.c.gameAssetsReady,true,'HUD preparation does not wait for an unrelated later background');
+  assert.equal(late.requests.length,eager.length+1,'missing 3D never creates legacy image requests');
+  for(const image of late.requests)late.settle(image);await background;
 
   const broken=imageFixture(mobile);broken.settleEager();await drain();
   const missing=broken.api.prepareMatchBackground(3);const timeout=[...broken.timers.values()].find(t=>t.ms===(mobile?10000:15000));
   assert.ok(timeout);timeout.callback();assert.equal(await missing,false,'missing round art times out without blocking preparation forever');
-  console.log('OK: '+(mobile?'mobile':'desktop')+' '+eager.length+' eager images; 32 fallback sprites + 4 later backgrounds deferred, single requests and round decode gates');
+  console.log('OK: '+(mobile?'mobile':'desktop')+' '+eager.length+' eager HUD images; 4 later backgrounds deferred, mandatory 3D world and no legacy fallback/downloads');
 }
 
 async function checkAudio(webAudio,mobile){
@@ -161,5 +156,6 @@ function checkDrag(){
   for(const mobile of [false,true])await checkImages(mobile);
   for(const mobile of [false,true])for(const webAudio of [true,false])await checkAudio(webAudio,mobile);
   checkDrag();
-  console.log('Game resources OK: eager 3D HUD, selected round backgrounds, deferred single-load 2D fallback, unchanged effect audio and playback, exact local particle motion with one drag power per pass.');
+  for(const retired of ['legacyGameImageKeys','loadLegacyGameImages','drawProfileSprite','SHIP_IMAGE_KEYS','ROCKET_IMAGE_KEYS','ASTEROID_IMAGE_KEYS','NAVEMIRA_IMAGE_KEYS','METEOR_DRAW_SIZES'])assert.ok(!game.includes(retired),retired+' is removed from the 3D-only game');
+  console.log('Game resources OK: eager 3D HUD, selected round backgrounds, no legacy world renderer or sprite loader, unchanged effect audio and playback, exact local particle motion with one drag power per pass.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -40,19 +40,7 @@ html:not(.handheld-device) #menu .menu-scene {
   max-width: none;
   margin: 0;
 }
-#menu .menu-art {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: auto;
-  display: block;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  z-index: -1;
-}
-/* V20.5: escena decorativa autonoma del menu. Vive sobre INTRO y siempre
+/* La escena 3D decorativa del menu permanece siempre
    por debajo de todos los controles. No recibe eventos ni participa en juego. */
 #menu .menu-decor-canvas {
   position:absolute;
@@ -299,25 +287,13 @@ html:not(.handheld-device) #menu .cpu-actions select{
   #menu .menu-credit { margin-top: 12px; }
 }
 @media (orientation: landscape) and (max-height: 560px) {
-  /* V18.16: recupera el fondo decorativo del menu movil y lo hace ocupar
-     toda la pantalla horizontal, independientemente del ancho reducido de
-     .menu-scene usado para encajar la interfaz. */
-  html.handheld-device #menu.menu-cover{
-    background-color:#05010b;
-    background-image:url('assets/sprites/INTRO_MOBILE.png?v=V18.16');
-    background-repeat:no-repeat;
-    background-position:center center;
-    background-size:cover;
-  }
-  html.handheld-device #menu .menu-art{visibility:hidden}
-
   /* V18.11: en movil recuperamos el aspecto original de la tarjeta CPU.
      Las opciones viven en una ventana aparte y JUGAR ocupa toda la linea. */
   html.handheld-device #menu .cpu-actions select{display:none!important}
   html.handheld-device #menu .cpu-actions{display:flex!important}
   html.handheld-device #menu .cpu-actions #cpu{width:100%!important;display:flex!important}
   /* V20.79: esta reduccion pertenece solo a la portada movil. En PC hacia
-     que INTRO y el canvas decorativo se encogieran a 420 px al hacer zoom o
+     que el canvas decorativo se encogiera a 420 px al hacer zoom o
      reducir la altura de la ventana, dejando de alcanzar arriba y abajo. */
   html.handheld-device #menu .menu-scene { width: min(100%, clamp(230px, calc((100svh - 285px) * 2.7), 420px)); aspect-ratio: auto; }
   #menu .menu-body { padding-top: 35.2%; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); }
@@ -1377,20 +1353,6 @@ html:not(.handheld-device) #menu .cpu-actions select{
   #menu #publicRoomsDialog .room-browser-bottom .room-dialog-close{
     margin-top:12px!important;
     margin-bottom:0!important;
-  }
-}
-/* V16.4.69: fondo exclusivo de portada para movil en horizontal.
-   La imagen ocupa todo el viewport y sustituye visualmente al INTRO superior. */
-@media (orientation: landscape) and (pointer: coarse) {
-  html.handheld-device #menu.menu-cover {
-    background-image: url("assets/sprites/INTRO_MOBILE.png");
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-color: #05010b;
-  }
-  html.handheld-device #menu .menu-art {
-    display: none;
   }
 }
 

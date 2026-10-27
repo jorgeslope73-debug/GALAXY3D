@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V23.95: cliente exclusivamente 3D; retirados el renderizado alternativo y33 sprites antiguos (3,68MB del repositorio). Se conservan el HUD, los indicadores, las partículas y las ilustraciones que usan el manual y las victorias. El misil nuevo recibe el color de su nave mediante su material de pintura, manteniendo metales y emisión. La cuenta de salida/reaparición usa el mismo tamaño a izquierda y derecha; junto al borde solo desplaza el número lo necesario para que pueda leerse entero.
+
 V23.81: este proyecto utiliza siempre la vista 3D. Se retiran el selector de presentacion y la opcion de abrir en 2D; las preferencias antiguas no cambian la vista.
 
 Versión V23.38: elimina de docs/assets/models/ las cuatro pinturas antiguas -sin-balas.png, que ya no se cargan. Las naves usan únicamente su pintura principal y la máscara del panel delantero. Se conservan los cuatro colores activos, los modelos 3D y el comportamiento de disponibilidad de disparo.

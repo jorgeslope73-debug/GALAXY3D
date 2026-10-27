@@ -5,6 +5,7 @@ import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 
 export const ROCKET_LENGTH=40;
 const teamPaints=[0x28bce8,0xf232a3,0x47df3f,0xffd83d].map(hex=>new T.Color(hex));
+const isMagentaPaint=colour=>colour&&colour.r>colour.g*3&&colour.b>colour.g*3&&colour.r>colour.b;
 
 export function prepareRocketTemplate(source){
   // The supplied model points along +Z. Align its nose with the game's +Y.
@@ -29,7 +30,7 @@ export function prepareRocketTemplate(source){
     for(const part of parts)part.dispose();
     if(!geometry)throw new Error('No se pueden agrupar las piezas del cohete');
     const material=original.clone();
-    // Keep the authored PBR finish; team paint only changes vertex colours.
+    // Keep the authored PBR finish; the factory changes only the paint colour.
     geometry.computeBoundingSphere();geometry.computeBoundingBox();
     template.add(new T.Mesh(geometry,material));
   }
@@ -47,6 +48,8 @@ export async function loadRocketTemplate(){
 export function createRocketFactory(template,environment=null){
   const palettes=new Map();
   function paintedGeometry(original,index){
+    // Material-painted exports need no duplicate vertex buffers for each team.
+    if(!original.attributes.color)return original;
     const key=original.uuid+':'+index;
     if(palettes.has(key))return palettes.get(key);
     const geometry=original.clone(),source=original.attributes.color,paint=geometry.attributes.color;
@@ -72,6 +75,13 @@ export function createRocketFactory(template,environment=null){
       const original=object.material;
       if(!materials.has(original)){
         const material=original.clone();
+        // The replacement GLB stores the body/cone/fin paint in baseColorFactor,
+        // rather than COLOR_0. Recolour that paint without tinting metal or lights.
+        if(index!==undefined&&!object.geometry.attributes.color&&!original.map&&
+          isMagentaPaint(original.color)&&(!original.emissive||original.emissive.r+original.emissive.g+original.emissive.b===0)){
+          const shade=original.color.r/teamPaints[1].r;
+          material.color.copy(teamPaints[team]).multiplyScalar(shade);
+        }
         if(environment&&!material.envMap){material.envMap=environment;material.needsUpdate=true;}
         materials.set(original,material);
       }

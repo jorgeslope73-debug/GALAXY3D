@@ -2,7 +2,6 @@
 .galaxy3d-brand{display:none}
 html[data-galaxy-view="3d"] #menu.menu-cover{background:#030814!important}
 html[data-galaxy-view="3d"] #menu .menu-scene{background:radial-gradient(ellipse at 50% 29%,rgba(18,55,80,.2),rgba(2,6,17,.5) 72%),url('assets/sprites/fondo02_1280.jpg') center/cover}
-html[data-galaxy-view="3d"] #menu .menu-art{visibility:hidden}
 html[data-galaxy-view="3d"] #menu .galaxy3d-brand{display:flex;position:absolute;top:8%;left:50%;transform:translateX(-50%);align-items:center;flex-direction:column;z-index:1;pointer-events:none;white-space:nowrap;text-align:center;color:#e8faff;filter:drop-shadow(0 4px 12px #000)}
 .galaxy3d-brand .galaxy3d-eyebrow{font:700 clamp(10px,1.05vw,16px)/1.4 Arial,sans-serif;letter-spacing:.45em;color:#8bc6e5;margin-bottom:11px}
 .galaxy3d-brand .galaxy3d-wordmark{font-size:clamp(36px,5.4vw,96px);line-height:1.1;letter-spacing:.03em;text-shadow:0 0 24px rgba(84,207,255,.2)}

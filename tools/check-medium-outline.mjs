@@ -7,16 +7,7 @@ import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareMeteorTemplate} from '../docs/meteor-model.js';
 const {engineContext}=createRequire(import.meta.url)('./check-session-regressions.js');
 const context=engineContext(),core=context.window.GalaxyPhysicsCore;
-for(const file of ['asteroidemediano.png','asteroidegrande_270.png']){
-  const png=await readFile(new URL('../docs/assets/sprites/'+file,import.meta.url));
-  let at=8;
-  while(at<png.length){
-    const length=png.readUInt32BE(at),type=png.toString('ascii',at+4,at+8);
-    assert.ok(!['tEXt','iTXt','zTXt','eXIf'].includes(type),file+': exported sprites must not expose local Blender metadata');
-    at+=length+12;
-  }
-  assert.equal(at,png.length);
-}
+// Legacy PNG exports are retired; all contact checks below use the actual GLB.
 const data=await readFile(new URL('../docs/assets/models/asteroidemediano.glb',import.meta.url));
 const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
 const gltf=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');

@@ -33,7 +33,7 @@ function clock(){let now=1000,id=0;const tasks=new Map();return {now:()=>now,sch
 const source=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n');
 function extract(name){const a=source.indexOf('  function '+name+'('),b=source.indexOf('\n  function ',a+1);assert.ok(a>=0&&b>a);return source.slice(a,b);}
 for(const index of [0,1]){
-  const text=[],points=[],ctx={save(){},restore(){},translate(x,y){points.push([x,y]);},scale(){},beginPath(){},arc(){},stroke(){},strokeText(){},fillText(v){text.push(v);}};
+  const text=[],points=[],ctx={save(){},restore(){},translate(x,y){points.push([x,y]);},scale(){},beginPath(){},arc(){},stroke(){},strokeText(){},measureText(){return {width:80};},fillText(v){text.push(v);}};
   const players=[{i:0,x:450,y:400},{i:1,x:1450,y:750}],snapshot={players,finished:false};
   const view=vm.createContext({ctx,W:1920,H:1080,inGame:true,myIndex:index,state:snapshot,localEntryVisual:null,isMobile:false,playerRgb:[[0,180,255],[255,30,180]],clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),matchStartGate:{key:'ROOM:6',phase:'countdown',deadline:4000,goAt:0}});
   vm.runInContext(extract('drawSpawnCountdownMarker')+extract('drawLocalEntryCountdown'),view);

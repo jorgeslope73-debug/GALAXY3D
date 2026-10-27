@@ -211,10 +211,10 @@ for(const script of ['config.js','campaign-config.js','physics-core.js','local-c
 if(!trainingPage.includes("window.GalaxyPhysicsCore"))fail(errors,'training: falta verificación de physics-core');
 if(!trainingPage.includes("window.GalaxyLocalCpu"))fail(errors,'training: falta verificación de GalaxyLocalCpu');
 
-if(!menuLoader.includes('decodeWithTimeout'))fail(errors,'mobile loader: falta timeout seguro para Image.decode');
+if(/new Image\(|INTRO|asteroide.*\.png/.test(menuLoader))fail(errors,'3D loader: conserva precargas del mundo 2D retirado');
 if(!menuLoader.includes('watchdogTimer'))fail(errors,'mobile loader: falta watchdog anti-bloqueo');
 if(!menuLoader.includes('isMobile?6000:18000'))fail(errors,'mobile loader: falta watchdog específico para móvil');
-if(!menuLoader.includes('if(isMobile)done();else decodeWithTimeout'))fail(errors,'mobile loader: iOS vuelve a esperar Image.decode');
+if(!menuLoader.includes("galaxy3d-error")||!menuLoader.includes("galaxy3d-ready"))fail(errors,'3D loader: faltan estados de disponibilidad/error');
 if(!game.includes('function decodeImageSafely'))fail(errors,'mobile loader: game.js no blinda Image.decode');
 if(!game.includes("reportImageFailure(im,'load timeout')"))fail(errors,'mobile loader: game.js no limita la espera de imágenes');
 if(!read('docs/pwa.js').includes("window.GALAXY_BUILD.versioned('./sw.js')"))fail(errors,'PWA: Service Worker no usa URL versionada');

@@ -43,17 +43,29 @@ for(const random of ['()=>0','()=>.999999','(()=>{let seed=12345;return ()=>{see
 const source=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n');
 const start=source.indexOf('  function drawLocalRespawnCountdown('),end=source.indexOf('\n  function lerp(',start);assert.ok(start>=0&&end>start);
 function view(index=0){
-  const draws=[],moves=[],scales=[],ctx={save(){},restore(){},translate(x,y){moves.push([x,y]);},scale(x){scales.push(x);},beginPath(){},arc(){},stroke(){},strokeText(){},fillText(t){draws.push(t);}};
+  const draws=[],moves=[],scales=[],glyphs=[],ctx={save(){},restore(){},translate(x,y){moves.push([x,y]);},scale(x){scales.push(x);},beginPath(){},arc(){},stroke(){},measureText(){return {width:80,actualBoundingBoxLeft:40,actualBoundingBoxRight:40,actualBoundingBoxAscent:60,actualBoundingBoxDescent:60};},strokeText(){},fillText(t,x,y){draws.push(t);glyphs.push([x,y]);}};
   const c=vm.createContext({W:1920,H:1080,myIndex:index,inGame:true,state:{code:'TEST',round:1,hostEpoch:1,simTime:1,players:[{i:0,d:1,dead:true,respawn:3,spawnX:600,spawnY:700},{i:1,d:0,dead:false}]},localRespawnVisual:null,lastStateTime:1000,localCampaignLevel:0,playerRgb:[[0,180,255],[255,0,180]],isMobile:false,ctx,clamp:(v,a,b)=>Math.max(a,Math.min(b,v))});
-  const markerStart=source.indexOf('  function drawSpawnCountdownMarker('),markerEnd=source.indexOf('  function drawLocalRespawnCountdown(',markerStart);vm.runInContext(source.slice(markerStart,markerEnd)+source.slice(start,end).split('  function drawLocalEntryCountdown(')[0],c);return {c,draws,moves,scales};
+  const markerStart=source.indexOf('  function drawSpawnCountdownMarker('),markerEnd=source.indexOf('  function drawLocalRespawnCountdown(',markerStart);vm.runInContext(source.slice(markerStart,markerEnd)+source.slice(start,end).split('  function drawLocalEntryCountdown(')[0],c);return {c,draws,moves,scales,glyphs,ctx};
 }
 const own=view();
 for(const t of [1000,2000,3000,4000])own.c.drawLocalRespawnCountdown(t);
 assert.deepEqual(own.draws,['3','2','1','0'],'one snapshot drives the whole local countdown without per-number messages');
 assert.ok(own.moves.every(([x,y])=>x===600&&y===700),'numbers stay centred on the reserved point');
-const animated=view();animated.c.drawLocalRespawnCountdown(1000);animated.c.drawLocalRespawnCountdown(1250);assert.ok(animated.scales[1]>animated.scales[3],'each digit animates locally');
+const animated=view();animated.c.drawLocalRespawnCountdown(1000);animated.c.drawLocalRespawnCountdown(1250);assert.ok(animated.scales[0]>animated.scales[1],'each digit animates locally');
 animated.c.state={...animated.c.state,players:[{...animated.c.state.players[0],respawn:2.9}]};animated.c.lastStateTime=2000;animated.c.drawLocalRespawnCountdown(2000);assert.equal(animated.draws.at(-1),'2','a delayed repeated countdown cannot move backwards');
-const edge=view();edge.c.state.players[0].spawnX=57.5;edge.c.drawLocalRespawnCountdown(1000);assert.ok(edge.scales[0]<1,'an edge spawn keeps its marker inside the screen');assert.deepEqual(edge.moves[0],[57.5,700],'fitting never moves the authoritative point');
+const edge=view();edge.c.state.players[0].spawnX=57.5;edge.c.drawLocalRespawnCountdown(1000);assert.equal(edge.scales[0],own.scales[0],'an edge spawn keeps the same digit size as a central spawn');assert.deepEqual(edge.moves[0],[57.5,700],'fitting never moves the authoritative point');
+// Size is independent of side/edge distance; only the glyph can move inward.
+for(const mobile of [false,true])for(const age of [0,.25,.99]){
+ const centre=view(),reference=[];centre.c.isMobile=mobile;centre.c.drawSpawnCountdownMarker(960,540,0,3,age,1,1000);
+ for(const x of [1,57.5,144,960,1776,1862.5,1919])for(const y of [1,54,540,1026,1079]){
+  const sample=view();sample.c.isMobile=mobile;sample.c.drawSpawnCountdownMarker(x,y,0,3,age,1,1000);
+  assert.deepEqual(sample.scales,centre.scales,'left/right/top/bottom share the exact same pop');
+  assert.equal(sample.ctx.font,centre.ctx.font,'all spawn positions use the same font size');
+  assert.deepEqual(sample.moves,[[x,y]],'the marker stays at the reserved spawn');
+  const pop=sample.scales[0],[dx,dy]=sample.glyphs[0],px=x+dx*pop,py=y+dy*pop;
+  assert.ok(px-40*pop>=0&&px+40*pop<=1920&&py-60*pop>=0&&py+60*pop<=1080,'full-size digits remain inside the viewport');
+ }
+}
 const other=view(1);other.c.drawLocalRespawnCountdown(1000);assert.equal(other.draws.length,0,'another player does not see the private marker or numbers');
 own.c.state={...own.c.state,players:[{i:0,d:1,dead:false,x:600,y:700}]};own.c.lastStateTime=4000;
 own.c.drawLocalRespawnCountdown(4000);assert.equal(own.draws.at(-1),'0');const before=own.draws.length;own.c.drawLocalRespawnCountdown(4280);assert.equal(own.draws.length,before);assert.equal(own.c.localRespawnVisual,null);

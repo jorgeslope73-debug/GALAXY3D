@@ -508,22 +508,11 @@
   if(cpuButton)cpuButton.disabled=false;
   // Same world-space hull on every device, matching the projectile silhouette.
   const SHIP_DRAW_SIZE=window.GalaxyPhysicsCore.SHIP_DRAW_SIZE;
-  const SHIELD_DRAW_RADIUS=window.GalaxyPhysicsCore.SHIELD_RADIUS;
   const HUD_SCALE=isMobile?1.60:1.12;
   const HUD_PANEL_W=128*HUD_SCALE;
   const HUD_PANEL_H=153*HUD_SCALE;
   const HUD_NAME_FONT=isMobile?`800 ${22*HUD_SCALE}px Arial,Helvetica,sans-serif`:`${20*HUD_SCALE}px Flashback,Arial`;
   const HUD_VALUE_FONT=isMobile?`800 ${23*HUD_SCALE}px Arial,Helvetica,sans-serif`:null;
-  const SHIP_IMAGE_KEYS=[
-    {base:'ship1',a:'ship1a',f:'ship1f',af:'ship1af'},
-    {base:'ship2',a:'ship2a',f:'ship2f',af:'ship2af'},
-    {base:'ship3',a:'ship3a',f:'ship3f',af:'ship3af'},
-    {base:'ship4',a:'ship4a',f:'ship4f',af:'ship4af'}
-  ];
-  const ROCKET_IMAGE_KEYS=['rocketA','rocketB','rocketC','rocketD'];
-  const NAVEMIRA_IMAGE_KEYS=['navemiraA','navemiraB','navemiraC','navemiraD'];
-  const ASTEROID_IMAGE_KEYS=['','asteroid1','asteroid2','asteroid3','asteroid4','asteroid5','asteroid6'];
-  const METEOR_DRAW_SIZES=[0,22,27,31];
   // 3D uses the collision diameter: SMALL_METEOR_RADIUS=14 in both engines.
   const METEOR_3D_DIAMETER=28;
 
@@ -1282,34 +1271,14 @@
     bg03:isMobile?'assets/sprites/fondo03_1280.jpg':'assets/sprites/fondo03.jpg',
     bg04:isMobile?'assets/sprites/fondo04_1280.jpg':'assets/sprites/fondo04.jpg',
     bg05:isMobile?'assets/sprites/fondo05_1280.jpg':'assets/sprites/fondo05.jpg',
-    giant:'assets/sprites/asteroidegrande_270.png',
-    ufo:'assets/sprites/ovni.png?v=V21.63',
     pantA:'assets/sprites/pantA.png',pantB:'assets/sprites/pantB.png',pantC:'assets/sprites/pantC.png',pantD:'assets/sprites/pantD.png',
     ammo1:'assets/sprites/municion1.png',ammo3:'assets/sprites/municion3.png',cadence:'assets/sprites/cadencia.png',speed:'assets/sprites/velocidad.png',
-    bengala:'assets/sprites/bengala.png',bengalahud:'assets/sprites/bengalahud.png',bengalasnave:'assets/sprites/bengalasnave.png',ojo:'assets/sprites/ojo.png',
-    mira1:'assets/sprites/mira1.png',coete:'assets/sprites/coete.png',navemira:'assets/sprites/navemira.png',
-    rocketA:'assets/sprites/coeteA.png',rocketB:'assets/sprites/coeteB.png',rocketC:'assets/sprites/coeteC.png',rocketD:'assets/sprites/coeteD.png',
-    navemiraA:'assets/sprites/navemiraA.png',navemiraB:'assets/sprites/navemiraB.png',navemiraC:'assets/sprites/navemiraC.png',navemiraD:'assets/sprites/navemiraD.png',
-    localizaA:'assets/sprites/localizaA.png',localizaB:'assets/sprites/localizaB.png',localizaC:'assets/sprites/localizaC.png',localizaD:'assets/sprites/localizaD.png',
-    asteroidMedium:'assets/sprites/asteroidemediano.png',
-    asteroid1:'assets/sprites/asteroide1.png',asteroid2:'assets/sprites/asteroide2.png',asteroid3:'assets/sprites/asteroide3.png',asteroid4:'assets/sprites/asteroide5.png',asteroid5:'assets/sprites/asteroide6.png',asteroid6:'assets/sprites/dos.png'
+    bengala:'assets/sprites/bengala.png',bengalahud:'assets/sprites/bengalahud.png',ojo:'assets/sprites/ojo.png',
+    mira1:'assets/sprites/mira1.png',
+    localizaA:'assets/sprites/localizaA.png',localizaB:'assets/sprites/localizaB.png',localizaC:'assets/sprites/localizaC.png',localizaD:'assets/sprites/localizaD.png'
   };
-  for(let i=1;i<=4;i++){
-    assetList[`ship${i}`]=`assets/sprites/coete${i}.png`;
-    assetList[`ship${i}a`]=`assets/sprites/coete${i}a.png`;
-    assetList[`ship${i}f`]=`assets/sprites/coete${i}f.png`;
-    assetList[`ship${i}af`]=`assets/sprites/coete${i}af.png`;
-  }
-  // These images are drawn only by the legacy Canvas world. HUD icons, deployed
-  // flares, localization markers and the four victory ships also serve 3D.
-  const legacyGameImageKeys=[
-    'giant','ufo','bengalasnave','coete','navemira',
-    ...ROCKET_IMAGE_KEYS,...NAVEMIRA_IMAGE_KEYS,
-    'asteroidMedium',...ASTEROID_IMAGE_KEYS.filter(Boolean),
-    ...SHIP_IMAGE_KEYS.flatMap(keys=>[keys.a,keys.f,keys.af])
-  ];
   const deferredGameImageKeys=new Set([
-    'bg02','bg03','bg04','bg05',...legacyGameImageKeys
+    'bg02','bg03','bg04','bg05'
   ]);
   const warnedImages=new WeakSet();
   function reportImageFailure(im,error){
@@ -1330,18 +1299,15 @@
       }catch(_){done(false);}
     });
   }
-  // Startup readiness only waits for eager images. Later backgrounds and legacy
-  // fallback loads have their own shared promises and cannot extend that gate.
+  // Startup readiness waits for HUD images; later round backgrounds have their
+  // own shared promises and cannot extend that initial gate.
   const imageDecodePromises={},imageLoadPromises={};
   function loadGameImage(k,url=assetList[k],startup=false){
     if(imageLoadPromises[k])return imageLoadPromises[k];
     if(!url)return Promise.resolve(false);
     const im=new Image();
     im.decoding='async';
-    // Estos sprites aparecen desde el primer frame. Antes los asteroides tenian
-    // prioridad baja y podian terminar de descargarse/decodificarse ya jugando.
-    const critical=k==='bg'||k==='giant'||k==='ufo'||k.startsWith('ship')||k.startsWith('pant')||
-      k.startsWith('asteroid')||k.startsWith('rocket')||k.startsWith('navemira')||k==='ammo1'||k==='ammo3'||k==='cadence'||k==='speed'||k==='bengala'||k==='bengalahud'||k==='bengalasnave'||k==='ojo';
+    const critical=k==='bg'||k.startsWith('pant')||k==='ammo1'||k==='ammo3'||k==='cadence'||k==='speed'||k==='bengala'||k==='bengalahud'||k==='ojo';
     if('fetchPriority' in im)im.fetchPriority=critical?'high':'auto';
     const ready=new Promise(resolve=>{
       let settled=false;
@@ -1372,11 +1338,6 @@
   }
   for(const [key,url] of Object.entries(assetList)){
     if(url&&!deferredGameImageKeys.has(key))loadGameImage(key,url,true);
-  }
-  let legacyGameImagesPromise=null;
-  function loadLegacyGameImages(){
-    if(!legacyGameImagesPromise)legacyGameImagesPromise=Promise.allSettled(legacyGameImageKeys.map(key=>loadGameImage(key)));
-    return legacyGameImagesPromise;
   }
 
   let rendererWarmed=false;
@@ -5124,8 +5085,7 @@
   }
   function drawImageCentered(im,x,y,size,rot=0,alpha=1){
     if(!imageReady(im)||!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(rot))return false;
-    // Asteroides, mejoras y meteorito gigante no rotados son la mayoria de
-    // drawImage del frame. Evitamos save/translate/rotate/restore en ese caso.
+    // Overlay icons often need no rotation; avoid transforming the canvas then.
     if(rot===0&&alpha===1){
       if(size)return drawImageSafely(im,x-size/2,y-size/2,size,size);
       return drawImageSafely(im,x-im.naturalWidth/2,y-im.naturalHeight/2);
@@ -5140,14 +5100,6 @@
     }finally{
       ctx.restore();
     }
-  }
-  function drawProfileSprite(image,outline,x,y,angle,scale,alpha,base,artSize){
-    // The 2D view keeps the authoritative silhouette too, including bank/tumble.
-    ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
-    ctx.beginPath();outline.forEach(([px,py],i)=>{if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});ctx.closePath();
-    ctx.fillStyle=base;ctx.fill();ctx.clip();
-    if(imageReady(image))drawImageSafely(image,-artSize*.5,-artSize*.5,artSize,artSize);
-    ctx.restore();
   }
   function drawLocalizaMarker(x,y,owner,alpha=.92){
     const idx=Math.max(0,Math.min(3,Number(owner)||0));
@@ -5360,9 +5312,6 @@
     ctx.save();
     try{
       ctx.translate(x,y);
-      const edge=Math.max(1,Math.min(x,W-x,y,H-y));
-      const fit=Math.min(1,edge/((isMobile?100:90)*pop+24));
-      ctx.scale(fit,fit);
       ctx.globalCompositeOperation='source-over';
       ctx.globalAlpha=alpha;
       ctx.strokeStyle=`rgba(${r},${g},${b},.9)`;
@@ -5379,7 +5328,16 @@
       ctx.lineWidth=10;ctx.strokeStyle='rgba(0,0,0,.92)';
       ctx.shadowColor=`rgba(${r},${g},${b},.9)`;ctx.shadowBlur=20;
       ctx.fillStyle='#f2fbff';
-      ctx.strokeText(String(digit),0,0);ctx.fillText(String(digit),0,0);
+      // Every pilot gets the same font and pop animation. Near an edge move
+      // only the glyph inward; shrinking the whole marker made spawn sides differ.
+      const text=String(digit),metrics=ctx.measureText(text),pad=7;
+      const left=(Number.isFinite(metrics.actualBoundingBoxLeft)?metrics.actualBoundingBoxLeft:metrics.width/2)+pad;
+      const right=(Number.isFinite(metrics.actualBoundingBoxRight)?metrics.actualBoundingBoxRight:metrics.width/2)+pad;
+      const top=(Number.isFinite(metrics.actualBoundingBoxAscent)?metrics.actualBoundingBoxAscent:(isMobile?136:120)*.6)+pad;
+      const bottom=(Number.isFinite(metrics.actualBoundingBoxDescent)?metrics.actualBoundingBoxDescent:(isMobile?136:120)*.6)+pad;
+      const textX=(clamp(x,left*pop,W-right*pop)-x)/pop;
+      const textY=(clamp(y,top*pop,H-bottom*pop)-y)/pop;
+      ctx.strokeText(text,textX,textY);ctx.fillText(text,textX,textY);
     }finally{ctx.restore();}
   }
   function drawLocalRespawnCountdown(now){
@@ -5699,22 +5657,8 @@
     }else suppressEngineTrail(p.i,false);
     if(p.camo>0&&local){alpha=.42;if(p.camo<=3)alpha=(Math.floor(now/160)%2===0)?.55:.22;}
     if(p.prot>0)alpha*=spawnProtectionAlpha(p.prot);
-    if(p.shield>0&&!scene3D){
-      let shieldAlpha=alpha;
-      // Aviso visual en los ultimos 3 segundos: el escudo parpadea suavemente
-      // sin modificar su duracion ni la proteccion real en el servidor.
-      if(p.shield<=3){
-        const shieldPulse=.38+.62*(.5+.5*Math.sin(now*.012));
-        shieldAlpha*=shieldPulse;
-      }
-      ctx.save();ctx.globalAlpha=shieldAlpha;ctx.strokeStyle='rgba(130,245,255,.95)';ctx.fillStyle='rgba(80,220,255,.12)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,SHIELD_DRAW_RADIUS,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
-    }
     // Python: armado = balas > 0 y recarga terminada. El servidor confirma
     // ese estado; no cambiamos el movimiento ni el efecto de propulsion web.
-    const variants=SHIP_IMAGE_KEYS[p.i]||SHIP_IMAGE_KEYS[0];
-    // El aspecto de la nave depende del acelerador, no de la velocidad.
-    // Para la nave local usamos el control de este mismo frame para que el PNG
-    // cambie al instante al pulsar/soltar, incluso mientras sigue por inercia.
     const materializing=spawnFxLeft>0;
     const thrusting=!materializing&&(Number(p.i)===Number(myIndex)?!!lastControlThrust:p.thrust===true);
     const turning=shipTurningForEngineFx(p,previous,now,materializing);
@@ -5725,14 +5669,6 @@
       emitEngineParticle(p,x,y,r,now,visualVx,visualVy,thrusting);
     }
     const armed=p.armed===true;
-    const selected=images[thrusting?(armed?variants.af:variants.a):(armed?variants.f:variants.base)];
-    const normal=images[thrusting?variants.a:variants.base]||images[variants.base];
-    // Si el PNG aun no esta disponible, dibujar la nave normal sin bloquear.
-    const im=imageReady(selected)?selected:normal;
-    // Los PNG originales de las naves apuntan hacia ARRIBA.
-    // La fisica usa rot=0 arriba, 90 izquierda, 180 abajo y 270 derecha.
-    // Canvas gira en el sentido visual contrario a esa convencion, por eso
-    // dibujamos con -rot. Asi el morro coincide exactamente con el avance.
     let shipSize=SHIP_DRAW_SIZE;
     if(materializing){
       const mt=spawnMaterializeProgress(spawnFxLeft);
@@ -5741,61 +5677,28 @@
       alpha*=.18+.82*me;
     }
     const hullPose={bank:local&&guestMotion?.ready?localVisual.bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:Number.isFinite(presentation?.simTime)?presentation.simTime:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i,motionSpeed:Math.hypot(Number(p.vx)||0,Number(p.vy)||0)};
-    if(scene3D){
-      // Existing motion data feeds a client-only model pose. It never enters
-      // authoritative state, prediction, collision profiles or network packets.
-      const renderPose={...hullPose,
-        vx:Number(local&&localVisual.ready?localVisual.vx:p.vx)||0,
-        vy:Number(local&&localVisual.ready?localVisual.vy:p.vy)||0,
-        speed:Number(p.spd)||1,motionActive:!materializing};
-      const shieldPulse=p.shield>0?(p.shield<=3?.38+.62*(.5+.5*Math.sin(now*.012)):1):0;
-      scene3D.ship(p.i,x,y,r,shipSize,alpha,thrusting,armed,shieldPulse,
-        Number(p.flare)>0,p.shock===true,p.mira===true,
-        Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma,Number(p.ammo)>0,
-        renderPose);
-    }else drawProfileSprite(im,window.GalaxyPhysicsCore.shipProfile(hullPose).outline,x,y,-r*Math.PI/180,shipSize/SHIP_DRAW_SIZE,alpha,'#263b50',98);
+    // Existing motion data feeds a client-only model pose. It never enters
+    // authoritative state, prediction, collision profiles or network packets.
+    const renderPose={...hullPose,
+      vx:Number(local&&localVisual.ready?localVisual.vx:p.vx)||0,
+      vy:Number(local&&localVisual.ready?localVisual.vy:p.vy)||0,
+      speed:Number(p.spd)||1,motionActive:!materializing};
+    const shieldPulse=p.shield>0?(p.shield<=3?.38+.62*(.5+.5*Math.sin(now*.012)):1):0;
+    scene3D.ship(p.i,x,y,r,shipSize,alpha,thrusting,armed,shieldPulse,
+      Number(p.flare)>0,p.shock===true,p.mira===true,
+      Math.max(0,(Number(shipHitFlashUntil[Number(p.i)]||0)-now)/165),false,p.ma,Number(p.ammo)>0,
+      renderPose);
     // V20.98: confirmacion visual muy corta de impacto. Solo se alimenta de
     // eventos ya recibidos y nunca revela una nave rival en modo FANTASMA.
     const hitLeft=Number(shipHitFlashUntil[Number(p.i)]||0)-now;
     if(hitLeft>0&&(local||Number(p.camo)<=0)){
       const hitT=clamp(hitLeft/165,0,1);
       ctx.save();
-      ctx.globalCompositeOperation='lighter';
-      if(!scene3D)drawImageCentered(im,x,y,shipSize*1.025,-r,Math.min(.42,alpha*.42)*hitT);
-      ctx.globalCompositeOperation='source-over';
       ctx.globalAlpha=.82*hitT;
       ctx.strokeStyle='#fff3bd';
       ctx.lineWidth=2.2;
       ctx.beginPath();ctx.arc(x,y,SHIP_DRAW_SIZE*(scene3D?.shipScale||1)*.52+7*(1-hitT),0,Math.PI*2);ctx.stroke();
       ctx.restore();
-    }
-    // V19.66: la bengala equipada se indica sobre la propia nave, igual que
-    // la capa de MIRA/misil. Solo se dibuja una vez aunque haya varias cargas.
-    if(!scene3D&&(Number(p.flare)||0)>0&&imageReady(images.bengalasnave)){
-      drawImageCentered(images.bengalasnave,x,y,64,-r,Math.min(1,alpha*.95));
-    }
-    if(p.shock===true&&!scene3D){
-      // V20.78: el testigo de onda se dibuja antes que la capa MIRA/misil,
-      // para que el indicador del misil quede siempre visualmente por encima.
-      const noseRot=(Number(r)||0)*Math.PI/180;
-      const noseX=-Math.sin(noseRot),noseY=-Math.cos(noseRot);
-      const sx=x+noseX*19,sy=y+noseY*19;
-      ctx.save();
-      ctx.globalAlpha=Math.min(1,alpha*.9);
-      ctx.fillStyle='rgba(150,215,255,.10)';
-      ctx.strokeStyle='#8ed8ff';
-      ctx.lineWidth=2.5;
-      ctx.beginPath();ctx.arc(sx,sy,9,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.globalAlpha=Math.min(1,alpha*.42);
-      ctx.strokeStyle='#e8f8ff';
-      ctx.lineWidth=1;
-      ctx.beginPath();ctx.arc(sx,sy,6,0,Math.PI*2);ctx.stroke();
-      ctx.restore();
-    }
-    if(p.mira===true&&!scene3D){
-      const navemiraKey=NAVEMIRA_IMAGE_KEYS[Math.max(0,Math.min(3,Number(p.i)||0))]||NAVEMIRA_IMAGE_KEYS[0];
-      const navemiraIm=imageReady(images[navemiraKey])?images[navemiraKey]:images.navemira;
-      if(imageReady(navemiraIm))drawImageCentered(navemiraIm,x,y,64,-r,Math.min(1,alpha*.95));
     }
     if(localized)drawLocalizaMarker(x,y,localizedOwner,Math.min(1,alpha*.95));
   }
@@ -6961,15 +6864,13 @@
       }
     }
     scene3D=window.Galaxy3D?.begin(ctx,now,renderState,myIndex)||null;
-    if(!scene3D){
-      loadLegacyGameImages();
-      if(canvas.dataset)canvas.dataset.view='2d';
-    }
+    // The loader reports missing/lost WebGL. Never reveal a different world renderer.
+    if(!scene3D)return;
     if(playback&&typeof guestShotOcclusion!=='undefined'&&guestShotOcclusion){
       // Only hide the local drawing at the first visible surface. The host's
       // projectile, ammunition, impacts and confirmations remain untouched.
       renderState.bullets=guestShotOcclusion.filter(renderState,myIndex,now,{
-        prediction:guestMotion,authoritative:state,front:scene3D?4:0,tail:scene3D?7.5:12,radius:4,
+        prediction:guestMotion,authoritative:state,front:4,tail:7.5,radius:4,
         playerVisible:p=>!(Number(p.camo)>0)||ghostRevealAlpha(p,now)>0
       });
     }
@@ -7038,13 +6939,11 @@
       const y=old?lerp(old.y,a.y,blend):a.y;
       const size=a.fragment===true?56:Math.max(56,(Number(a.r)||45)*2);
       const spin=old?(Number(old.s)||0)+Math.atan2(Math.sin((Number(a.s)||0)-(Number(old.s)||0)),Math.cos((Number(a.s)||0)-(Number(old.s)||0)))*blend:Number(a.s)||0;
-      if(scene3D)scene3D.rock('a'+a.id,x,y,size,a.type,0,a.fragment===true?'fragment':'medium',spin);
-      else if(a.fragment===true)drawImageCentered(images[ASTEROID_IMAGE_KEYS[a.type]]||images.asteroid1,x,y,size);
-      else drawProfileSprite(images.asteroidMedium,window.GalaxyPhysicsCore.mediumProfile({spin}).outline,x,y,-window.GalaxyPhysicsCore.mediumRotation(x,y,a.id),size*.5,1,'#5b5450',2.5);
+      scene3D.rock('a'+a.id,x,y,size,a.type,0,a.fragment===true?'fragment':'medium',spin);
     }
     for(const pk of renderState.pickups){
       const old=previousLookup.pickups.get(pk.id);
-      if(scene3D)scene3D.pickup(pk.id,old?lerp(old.x,pk.x,blend):pk.x,old?lerp(old.y,pk.y,blend):pk.y,pk.type);
+      scene3D.pickup(pk.id,old?lerp(old.x,pk.x,blend):pk.x,old?lerp(old.y,pk.y,blend):pk.y,pk.type);
       drawPickup(pk,old?lerp(old.x,pk.x,blend):pk.x,old?lerp(old.y,pk.y,blend):pk.y,nowSec);
     }
     for(const f of renderState.flares||[]){
@@ -7058,21 +6957,19 @@
       const x=old?lerp(old.x,m.x,blend):m.x;
       const y=old?lerp(old.y,m.y,blend):m.y;
       const angle=old?lerpAngle(old.a,m.a,blend):m.a;
-      if(scene3D)scene3D.rock('m'+m.id,x,y,METEOR_3D_DIAMETER,m.type,angle,'fragment');
-      else drawImageCentered(images[ASTEROID_IMAGE_KEYS[m.type]]||images.asteroid1,x,y,METEOR_DRAW_SIZES[m.type]||25,angle);
+      scene3D.rock('m'+m.id,x,y,METEOR_3D_DIAMETER,m.type,angle,'fragment');
     }
     if(renderState.giant){
       const old=prev.giant;
       const giantX=old?lerp(old.x,renderState.giant.x,blend):renderState.giant.x;
       const giantY=old?lerp(old.y,renderState.giant.y,blend):renderState.giant.y;
       drawGiantEntryWarning({x:giantX,y:giantY},now);
-      if(scene3D)scene3D.rock('giant',giantX,giantY,window.GalaxyPhysicsCore.GIANT_DIAMETER,3,0,'large');
-      else drawImageCentered(images.giant,giantX,giantY,window.GalaxyPhysicsCore.GIANT_DIAMETER,-window.GalaxyPhysicsCore.giantRotation(giantX,giantY)*180/Math.PI,1);
+      scene3D.rock('giant',giantX,giantY,window.GalaxyPhysicsCore.GIANT_DIAMETER,3,0,'large');
     }
     {
       const visibleUfos=Array.isArray(renderState.ufos)?renderState.ufos:(renderState.ufo?[renderState.ufo]:[]);
       // V21.62: el rastro se genera y evoluciona solo en este cliente.
-      // Se pinta antes del PNG para quedar por detras del platillo.
+      // Se pinta antes del modelo para quedar por detras del platillo.
       updateUfoLocalFx(now,visibleUfos,blend);
       drawUfoParticles(now);
       for(const ufo of visibleUfos){
@@ -7083,8 +6980,7 @@
         // V21.61: cada OVNI gira de forma visual e independiente.
         // La fase depende de su id; no toca trayectoria, IA ni colisiones.
         const ufoAngle=ufoSpinAngle(now,ufo.id);
-        if(scene3D)scene3D.ufo(ufo.id,ufoX,ufoY,ufoAngle,ufo.vx,ufo.vy);
-        else drawImageCentered(images.ufo,ufoX,ufoY,56,ufoAngle,1);
+        scene3D.ufo(ufo.id,ufoX,ufoY,ufoAngle,ufo.vx,ufo.vy);
       }
     }
     detectGiantAsteroidDebris(now,renderState.giant,renderState.asteroids);
@@ -7102,22 +6998,8 @@
 
     for(const b of renderState.bullets){
       const x=b.x+b.vx*age,y=b.y+b.vy*age;
-      const sp=Math.hypot(b.vx,b.vy)||1;
-      if(scene3D){
-        if(b.g)scene3D.rocket(b.id,x,y,Math.atan2(-b.vx,-b.vy)*180/Math.PI,b.o);
-        else scene3D.bolt(x,y,b.vx,b.vy,b.id);
-        continue;
-      }
-      if(b.g){
-        const rocketKey=ROCKET_IMAGE_KEYS[Math.max(0,Math.min(3,Number(b.o)||0))]||ROCKET_IMAGE_KEYS[0];
-        const rocketIm=imageReady(images[rocketKey])?images[rocketKey]:images.coete;
-        if(imageReady(rocketIm)){
-          const bulletRot=(Math.atan2(-b.vx,-b.vy)*180/Math.PI+360)%360;
-          drawImageCentered(rocketIm,x,y,42,-bulletRot,1);
-          continue;
-        }
-      }
-      ctx.strokeStyle=b.g?'#ff3b48':'#50ff78';ctx.lineWidth=b.g?4:3;ctx.beginPath();ctx.moveTo(x-b.vx/sp*(b.g?15:12),y-b.vy/sp*(b.g?15:12));ctx.lineTo(x,y);ctx.stroke();
+      if(b.g)scene3D.rocket(b.id,x,y,Math.atan2(-b.vx,-b.vy)*180/Math.PI,b.o);
+      else scene3D.bolt(x,y,b.vx,b.vy,b.id);
     }
     // El rastro se calcula y pinta solo en esta maquina. Las nuevas particulas
     // se emiten al dibujar las naves y apareceran desde el siguiente frame.
@@ -7127,7 +7009,7 @@
       const old=playback&&!local?(playback.previous.players||[]).find(v=>v.i===p.i):previousLookup.players.get(p.i);
       drawShip(p,old,blend,now,playback?{interpolated:!local,simTime:local?state.simTime:playback.simTime}:null);
     }
-    if(scene3D)window.Galaxy3D.flush(ctx);
+    window.Galaxy3D.flush(ctx);
     if(shockwaveFx.length){
       let write=0;
       ctx.save();

@@ -8,6 +8,8 @@ const SHELL_FILES=[
   './build-version.js?v='+encodeURIComponent(VERSION),
   './config.js?v='+encodeURIComponent(VERSION)
 ];
+// Retired art is removed from older offline copies as well as from the repository.
+const RETIRED_2D_ASSETS=new Set(["asteroide1.png","asteroide2.png","asteroide3.png","asteroide5.png","asteroide6.png","asteroidegrande_270.png","asteroidemediano.png","dos.png","ovni.png","bengalasnave.png","coete.png","coeteA.png","coeteB.png","coeteC.png","coeteD.png","navemira.png","navemiraA.png","navemiraB.png","navemiraC.png","navemiraD.png","coete1a.png","coete1af.png","coete2a.png","coete2f.png","coete2af.png","coete3a.png","coete3f.png","coete3af.png","coete4a.png","coete4f.png","coete4af.png","INTRO.png","INTRO_MOBILE.png"]);
 const assetFlights=new Map(),legacyIndexes=new Map();
 const idleClients=new Map(),warmSeen=new Set();
 let warmTask=null;
@@ -44,6 +46,20 @@ self.addEventListener('install',event=>{
     await self.skipWaiting();
   })());
 });
+async function purgeRetiredArt(names){
+  for(const name of names){
+    if(!name.startsWith('galaxy3d-'))continue;
+    const cache=await openCache(name);if(!cache)continue;
+    try{
+      for(const request of await cache.keys()){
+        const url=new URL(request.url);
+        if(inScope(url)&&url.pathname.startsWith(SCOPE.pathname+'assets/sprites/')&&RETIRED_2D_ASSETS.has(decodeURIComponent(url.pathname.slice(url.pathname.lastIndexOf('/')+1)))){
+          try{await cache.delete(request);}catch(_){}
+        }
+      }
+    }catch(_){}
+  }
+}
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     const keys=await cacheNames(),keep=new Set([SHELL_CACHE,ASSET_CACHE]);
@@ -52,6 +68,7 @@ self.addEventListener('activate',event=>{
       const previous=keys.filter(key=>key.startsWith(prefix)&&!keep.has(key)).at(-1);if(previous)keep.add(previous);
     }
     await Promise.all(keys.filter(key=>key.startsWith('galaxy3d-')&&!keep.has(key)).map(async key=>{try{await caches.delete(key);}catch(_){}}));
+    await purgeRetiredArt([...keep]);
     await self.clients.claim();
   })());
 });

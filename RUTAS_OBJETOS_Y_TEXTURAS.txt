@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.94
+V23.95
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -328,3 +328,11 @@ CARGA DE RECURSOS OPTIMIZADA - V23.94
 - Sin cambios de resolucion, modelos, texturas, cantidad de particulas, fisica, controles, IA, protocolo ni frecuencias de red. Render y base de datos no cambian.
 - Medicion local de carga limpia al menu (HTTP sin compresion, mismo navegador/assets):35913543 ->10514351 bytes (-70,7%);243 ->78 solicitudes con cuerpo/validacion del servidor. Segunda visita optimizada:517089 bytes adicionales. Los tiempos y bytes reales dependen de navegador/cache/compresion.
 - Se conserva el GLB de cohete que el usuario habia subido a main durante la revision.
+
+
+RETIRADA DEL MUNDO 2D Y MISIL NUEVO - V23.95
+- El juego y la portada usan exclusivamente sus modelos3D. Se eliminan el cargador y las ramas de dibujo del mundo2D, mas33PNG exclusivos (3676470bytes) y sus copias offline antiguas.
+- Se mantienen Canvas2D para componer la escena, HUD, cuenta atras, particulas, fondos y las imagenes utilizadas por manual/victorias. No son una vista de juego alternativa.
+- Misil: docs/assets/models/cohete_galaxy_combat.glb. El nuevo GLB no tiene COLOR_0; rocket-model.js cambia exclusivamente baseColor del material fucsia por azul/fucsia/verde/amarillo. Conserva metalness, roughness, metales, escape y luces. Geometria compartida entre equipos.
+- Cuenta3-0 de salida y reaparicion: misma fuente y animacion para todos los puntos; no encoge por cercania al borde. El marcador conserva el punto reservado, el digito se ajusta dentro de la pantalla si hace falta. Todo se dibuja localmente.
+- Sin cambios de fisica, controles, protocolo, cadencias o backend.
