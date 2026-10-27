@@ -305,6 +305,7 @@ async function checkLocalCpuStartup(){
 }
 async function checkBackendMembershipFlow(){
   const server=serverFixture(),host=playableClientFixture(),guest=playableClientFixture();
+  const receiveWire=(socket,message)=>server.receive(socket,message,{raw:true});
   const drain=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
   host.ctx.returnToMainMenu(false);
   await guest.ctx.startLocalCpu();await drain();
@@ -317,17 +318,17 @@ async function checkBackendMembershipFlow(){
     return {client,backend,connection,flush(){for(const m of backend.messages.slice(cursor)){client.receive(connection,m);}cursor=backend.messages.length;}};
   }
   const h=link(host),g=link(guest);
-  await host.ctx.createOnlineRoom(true);await server.receive(h.backend,host.wire.at(-1));h.flush();
+  await host.ctx.createOnlineRoom(true);await receiveWire(h.backend,host.wire.at(-1));h.flush();
   const code=host.ctx.roomCode,lobbySeries=host.ctx.onlineSeriesId,lobbyEpoch=host.ctx.hostEpoch;
   assert.ok(code&&host.ctx.PROTOCOL.validId(lobbySeries));assert.equal(lobbyEpoch,1);
   assert.equal(host.ctx.menu.classList.contains('hidden'),true);assert.equal(host.ctx.lobby.classList.contains('hidden'),false);
   assert.equal(host.ctx.inGame,false,'created/lobby must actually reach the room view before start');
-  await guest.ctx.joinRoomByCode(code);await server.receive(g.backend,guest.wire.at(-1));g.flush();h.flush();
+  await guest.ctx.joinRoomByCode(code);await receiveWire(g.backend,guest.wire.at(-1));g.flush();h.flush();
   assert.equal(guest.ctx.roomCode,code);assert.equal(guest.ctx.myIndex,1);assert.equal(guest.ctx.onlineSeriesId,lobbySeries);
   assert.equal(guest.ctx.menu.classList.contains('hidden'),true);assert.equal(guest.ctx.lobby.classList.contains('hidden'),false);
   assert.equal(guest.ctx.inGame,false,'a previous CPU match cannot block joined/lobby');
   retiredCpu.onState({t:'state',players:[]});assert.equal(guest.ctx.roomCode,code,'retired CPU state cannot replace the joined room');
-  host.ctx.send({t:'start'});await server.receive(h.backend,host.wire.at(-1));
+  host.ctx.send({t:'start'});await receiveWire(h.backend,host.wire.at(-1));
   const start=h.backend.last('start');
   assert.notEqual(start.seriesId,lobbySeries,'the actual backend renews the series on first start');
   assert.ok(start.hostEpoch>lobbyEpoch);
@@ -351,21 +352,21 @@ async function checkBackendMembershipFlow(){
     assert.equal(client.ctx.onlineSeriesId,start.seriesId,'old series packets cannot restore the previous authority');
   }
   const ready=guest.wire.filter(m=>m.t==='fallback-action'&&m.action==='start-ready').at(-1);assert.ok(ready,'the prepared guest sends readiness through the existing relay');
-  await server.receive(g.backend,ready);h.flush();host.advanceStart(host.ctx.ONLINE_READY_MS);
+  await receiveWire(g.backend,ready);h.flush();host.advanceStart(host.ctx.ONLINE_READY_MS);
   assert.equal(host.ctx.matchStartGate.phase,'countdown');
   const preview=host.wire.filter(m=>m.t==='fallback-state'&&m.state.startGate?.phase==='countdown').at(-1);assert.ok(preview);
-  await server.receive(h.backend,preview);g.flush();assert.equal(guest.ctx.matchStartGate.phase,'countdown');
+  await receiveWire(h.backend,preview);g.flush();assert.equal(guest.ctx.matchStartGate.phase,'countdown');
   assert.equal(guest.ctx.fallbackActive,false,'the reliable startup preview does not change the playing transport');
   assert.equal(host.ctx.hostPhysics.fxClock,0,'the authoritative simulation stays frozen throughout preparation');
   host.advanceStart(host.ctx.ONLINE_ENTRY_MS);
   const go=host.wire.filter(m=>m.t==='fallback-state'&&m.state.startGate?.phase==='go').at(-1);assert.ok(go);
-  await server.receive(h.backend,go);g.flush();assert.equal(guest.ctx.matchStartGate.phase,'go');
+  await receiveWire(h.backend,go);g.flush();assert.equal(guest.ctx.matchStartGate.phase,'go');
   assert.ok(host.ctx.hostPhysics&&host.ctx.hostPhysics.started,'the real start transition launches authoritative host physics');
   const state=host.ctx.hostPhysics.publicState();host.ctx.handle(state);
   guest.ctx.fallbackActive=true;guest.receive(g.connection,{t:'fallback-state',state});
   assert.equal(guest.ctx.state.seriesId,start.seriesId);assert.equal(guest.ctx.state.players.length,4,'the guest receives the running authoritative state');
   const live=playableClientFixture();live.ctx.returnToMainMenu(false);const l=link(live);
-  await live.ctx.joinRoomByCode(code,2);await server.receive(l.backend,live.wire.at(-1));l.flush();h.flush();g.flush();await drain();
+  await live.ctx.joinRoomByCode(code,2);await receiveWire(l.backend,live.wire.at(-1));l.flush();h.flush();g.flush();await drain();
   assert.equal(live.ctx.roomCode,code);assert.equal(live.ctx.myIndex,2);assert.equal(live.ctx.onlineSeriesId,start.seriesId);
   assert.equal(live.ctx.inGame,true,'joining an existing CPU slot uses joined.started without requiring another start event');
 }

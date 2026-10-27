@@ -307,7 +307,7 @@ inputRate.turn=-1;inputRate.changed=true;inputRate.elapsed=1;inputRate.decide();
 assert.equal(inputSends,31,'no esperar 33 ms adicionales al invertir el giro');
 // El filtro de respaldo tolera variaciones submilisegundo entre estados a 20 Hz.
 let fallbackSent=0;
-const fallbackRate=vm.createContext({fallbackPeers:new Set([1]),ws:{readyState:1,bufferedAmount:0},WebSocket:{OPEN:1},
+const fallbackRate=vm.createContext({window:{},hostPhysics:null,fallbackCodecPeers:new Map(),fallbackPeers:new Set([1]),ws:{readyState:1,bufferedAmount:0},WebSocket:{OPEN:1},
   performance:{now:()=>149.8},lastFallbackStateSentAt:100,FALLBACK_STATE_MS:50,
   onlinePacket:m=>m,sendSocketRaw(){fallbackSent++;return true;}});
 const fallbackStart=game.indexOf('  function sendHostFallbackState(');

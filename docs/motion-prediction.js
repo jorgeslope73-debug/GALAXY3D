@@ -52,11 +52,11 @@
         vx:visual.x*speed,vy:visual.y*speed});
       if(this.shots.length>32)this.shots.shift();
     }
-    fromPlayer(p){const m=p.motion;return{x:m.x,y:m.y,rot:m.rot,vx:m.vx,vy:m.vy,speed:Number(p.spd)||1};}
+    fromPlayer(p){const m=p.motion;return{x:m.x,y:m.y,rot:m.rot,vx:m.vx,vy:m.vy,bank:Number(m.bank??p.b)||0,speed:Number(p.spd)||1};}
     valid(p){
       const m=p&&p.motion;
       return !!(m&&m.v===1&&Number.isSafeInteger(m.epoch)&&Number.isSafeInteger(m.ack)&&m.ack>=0&&
-        ['x','y','rot','vx','vy'].every(k=>Number.isFinite(m[k]))&&!p.dead&&!(p.spawnFx>0));
+        ['x','y','rot','vx','vy'].every(k=>Number.isFinite(m[k]))&&(m.bank===undefined||Number.isFinite(m.bank))&&!p.dead&&!(p.spawnFx>0));
     }
     reconcile(p){
       const m=p.motion;
@@ -154,7 +154,7 @@
       const pose={...this.pose};
       if(this.accumulator>0)core.stepShipMovement(pose,this.input,this.accumulator/1000);
       return{x:(pose.x+this.offset.x+1920)%1920,y:(pose.y+this.offset.y+1080)%1080,
-        r:(pose.rot+this.offset.r+360)%360,vx:pose.vx,vy:pose.vy};
+        r:(pose.rot+this.offset.r+360)%360,vx:pose.vx,vy:pose.vy,bank:pose.bank};
     }
   }
   const normalOwn=(b,owner)=>!!b&&Number(b.o??b.owner)===Number(owner)&&!b.g&&!b.guided;

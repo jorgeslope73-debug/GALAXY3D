@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.92
+V23.93
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -308,3 +308,10 @@ PRECARGA Y CUENTA DE SALIDA PERSONAL - V23.92
 - Las fases y la disponibilidad usan los canales P2P y el relay existentes. No requiere despliegue ni cambios de base de datos en Render.
 - El precache offline se limita a tres descargas simultaneas para reducir la competencia de recursos durante el arranque.
 - Se ejecutan calculos iniciales en una simulacion aislada por lotes entre fotogramas. No avanza la partida real ni consume sus identificadores o numeros aleatorios.
+
+PREDICCION Y COMPACTACION DEL RESPALDO - V23.93
+- La prediccion local por comandos y su confirmacion usan el mismo motor de 60 Hz por P2P y por el relay existente. Los hosts antiguos mantienen la ruta anterior.
+- El host anuncia capacidades; el invitado confirma su decoder enviando un control valido en el canal de acciones existente. Se comprimen secuencias identicas sin quitar ticks ni pulsos cortos.
+- Un unico snapshot compacto agrupa los invitados compatibles del relay; se conserva la precision completa del movimiento confirmado, incluida la inclinacion de la nave propia.
+- Los paquetes son completos e independientes. No se reducen frecuencias ni se trasladan daños o colisiones al cliente; no cambia el servicio ni la base de datos de Render.
+- La confirmacion de PREPARADOS por respaldo incluye el identificador de sesion que exige el backend; las pruebas de red ahora tambien ejercitan mensajes exactos sin completar campos automaticamente.

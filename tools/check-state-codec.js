@@ -27,6 +27,12 @@ for(const recipient of [0,1,2,3]){
 }
 assert.equal(JSON.stringify(original),before,'packing must not modify authority');
 const prepared=Codec.prepare(original),forOne=prepared.encodeFor(1),forTwo=prepared.encodeFor(2);
+const shared=prepared.encodeForRecipients([1,2,3]),sharedDecoded=json(Codec.decode(json(shared))),sharedExpected=expected(original,1);
+for(const p of sharedExpected.players)if([2,3].includes(p.i))p.motion=original.players.find(player=>player.i===p.i).motion;
+assert.deepEqual(sharedDecoded,sharedExpected,'one relay upload contains exact replay bases only for its recipients');
+const relayLegacy=Buffer.byteLength(JSON.stringify({t:'fallback-state',to:[1,2,3],state:original})),relayCompact=Buffer.byteLength(JSON.stringify({t:'fallback-state',to:[1,2,3],state:shared}));
+assert.ok(relayCompact<relayLegacy*.65,'grouped relay compaction also saves at least 35 percent without three uploads');
+console.log(JSON.stringify({relayLegacy,relayCompact,savedPercent:+(100*(1-relayCompact/relayLegacy)).toFixed(1)}));
 assert.equal(forOne.entities.a,forTwo.entities.a,'asteroid rows are prepared once for all recipients');assert.equal(forOne.entities.b,forTwo.entities.b,'bullet rows are prepared once for all recipients');assert.notEqual(forOne.entities.p,forTwo.entities.p,'recipient input replay rows remain separate');
 for(const recipient of [1,2,3])assert.deepEqual(json(Codec.decode(json(prepared.encodeFor(recipient)))),expected(original,recipient),'prepared and standalone encoders preserve identical data');
 const changed={...original,winner:2};assert.equal(Codec.prepare(changed).encodeFor(1).winner,2,'a later broadcast reads the new header, without a stale cross-frame cache');

@@ -324,7 +324,7 @@
   let p2p=null,hostPhysics=null,lobbyPlayers=[],cpuFillEnabled=false;
   let netStartAt=0,lastP2PStateAt=0,lastFallbackRequestAt=0,lastFallbackStateSentAt=0;
   let fallbackActive=false,p2pStableCount=0;
-  const fallbackPeers=new Set(),fallbackReconnectAt=new Map();
+  const fallbackPeers=new Set(),fallbackReconnectAt=new Map(),fallbackCodecPeers=new Map();
   const FALLBACK_AFTER_MS=500,FALLBACK_RETRY_MS=3000,FALLBACK_STATE_MS=50,P2P_STABLE_STATES=12;
   const keys=new Set(); let ws=null,reconnectTimer=null,musicStarted=false,serverProtocolReady=false;
   // V16.4.36: sincronizamos estados/controles y reducimos GC en movil para evitar picos de trabajo
@@ -2637,7 +2637,7 @@
     p2p=null;
     lastRestartedRound=0;
     netStartAt=0;lastP2PStateAt=0;lastFallbackRequestAt=0;lastFallbackStateSentAt=0;
-    fallbackActive=false;p2pStableCount=0;fallbackPeers.clear();fallbackReconnectAt.clear();
+    fallbackActive=false;p2pStableCount=0;fallbackPeers.clear();fallbackReconnectAt.clear();fallbackCodecPeers.clear();
     controlSeq=0;lastTurnControlSeq=0;lastSubmittedTurn=NaN;
     lastMotionControlSeq=0;lastSubmittedThrust=false;pendingInputActions.length=0;
     for(const k of ['rocket','flare','shock']){inputActionSeq[k]=0;inputActionHeld[k]=false;}
@@ -2757,7 +2757,32 @@
     const now=performance.now();
     if(now-lastFallbackStateSentAt<FALLBACK_STATE_MS-1)return false;
     lastFallbackStateSentAt=now;
-    return sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-state',to:[...fallbackPeers],state:m})));
+    const codec=window.GalaxyStateCodec,modern=[],legacy=[];
+    for(const index of fallbackPeers){
+      const capability=fallbackCodecPeers.get(index),player=hostPhysics?.players.find(p=>p.index===index);
+      const known=capability&&capability.seriesId===onlineSeriesId&&capability.hostEpoch===hostEpoch&&capability.inputSessionId===player?.inputSessionId;
+      (known?modern:legacy).push(index);
+    }
+    const packed=modern.length&&codec?.prepare?.(m)?.encodeForRecipients?.(modern);
+    // One shared compact upload retains motion only for its actual recipients.
+    // Older clients keep the existing snapshot format and controls.
+    if(modern.length&&!packed){legacy.push(...modern);modern.length=0;}
+    let sent=false;
+    if(modern.length)sent=sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-state',to:modern,state:packed})))||sent;
+    if(legacy.length)sent=sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-state',to:legacy,state:m})))||sent;
+    return sent;
+  }
+  function relayPredictionAvailable(){
+    return state?.relayCaps===1&&typeof window.GalaxyStateCodec?.encodeRelayControl==='function';
+  }
+  function receiveRelayControl(message){
+    if(!isHost||!hostPhysics||matchStartGate?.blocked||!isCurrentOnlinePacket(message))return false;
+    const control=window.GalaxyStateCodec?.decodeRelayControl?.(message.action);
+    if(!control||!isCurrentOnlinePacket(control))return false;
+    const index=Number(message.from),player=hostPhysics.players.find(p=>p.index===index&&!p.cpu&&p.inputSessionId===control.inputSessionId);
+    if(!player||!hostPhysics.setControl(index,control.turn,control.thrust,control.fire,control))return false;
+    fallbackCodecPeers.set(index,{seriesId:control.seriesId,hostEpoch:control.hostEpoch,inputSessionId:control.inputSessionId});
+    return true;
   }
   function sendHostFallbackEvent(m,forceReliable=false){
     // V19.79: los estados continuos siguen usando el camino P2P descartable,
@@ -3066,6 +3091,11 @@
         return;
       }
       if(m&&m.t==='fallback-state'){
+        if(m.state?.stateCodec!==undefined){
+          const codec=window.GalaxyStateCodec,decoded=m.state.stateCodec===1&&codec?codec.decode(m.state):null;
+          if(!decoded)return;
+          m={...m,state:decoded};
+        }
         // Puede quedar un estado en vuelo despues de fallback-clear.
         // No reactivar el respaldo cuando el enlace directo ya se recupero.
         if(!isHost&&m.state&&isCurrentOnlinePacket(m.state,{futureRound:true})&&(m.state.startGate?.v===1||fallbackActive||clientNeedsFallback())){
@@ -3088,7 +3118,8 @@
       }
       if(m&&m.t==='input-ack'){acknowledgeInputAction(m);return;}
       if(m&&m.t==='fallback-action'){
-        if(m.action==='start-ready')receiveStartPreparationReady(Number(m.from),m);
+        if(typeof m.action==='string'&&m.action.startsWith('gc-ctrl:1:'))receiveRelayControl(m);
+        else if(m.action==='start-ready')receiveStartPreparationReady(Number(m.from),m);
         else if(isHost&&m.action==='restart'&&hostPhysics)restartOnlineRoundAuthoritatively(m.rankRound,m.hostEpoch);
         return;
       }
@@ -3284,6 +3315,9 @@
       if(turn!==lastSubmittedTurn){lastTurnControlSeq=seq;lastSubmittedTurn=turn;}
       controlSeq=seq;return true;
     };
+    if(typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready&&!isHost&&!inputSuspended){
+      actions={...actions,motion:guestMotion.packet()};
+    }
     if(inGame&&p2p){
       const now=performance.now();
       if(!isHost&&(fallbackActive||clientNeedsFallback(now))){
@@ -3291,14 +3325,16 @@
         if(ws&&ws.readyState===WebSocket.OPEN){
           if(Number(ws.bufferedAmount||0)>4*1024)return false;
           try{
+            if(relayPredictionAvailable()){
+              const action=window.GalaxyStateCodec.encodeRelayControl(onlinePacket({controlSeq:seq,inputSessionId,turn,thrust:!!thrust,fire:!!fire,...actions}));
+              if(!action||!sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-action',action,inputSessionId}))))return false;
+              return accepted();
+            }
             if(!sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-ctrl',controlSeq:seq,turn,thrust:!!thrust,fire:!!fire,...actions,inputSessionId}))))return false;
             return accepted();
           }catch(_){return false;}
         }
         return false;
-      }
-      if(typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready&&!isHost&&!inputSuspended){
-        actions={...actions,motion:guestMotion.packet()};
       }
       if(p2p.sendControl(turn,thrust,fire,actions,seq))return accepted();
       return false;
@@ -3325,7 +3361,7 @@
   function updateGuestPrediction(now,input){
     if(!guestMotion)return;
     const player=state&&state.players&&state.players.find(p=>p.i===myIndex);
-    if(isHost||localCpuActive||!inGame||inputSuspended||fallbackActive||clientNeedsFallback(now)||!player){
+    if(isHost||localCpuActive||!inGame||inputSuspended||((fallbackActive||clientNeedsFallback(now))&&!relayPredictionAvailable())||!player){
       guestMotion.reset();return;
     }
     const context=hostEpoch+':'+onlineSeriesId+':'+currentOnlineSeriesRound();
@@ -5673,7 +5709,7 @@
       shipSize*=.28+.72*me;
       alpha*=.18+.82*me;
     }
-    const hullPose={bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:Number.isFinite(presentation?.simTime)?presentation.simTime:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i,motionSpeed:Math.hypot(Number(p.vx)||0,Number(p.vy)||0)};
+    const hullPose={bank:local&&guestMotion?.ready?localVisual.bank:lerp(Number(previous?.b)||0,Number(p.b)||0,blend),time:Number.isFinite(presentation?.simTime)?presentation.simTime:lerp(Number(previousState?.simTime)||0,Number(state.simTime)||0,blend),index:p.i,motionSpeed:Math.hypot(Number(p.vx)||0,Number(p.vy)||0)};
     if(scene3D){
       // Existing motion data feeds a client-only model pose. It never enters
       // authoritative state, prediction, collision profiles or network packets.
@@ -6192,7 +6228,7 @@
     clearStartReadyRetry();
     if(isHost||roomCode==='LOCAL'||!matchStartGate?.localReady||matchStartGate.phase!=='preparing')return;
     ensureP2P()?.sendAction?.('start-ready',onlineStartRankRound);
-    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-action',action:'start-ready',rankRound:onlineStartRankRound})));
+    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-action',action:'start-ready',rankRound:onlineStartRankRound,inputSessionId})));
     startReadyRetryTimer=setTimeout(sendStartPreparationReady,400);
   }
   function applyStartPreparationState(packet){

@@ -81,10 +81,10 @@ function serverFixture(){
     wss.emit('connection',socket,{headers:{},socket:{remoteAddress:'10.0.0.'+(++connectionId)}});
     return socket;
   };
-  const receive=async(socket,message)=>{
+  const receive=async(socket,message,{raw=false}={})=>{
     const code=message.code||socket.code;
     const current=code&&room(code);
-    message={...(current?PROTOCOL.context(current):{protocolVersion:PROTOCOL.VERSION}),inputSessionId:socket.inputSessionId,...message};
+    if(!raw)message={...(current?PROTOCOL.context(current):{protocolVersion:PROTOCOL.VERSION}),inputSessionId:socket.inputSessionId,...message};
     await socket.listeners('message')[0](Buffer.from(JSON.stringify(message)));
     const joined=socket.last('resumed')||socket.last('joined')||socket.last('created');
     if(joined)socket.code=joined.code;
@@ -156,7 +156,7 @@ function clientFixture(){
     onlineSeriesComplete:false,onlineSeriesConfirmedRound:0,onlineSeriesRound:0,onlineSeriesScoredRound:0,onlineSessionWins:new Map(),onlineStartGeneration:0,lastRestartedRound:0,
     lastAcceptedStateEpoch:-1,lastAcceptedStateRound:-1,lastAcceptedStateSeq:-1,
     lastP2PStateAt:0,lastFallbackRequestAt:0,lastFallbackStateSentAt:0,fallbackActive:false,p2pStableCount:0,
-    fallbackPeers:new Set(),fallbackReconnectAt:new Map(),pendingCriticalServerOps:[],pendingInputActions:[],
+    fallbackPeers:new Set(),fallbackReconnectAt:new Map(),fallbackCodecPeers:new Map(),pendingCriticalServerOps:[],pendingInputActions:[],
     p2p:{broadcastEvent:m=>events.push(m),sendInputAck:noop},sendHostFallbackEvent:noop,
     queueCriticalServerOp:m=>{queued.push(m);return true;},persistCriticalServerOps:noop,
     prepareGameAssets:()=>Promise.resolve(),prepareMatchBackground:()=>Promise.resolve(),

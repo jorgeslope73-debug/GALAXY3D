@@ -57,6 +57,7 @@ on:
       - 'tools/check-ship-ram-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-state-codec.js'
+      - 'tools/check-relay-prediction.js'
       - 'tools/check-joystick-controls.js'
       - 'tools/check-network-playback.js'
       - 'tools/check-motion-prediction.js'
@@ -134,6 +135,7 @@ on:
       - 'tools/check-ship-ram-collisions.js'
       - 'tools/check-network-resilience.js'
       - 'tools/check-state-codec.js'
+      - 'tools/check-relay-prediction.js'
       - 'tools/check-joystick-controls.js'
       - 'tools/check-network-playback.js'
       - 'tools/check-motion-prediction.js'
@@ -174,6 +176,8 @@ jobs:
         run: node tools/check-host-continuity.js
       - name: Check compact packets and negotiated compatibility
         run: node tools/check-state-codec.js
+      - name: Check prediction and compact states through the unchanged relay
+        run: node tools/check-relay-prediction.js
       - name: Check controller mapping and transported actions
         run: node tools/check-joystick-controls.js
   shared-physics-parity:

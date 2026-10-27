@@ -118,15 +118,18 @@
     }
     // This object lives only for one broadcast. No cross-frame cache can retain
     // an old winner/header, and expensive shared rows are prepared once.
-    return {encodeFor(recipient){
-      const index=state.players.findIndex(p=>Number(p.i)===Number(recipient)&&own(p,'motion')&&p.motion!==undefined);
+    const encodeForRecipients=recipients=>{
+      const selected=new Set(recipients.map(Number));
       let ownRows=playerRows;
-      if(index>=0){
-        const row=rowPack(state.players[index],schemas.players,'players',recipient);if(!row)return null;
-        ownRows=playerRows.slice();ownRows[index]=row;
+      for(let index=0;index<state.players.length;index++){
+        const player=state.players[index];
+        if(!selected.has(Number(player.i))||!own(player,'motion')||player.motion===undefined)continue;
+        const row=rowPack(player,schemas.players,'players',player.i);if(!row)return null;
+        if(ownRows===playerRows)ownRows=playerRows.slice();ownRows[index]=row;
       }
       return {...header,stateCodec:1,entities:{...entities,p:ownRows}};
-    }};
+    };
+    return {encodeFor:recipient=>encodeForRecipients([recipient]),encodeForRecipients};
   }
   function encode(state,recipient){return prepare(state)?.encodeFor(recipient)||null;}
   function decode(packet){
@@ -146,5 +149,49 @@
       return state;
     }catch(_){return null;}
   }
-  window.GalaxyStateCodec=Object.freeze({version:1,prepare,encode,decode,isCompact:packet=>object(packet)&&packet.stateCodec===1});
+  // The existing relay forwards the action string unchanged. A negotiated
+  // control row carries only fixed-tick commands, never positions or client dt.
+  const relayControlPrefix='gc-ctrl:1:';
+  const validId=value=>typeof value==='string'&&/^[a-f0-9]{32}$/.test(value);
+  function packCommands(motion){
+    if(!object(motion)||motion.v!==1||!safeInteger(motion.epoch)||motion.epoch<1||!isArray(motion.frames)||motion.frames.length>60)return null;
+    const runs=[];let previous=0;
+    for(const f of motion.frames){
+      if(!isArray(f)||f.length!==5||!safeInteger(f[0])||f[0]<=previous||!finite(f[1])||Math.abs(f[1])>1||!f.slice(2).every(v=>v===0||v===1))return null;
+      const bits=f[2]|f[3]<<1|f[4]<<2,last=runs.at(-1);
+      if(last&&f[0]===last[0]+last[1]&&f[1]===last[2]&&bits===last[3])last[1]++;
+      else runs.push([f[0],1,f[1],bits]);
+      previous=f[0];
+    }
+    return [motion.epoch,runs];
+  }
+  function unpackCommands(row){
+    if(!isArray(row)||row.length!==2||!safeInteger(row[0])||row[0]<1||!isArray(row[1])||row[1].length>60)return null;
+    const frames=[];let previous=0;
+    for(const run of row[1]){
+      if(!isArray(run)||run.length!==4||!safeInteger(run[0])||run[0]<=previous||!safeInteger(run[1])||run[1]<1||frames.length+run[1]>60||run[0]>Number.MAX_SAFE_INTEGER-(run[1]-1)||!finite(run[2])||Math.abs(run[2])>1||!integer(run[3])||run[3]<0||run[3]>7)return null;
+      for(let n=0;n<run[1];n++)frames.push([run[0]+n,run[2],run[3]&1,run[3]>>1&1,run[3]>>2&1]);
+      previous=run[0]+run[1]-1;
+    }
+    return {v:1,epoch:row[0],frames};
+  }
+  function validControlRow(row){
+    return isArray(row)&&(row.length===8||row.length===9)&&safeInteger(row[0])&&row[0]>0&&validId(row[1])&&safeInteger(row[2])&&row[2]>0&&safeInteger(row[3])&&row[3]>=0&&validId(row[4])&&safeInteger(row[5])&&row[5]>0&&finite(row[6])&&Math.abs(row[6])<=1&&integer(row[7])&&row[7]>=0&&row[7]<=7;
+  }
+  function encodeRelayControl(packet){
+    if(!object(packet)||typeof packet.thrust!=='boolean'||typeof packet.fire!=='boolean'||packet.directFire!==undefined&&typeof packet.directFire!=='boolean')return null;
+    const row=[packet.protocolVersion,packet.seriesId,packet.hostEpoch,packet.rankRound,packet.inputSessionId,packet.controlSeq,packet.turn,(packet.thrust?1:0)|(packet.fire?2:0)|(packet.directFire?4:0)];
+    if(!validControlRow(row))return null;
+    if(packet.motion!==undefined){const commands=packCommands(packet.motion);if(!commands)return null;row.push(commands);}
+    return relayControlPrefix+JSON.stringify(row);
+  }
+  function decodeRelayControl(action){
+    try{
+      if(typeof action!=='string'||action.length>16384||!action.startsWith(relayControlPrefix))return null;
+      const row=JSON.parse(action.slice(relayControlPrefix.length));if(!validControlRow(row))return null;
+      const motion=row.length===9?unpackCommands(row[8]):undefined;if(row.length===9&&!motion)return null;
+      return {protocolVersion:row[0],seriesId:row[1],hostEpoch:row[2],rankRound:row[3],inputSessionId:row[4],controlSeq:row[5],turn:row[6],thrust:!!(row[7]&1),fire:!!(row[7]&2),directFire:!!(row[7]&4),...(motion?{motion}:{})};
+    }catch(_){return null;}
+  }
+  window.GalaxyStateCodec=Object.freeze({version:1,prepare,encode,decode,relayControlPrefix,encodeRelayControl,decodeRelayControl,isCompact:packet=>object(packet)&&packet.stateCodec===1});
 })();
