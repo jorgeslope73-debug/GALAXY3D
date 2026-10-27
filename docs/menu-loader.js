@@ -9,6 +9,8 @@
   const actions=document.getElementById('menuFirstLoaderActions');
   let modelsState='loading';
   let total=0,done=0,registrationComplete=false,finished=false,releaseTimer=0;
+  let resolveReady;
+  const ready=new Promise(resolve=>{resolveReady=resolve;});
   const isMobile=document.documentElement.classList.contains('handheld-device')||
     matchMedia('(pointer:coarse)').matches||/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   document.documentElement.classList.add('menu-first-loading');
@@ -50,6 +52,7 @@
       loader.hidden=true;
       if(app)app.inert=false;
       document.documentElement.classList.remove('menu-first-loading');
+      resolveReady(true);
     },420);
   }
   function track(promise){
@@ -60,7 +63,7 @@
     return promise;
   }
   // game.js registra sus texturas y la preparacion final de fuentes y caches.
-  window.GalaxyGraphicsLoader={track};
+  window.GalaxyGraphicsLoader={track,ready};
   function modelFailure(){
     finished=false;modelsState='error';loader.dataset.state='error';
     window.clearTimeout(slowTimer);window.clearTimeout(watchdogTimer);
@@ -87,7 +90,7 @@
     },modelFailure));
   }catch(_){modelFailure();}
   document.getElementById('menuFirstLoaderRetry')?.addEventListener('click',()=>window.location.reload());
-  const assets=[
+  const assets=window.Galaxy3D?.requested?[]:[
     isMobile?'assets/sprites/INTRO_MOBILE.png':'assets/sprites/INTRO.png',
     'assets/sprites/asteroide1.png','assets/sprites/asteroide2.png',
     'assets/sprites/asteroide3.png','assets/sprites/asteroide5.png',

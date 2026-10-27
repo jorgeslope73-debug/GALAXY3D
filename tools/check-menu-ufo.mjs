@@ -27,5 +27,6 @@ const paused=createMenuUfoFlight({random:()=>.5});let active;for(let time=0;time
 assert.equal(paused.update(500000,menuFloaters(500000)),null,'a hidden tab or match ends the interrupted visit');
 for(let time=500040;time<512000;time+=40)assert.equal(paused.update(time,menuFloaters(time)),null,'returning to the menu does not catch up or spawn immediately');
 const reduced=createMenuUfoFlight({reducedMotion:true});for(let time=0;time<300000;time+=40)assert.equal(reduced.update(time,menuFloaters(time)),null);
-const sw=await readFile(new URL('../docs/sw.js',import.meta.url),'utf8');assert.ok(sw.includes('./menu-ufo.js'),'the flight controller is available offline');
+const render=await readFile(new URL('../docs/render-3d.js',import.meta.url),'utf8');assert.ok(render.includes("import('./menu-ufo.js?v='"),'renderer loads the versioned flight controller');
+// Offline reuse of this module is covered by check-resource-cache.js.
 console.log('Menu UFO OK: '+flights+' desktop/mobile visits; two observation stops; complete exits; 60+ second gaps; minimum envelope clearance '+minimum.toFixed(1)+'; smooth lateral motion, pause handling and reduced motion.');

@@ -28,7 +28,7 @@ assert.equal(core.shipProfile(movingPose),core.shipProfile({...movingPose,motion
 assert.notEqual(core.shipProfile({...movingPose,motionSpeed:0}),core.shipProfile({...movingPose,motionSpeed:120}),'the actual collision profile follows the resting/moving sway distinction');
 const index=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
 assert.ok(index.indexOf('src="collision-profiles.js')>0&&index.indexOf('src="collision-profiles.js')<index.indexOf('src="physics-core.js'),'static startup loads profile data before physics');
-for(const file of ['build-version.js','cpu-training.html','sw.js'])assert.ok((await readFile(new URL('../docs/'+file,import.meta.url),'utf8')).includes('collision-profiles.js'),file+' includes the shared profile table');
+for(const file of ['build-version.js','cpu-training.html'])assert.ok((await readFile(new URL('../docs/'+file,import.meta.url),'utf8')).includes('collision-profiles.js'),file+' includes the shared profile table');
 for(const [file,sha] of Object.entries(data.models))assert.equal(createHash('sha256').update(await readFile(new URL('../docs/assets/models/'+file,import.meta.url))).digest('hex'),sha,'regenerate profiles when model geometry changes');
 const signedArea=p=>p.reduce((a,v,i)=>{const u=p[(i+1)%p.length];return a+(v[0]*u[1]-u[0]*v[1])*.5;},0);
 let partitions=0;

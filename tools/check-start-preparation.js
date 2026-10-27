@@ -41,8 +41,8 @@ for(const index of [0,1]){
   assert.deepEqual(text,['3','2','1','0']);assert.ok(points.every(([x,y])=>x===players[index].x&&y===players[index].y),'each machine draws only its own initial position');
   view.matchStartGate.phase='go';view.matchStartGate.goAt=4000;const previous=text.length;view.drawLocalEntryCountdown(4280);assert.equal(text.length,previous);
 }
-const build=fs.readFileSync('docs/build-version.js','utf8'),index=fs.readFileSync('docs/index.html','utf8'),sw=fs.readFileSync('docs/sw.js','utf8');
-assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));assert.ok(index.indexOf('src="startup-preparation.js')<index.indexOf('src="game.js'));assert.ok(sw.includes("'./startup-preparation.js'"));
+const build=fs.readFileSync('docs/build-version.js','utf8'),index=fs.readFileSync('docs/index.html','utf8');
+assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));assert.ok(index.indexOf('src="startup-preparation.js')<index.indexOf('src="game.js'));
 (async()=>{
   const {engineContext}=require('./check-session-regressions.js');
   for(const [name,mode] of [['GalaxyLocalCpu','cpu'],['GalaxyHostPhysics','host']]){

@@ -197,7 +197,10 @@ if(!index.includes("handheld?4000:15000"))fail(errors,'mobile loader: falta fall
 if(!sw.includes("importScripts('./build-version.js');"))fail(errors,'version: sw.js no importa la fuente central');
 if(/const VERSION\s*=\s*['"]V\d+\.\d+/.test(sw))fail(errors,'version: sw.js vuelve a hardcodear VERSION');
 if(!game.includes("AUDIO_ASSET_VERSION=String(window.GALAXY_BUILD&&window.GALAXY_BUILD.version||'dev')"))fail(errors,'version: audio no usa GALAXY_BUILD');
-if(!sw.includes("cache.match(request,{ignoreSearch:true})"))fail(errors,'PWA: falta fallback offline ignorando query de versión');
+// Assets can share a canonical URL across builds; code must retain its exact version.
+// The real worker's offline/migration/304 behavior is exercised in check-resource-cache.js.
+if(/(?:cache|caches)\.match\([^\n]*ignoreSearch\s*:\s*true/.test(sw))fail(errors,'PWA: una búsqueda sin versión puede mezclar código de builds diferentes');
+if(!fs.existsSync('tools/check-resource-cache.js'))fail(errors,'PWA: falta prueba de caché compartida y fallback offline');
 
 if(!trainingPage.includes('<script src="build-version.js"></script>'))fail(errors,'training: cpu-training.html no usa build-version.js');
 if(!trainingPage.includes("build.versioned(src)"))fail(errors,'training: scripts del entrenamiento no usan la versión central');

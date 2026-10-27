@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.93
+V23.94
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -315,3 +315,16 @@ PREDICCION Y COMPACTACION DEL RESPALDO - V23.93
 - Un unico snapshot compacto agrupa los invitados compatibles del relay; se conserva la precision completa del movimiento confirmado, incluida la inclinacion de la nave propia.
 - Los paquetes son completos e independientes. No se reducen frecuencias ni se trasladan daños o colisiones al cliente; no cambia el servicio ni la base de datos de Render.
 - La confirmacion de PREPARADOS por respaldo incluye el identificador de sesion que exige el backend; las pruebas de red ahora tambien ejercitan mensajes exactos sin completar campos automaticamente.
+
+
+CARGA DE RECURSOS OPTIMIZADA - V23.94
+- Menu 3D: evita la portada 2D oculta y la simulacion decorativa antigua. Conserva la escena y los materiales actuales.
+- Inicio: 20 imagenes de game.js en PC (antes56) y21 en movil (antes57); fondos02-05 se cargan/decodifican al preparar su ronda, antes de dar salida.
+- Fallback 2D: sus32 variantes solo se cargan si se necesita. HUD, indicadores y cuatro naves de victoria siguen preparados.
+- Cache: instala3 entradas pequenas y guarda los recursos ya cargados en serie y solo con el menu inactivo. Pausa ese mantenimiento durante partidas.
+- Modelos/texturas se comparten entre versiones y se validan por ETag/Last-Modified: detecta cambios con el mismo nombre sin volver a descargar cuerpos sin cambios. Codigo por URL/version exacta, sin mezclar builds.
+- La primera activacion de cache ya no fuerza una recarga de la misma version. Foco/visibilidad deduplican las comprobaciones y no actualizan durante partida.
+- Particulas: arrastre constante calculado una vez por pase, con resultados identicos. Musica sin precarga anticipada; reproduce al permitirse el audio.
+- Sin cambios de resolucion, modelos, texturas, cantidad de particulas, fisica, controles, IA, protocolo ni frecuencias de red. Render y base de datos no cambian.
+- Medicion local de carga limpia al menu (HTTP sin compresion, mismo navegador/assets):35913543 ->10514351 bytes (-70,7%);243 ->78 solicitudes con cuerpo/validacion del servidor. Segunda visita optimizada:517089 bytes adicionales. Los tiempos y bytes reales dependen de navegador/cache/compresion.
+- Se conserva el GLB de cohete que el usuario habia subido a main durante la revision.

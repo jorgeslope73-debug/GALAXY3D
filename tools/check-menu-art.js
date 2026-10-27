@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const html=fs.readFileSync('docs/index.html','utf8'),css=fs.readFileSync('docs/view-3d.css','utf8'),renderer=fs.readFileSync('docs/render-3d.js','utf8');
+const images=[...html.matchAll(/<img\b[^>]*\bclass="[^"]*\bmenu-art\b[^"]*"[^>]*>/g)];
+assert.equal(images.length,1,'keep the decorative menu element used by the current layout');
+const tag=images[0][0],src=/\bsrc="([^"]+)"/.exec(tag)?.[1];
+assert.ok(src,'the layout image has a valid local data source');
+assert.equal(new URL(src).protocol,'data:','a hidden cover must not start another image download');
+assert.ok(src.startsWith('data:image/svg+xml,'));
+const svg=decodeURIComponent(src.slice(src.indexOf(',')+1));
+assert.match(svg,/^<svg\s[^>]*\/>$/,'the placeholder is an empty transparent SVG');
+assert.match(svg,/viewBox=['"]0 0 1920 1080['"]/,'retain the exact 16:9 intrinsic ratio');
+assert.ok(!/<(?:image|rect|circle|path)\b|\bhref\s*=/.test(svg),'the placeholder has no artwork or nested network references');
+assert.match(tag,/\bwidth="1920"/);assert.match(tag,/\bheight="1080"/);assert.match(tag,/\balt=""/);
+assert.match(css,/html\[data-galaxy-view="3d"\]\s+#menu\s+\.menu-art\s*\{\s*visibility:hidden\s*\}/,'the active 3D presentation already hides this legacy image');
+assert.ok(renderer.includes("document.documentElement.dataset.galaxyView='3d'"),'the project keeps its mandatory 3D menu');
+for(const file of ['INTRO.png','INTRO_MOBILE.png'])assert.ok(fs.statSync('docs/assets/sprites/'+file).size>0,'retain the original artwork for editing');
+console.log('Menu art OK: no external image request, transparent data SVG, preserved 16:9 layout and originals, and the existing permanent 3D cover remains in charge.');

@@ -124,6 +124,7 @@ check('stable identities, finite inputs and bounded peak populations',()=>{
   }
 });
 
-const sw=await readFile(new URL('../docs/sw.js',import.meta.url),'utf8');
-assert.ok(sw.includes("'./projectile-lighting.js'"),'offline startup includes the lighting module');
+const render=await readFile(new URL('../docs/render-3d.js',import.meta.url),'utf8');
+assert.ok(render.includes("import('./projectile-lighting.js?v='"),'renderer loads the versioned lighting module');
+// Offline reuse of this module is covered by check-resource-cache.js.
 console.log('Projectile lighting OK: local visible positions, soft green range, stable bounded pools, no ghost lights or snapshot mutation.');

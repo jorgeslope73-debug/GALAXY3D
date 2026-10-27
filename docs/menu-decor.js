@@ -12,6 +12,9 @@
     matchMedia('(pointer:coarse)').matches||
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Requested 3D owns this canvas during loading as well as after readiness.
+  // Keep legacy downloads and simulation only for pages without that renderer.
+  const legacyDecoration=window.Galaxy3D?.requested!==true;
   const METEOR_COUNT=reducedMotion?2:(isMobile?3:5);
   const PARTICLE_MAX=isMobile?42:72;
   const VERSION='V20.13';
@@ -27,14 +30,14 @@
     meteor5:'assets/sprites/asteroide6.png',
     giant:'assets/sprites/asteroidegrande_270.png'
   };
-  for(const [key,url] of Object.entries(assetUrls)){
+  if(legacyDecoration)for(const [key,url] of Object.entries(assetUrls)){
     const im=new Image();
     im.decoding='async';
     im.src=url+'?v='+VERSION;
     assets[key]=im;
   }
 
-  const particles=Array.from({length:PARTICLE_MAX},()=>({
+  const particles=Array.from({length:legacyDecoration?PARTICLE_MAX:0},()=>({
     life:0,maxLife:0,x:0,y:0,vx:0,vy:0,size:0,rot:0,spin:0
   }));
   let particleCursor=0;
@@ -101,7 +104,7 @@
     return obj;
   }
 
-  for(let i=0;i<METEOR_COUNT;i++)meteors.push(spawnMeteor(null,true));
+  if(legacyDecoration)for(let i=0;i<METEOR_COUNT;i++)meteors.push(spawnMeteor(null,true));
 
   function updateMeteors(dt){
     for(const m of meteors){
@@ -215,6 +218,7 @@
     ctx.clearRect(0,0,W,H);
     ctx.globalCompositeOperation='source-over';
     if(window.Galaxy3D?.menu(ctx,performance.now()))return;
+    if(!legacyDecoration)return;
 
     drawParticles();
 
@@ -290,9 +294,11 @@
     const dt=Math.min(.05,Math.max(0,(now-lastAt)/1000));
     lastAt=now;
 
-    updateMeteors(reducedMotion?dt*.35:dt);
-    if(!reducedMotion)collideMeteors(now);
-    updateParticles(dt);
+    if(legacyDecoration){
+      updateMeteors(reducedMotion?dt*.35:dt);
+      if(!reducedMotion)collideMeteors(now);
+      updateParticles(dt);
+    }
     render();
   }
 

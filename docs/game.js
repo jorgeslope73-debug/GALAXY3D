@@ -674,6 +674,7 @@
     }
     const dt=Math.min(.05,Math.max(0,elapsed/1000));
     if(dt<=0)return;
+    const drag=Math.pow(.72,dt);
 
     // Primero avanzamos todas las particulas una sola vez.
     for(const particle of engineParticles){
@@ -682,8 +683,8 @@
       if(particle.life<=0)continue;
       particle.x+=particle.vx*dt;
       particle.y+=particle.vy*dt;
-      particle.vx*=Math.pow(.72,dt);
-      particle.vy*=Math.pow(.72,dt);
+      particle.vx*=drag;
+      particle.vy*=drag;
     }
 
     ctx.save();
@@ -806,6 +807,7 @@
     }
     const dt=Math.min(.05,Math.max(0,elapsed/1000));
     if(dt<=0)return;
+    const drag=Math.pow(.58,dt);
 
     ctx.save();
     ctx.fillStyle='#8a8d92';
@@ -818,8 +820,8 @@
 
       particle.x+=particle.vx*dt;
       particle.y+=particle.vy*dt;
-      particle.vx*=Math.pow(.58,dt);
-      particle.vy*=Math.pow(.58,dt);
+      particle.vx*=drag;
+      particle.vy*=drag;
       particle.rot+=particle.spin*dt;
 
       const t=particle.life/particle.maxLife;
@@ -906,6 +908,7 @@
     }
     const dt=Math.min(.05,Math.max(0,elapsed/1000));
     if(dt<=0)return;
+    const drag=Math.pow(.66,dt);
 
     ctx.save();
     ctx.globalCompositeOperation='lighter';
@@ -916,8 +919,8 @@
 
       particle.x+=particle.vx*dt;
       particle.y+=particle.vy*dt;
-      particle.vx*=Math.pow(.66,dt);
-      particle.vy*=Math.pow(.66,dt);
+      particle.vx*=drag;
+      particle.vy*=drag;
 
       const t=particle.life/particle.maxLife;
       const radius=Math.max(.6,particle.size*(.25+.75*t));
@@ -1016,6 +1019,7 @@
     }
     const dt=Math.min(.05,Math.max(0,elapsed/1000));
     if(dt<=0)return;
+    const drag=Math.pow(.70,dt);
 
     ctx.save();
     ctx.globalCompositeOperation='lighter';
@@ -1026,8 +1030,8 @@
 
       particle.x+=particle.vx*dt;
       particle.y+=particle.vy*dt;
-      particle.vx*=Math.pow(.70,dt);
-      particle.vy*=Math.pow(.70,dt);
+      particle.vx*=drag;
+      particle.vy*=drag;
 
       const t=particle.life/particle.maxLife;
       const radius=Math.max(.3,particle.size*(.16+.84*t));
@@ -1296,6 +1300,17 @@
     assetList[`ship${i}f`]=`assets/sprites/coete${i}f.png`;
     assetList[`ship${i}af`]=`assets/sprites/coete${i}af.png`;
   }
+  // These images are drawn only by the legacy Canvas world. HUD icons, deployed
+  // flares, localization markers and the four victory ships also serve 3D.
+  const legacyGameImageKeys=[
+    'giant','ufo','bengalasnave','coete','navemira',
+    ...ROCKET_IMAGE_KEYS,...NAVEMIRA_IMAGE_KEYS,
+    'asteroidMedium',...ASTEROID_IMAGE_KEYS.filter(Boolean),
+    ...SHIP_IMAGE_KEYS.flatMap(keys=>[keys.a,keys.f,keys.af])
+  ];
+  const deferredGameImageKeys=new Set([
+    'bg02','bg03','bg04','bg05',...legacyGameImageKeys
+  ]);
   const warnedImages=new WeakSet();
   function reportImageFailure(im,error){
     if(!im||warnedImages.has(im))return;
@@ -1315,9 +1330,12 @@
       }catch(_){done(false);}
     });
   }
-  const imageDecodePromises={};
-  for(const [k,url] of Object.entries(assetList)){
-    if(!url)continue;
+  // Startup readiness only waits for eager images. Later backgrounds and legacy
+  // fallback loads have their own shared promises and cannot extend that gate.
+  const imageDecodePromises={},imageLoadPromises={};
+  function loadGameImage(k,url=assetList[k],startup=false){
+    if(imageLoadPromises[k])return imageLoadPromises[k];
+    if(!url)return Promise.resolve(false);
     const im=new Image();
     im.decoding='async';
     // Estos sprites aparecen desde el primer frame. Antes los asteroides tenian
@@ -1325,7 +1343,7 @@
     const critical=k==='bg'||k==='giant'||k==='ufo'||k.startsWith('ship')||k.startsWith('pant')||
       k.startsWith('asteroid')||k.startsWith('rocket')||k.startsWith('navemira')||k==='ammo1'||k==='ammo3'||k==='cadence'||k==='speed'||k==='bengala'||k==='bengalahud'||k==='bengalasnave'||k==='ojo';
     if('fetchPriority' in im)im.fetchPriority=critical?'high':'auto';
-    imageDecodePromises[k]=new Promise(resolve=>{
+    const ready=new Promise(resolve=>{
       let settled=false;
       const done=value=>{if(settled)return;settled=true;clearTimeout(loadTimer);resolve(value);};
       const loadTimer=setTimeout(()=>{
@@ -1343,9 +1361,22 @@
         },()=>done(false));
       };
     });
-    if(window.GalaxyGraphicsLoader)window.GalaxyGraphicsLoader.track(imageDecodePromises[k]);
-    im.src=url;
+    imageLoadPromises[k]=ready;
     images[k]=im;
+    if(startup){
+      imageDecodePromises[k]=ready;
+      if(window.GalaxyGraphicsLoader)window.GalaxyGraphicsLoader.track(ready);
+    }
+    im.src=url;
+    return ready;
+  }
+  for(const [key,url] of Object.entries(assetList)){
+    if(url&&!deferredGameImageKeys.has(key))loadGameImage(key,url,true);
+  }
+  let legacyGameImagesPromise=null;
+  function loadLegacyGameImages(){
+    if(!legacyGameImagesPromise)legacyGameImagesPromise=Promise.allSettled(legacyGameImageKeys.map(key=>loadGameImage(key)));
+    return legacyGameImagesPromise;
   }
 
   let rendererWarmed=false;
@@ -1450,7 +1481,7 @@
   // Los efectos siguen usando WebAudio. En iPhone esto evita que la musica
   // dependa de que el AudioContext del juego haya sido desbloqueado por el micro.
   sounds.music=new Audio('assets/sonido/musica.mp3?v='+AUDIO_ASSET_VERSION);
-  sounds.music.preload='auto';sounds.music.loop=true;sounds.music.volume=.35*gameVolume;
+  sounds.music.preload='none';sounds.music.loop=true;sounds.music.volume=.35*gameVolume;
   sounds.music.setAttribute('playsinline','');
 
   let audioCtx=null,masterGain=null,fxGain=null,musicGain=null;
@@ -1487,8 +1518,8 @@
     if(!ctx)return false;
     if(webAudioLoadPromise)return webAudioLoadPromise;
     webAudioLoadPromise=(async()=>{
-      // Solo efectos de juego (~0,5 MB). La musica (~2,9 MB) se decodifica
-      // aparte cuando el navegador esta ocioso en el menu.
+      // Solo efectos de juego (~0,5 MB). La musica del menu se reproduce con
+      // HTMLAudio cuando se solicita; no forma parte de esta carga.
       for(const [key,def] of Object.entries(soundDefs)){
         if(webAudioBuffers[key])continue;
         const res=await fetch(def.url,{cache:'force-cache'});
@@ -6241,19 +6272,9 @@
       ?clamp(Math.round(Number(localCampaignLevel)||1)-1,0,LOCAL_CAMPAIGN_LEVELS-1)
       :(Math.max(1,Number(rankRound)||1)-1)%MATCH_BACKGROUNDS.length;
     const cfg=MATCH_BACKGROUNDS[index];
-    if(imageDecodePromises[cfg.mobileKey])return imageDecodePromises[cfg.mobileKey];
-    // En PC el primer fondo vive en CSS: tambien esperamos su decodificacion.
-    const im=new Image();im.decoding='async';
-    const ready=new Promise(resolve=>{
-      im.onerror=()=>{reportImageFailure(im);resolve(false);};
-      im.onload=()=>{
-        const decoded=typeof im.decode==='function'?im.decode():Promise.resolve();
-        Promise.resolve(decoded).then(()=>resolve(true),()=>resolve(false));
-      };
-    });
-    imageDecodePromises[cfg.mobileKey]=ready;
-    images[cfg.mobileKey]=im;im.src=cfg.file;
-    return ready;
+    // Only decode the selected round. Mobile keeps its 1280px image; the PC
+    // first background lives in CSS but must also be ready before the countdown.
+    return loadGameImage(cfg.mobileKey,assetList[cfg.mobileKey]||cfg.file);
   }
   async function beginOnlineStartCountdown(rankRound=1){
     resetOnlineStartCountdown();
@@ -6940,7 +6961,10 @@
       }
     }
     scene3D=window.Galaxy3D?.begin(ctx,now,renderState,myIndex)||null;
-    if(!scene3D&&canvas.dataset)canvas.dataset.view='2d';
+    if(!scene3D){
+      loadLegacyGameImages();
+      if(canvas.dataset)canvas.dataset.view='2d';
+    }
     if(playback&&typeof guestShotOcclusion!=='undefined'&&guestShotOcclusion){
       // Only hide the local drawing at the first visible surface. The host's
       // projectile, ammunition, impacts and confirmations remain untouched.

@@ -77,6 +77,12 @@ on:
       - 'tools/check-start-preparation.js'
       - 'tools/check-graphics-prewarm.js'
       - 'tools/check-model-texture-cache.js'
+      - 'docs/menu-decor.js'
+      - 'tools/check-menu-resources.js'
+      - 'tools/check-menu-art.js'
+      - 'tools/check-game-resources.js'
+      - 'tools/check-resource-cache.js'
+      - 'tools/check-pwa-resource-idle.js'
       - 'tools/stress-game.js'
       - '.github/workflows/physics-parity.yml'
   pull_request:
@@ -155,6 +161,12 @@ on:
       - 'tools/check-start-preparation.js'
       - 'tools/check-graphics-prewarm.js'
       - 'tools/check-model-texture-cache.js'
+      - 'docs/menu-decor.js'
+      - 'tools/check-menu-resources.js'
+      - 'tools/check-menu-art.js'
+      - 'tools/check-game-resources.js'
+      - 'tools/check-resource-cache.js'
+      - 'tools/check-pwa-resource-idle.js'
       - 'tools/stress-game.js'
       - '.github/workflows/physics-parity.yml'
   workflow_dispatch:
@@ -262,6 +274,8 @@ jobs:
         run: node tools/check-start-preparation.js
       - name: Check shader and GPU prewarming before match readiness
         run: node tools/check-graphics-prewarm.js
+      - name: Check resource loading, idle cache maintenance and visual fallbacks
+        run: node tools/check-menu-resources.js && node tools/check-menu-art.js && node tools/check-game-resources.js && node tools/check-resource-cache.js && node tools/check-pwa-resource-idle.js
       - name: Check existing gameplay invariants
         run: node tools/check-game-invariants.js
       - name: Run 5-minute simulated gameplay stress

@@ -39,6 +39,31 @@ function geometryState(geometry){
 }
 function collect(scene){const meshes=[];scene.traverse(object=>{if(object.isMesh)meshes.push(object);});return meshes;}
 function near(a,b,label,tolerance=1e-4){assert.ok(Math.abs(a-b)<tolerance,label+': '+a+' != '+b);}
+const teamColours=[0x28bce8,0xf232a3,0x47df3f,0xffd83d].map(hex=>new T.Color(hex));
+function checkPaint(authored,coloured,team,label){
+  const actual=geometryState(coloured),original=geometryState(authored);
+  delete actual.attributes.color;delete original.attributes.color;
+  assert.deepEqual(actual,original,label+': painting changes neither shape nor normals/UVs/index');
+  const a=authored.attributes.color,b=coloured.attributes.color;
+  if(!a){
+    assert.equal(b,undefined,label+': never invent vertex colours for a material-painted export');
+    return {painted:0,details:0};
+  }
+  assert.equal(b.count,a.count,label+': retain every authored colour');
+  let painted=0,details=0;
+  for(let v=0;v<a.count;v++){
+    const paint=a.getX(v)>a.getY(v)*3&&a.getZ(v)>a.getY(v)*3&&a.getX(v)>a.getZ(v);
+    if(paint){
+      painted++;
+      const shade=a.getX(v)/(242/255),tone=teamColours[team];
+      for(const [channel,value] of [tone.r,tone.g,tone.b].entries())near(b.getComponent(v,channel),value*shade,label+': preserve team hue and authored shading',1e-6);
+    }else{
+      details++;
+      for(let channel=0;channel<a.itemSize;channel++)assert.equal(b.getComponent(v,channel),a.getComponent(v,channel),label+': preserve non-paint metal, seams and lamps');
+    }
+  }
+  return {painted,details};
+}
 
 const bytes=await readFile(new URL('../docs/assets/models/cohete_galaxy_combat.glb',import.meta.url));
 assert.equal(bytes.toString('ascii',0,4),'glTF');assert.equal(bytes.readUInt32LE(4),2);assert.equal(bytes.readUInt32LE(8),bytes.length);
@@ -57,12 +82,15 @@ for(const mesh of sourceMeshes){
   const points=Array.from({length:positions.count},(_,i)=>new T.Vector3().fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld).applyMatrix4(alignment));
   for(const point of points)alignedBounds.expandByPoint(point);
   const range={group,start:group.count,count:positions.count,name:mesh.name};
-  ranges.set(mesh.name,range);group.parts.push({range,points});group.count+=positions.count;
+  ranges.set(mesh.name,range);group.parts.push({range,points,mesh,normalMatrix:new T.Matrix3().getNormalMatrix(new T.Matrix4().multiplyMatrices(alignment,mesh.matrixWorld))});group.count+=positions.count;
   const partTriangles=(mesh.geometry.index?.count||positions.count)/3;group.triangles+=partTriangles;triangles+=partTriangles;totalVertices+=positions.count;
   sourceGeometry.set(mesh.geometry,geometryState(mesh.geometry));
   sourceMaterials.set(mesh.material,materialState(mesh.material));
 }
-assert.equal(sourceMeshes.length,38,'Load every authored rocket part');
+const primitives=json.meshes.flatMap(mesh=>mesh.primitives);
+assert.equal(sourceMeshes.length,primitives.length,'Load every authored GLB primitive, including multi-material parts');
+assert.equal(totalVertices,primitives.reduce((sum,part)=>sum+json.accessors[part.attributes.POSITION].count,0),'Load every declared vertex');
+assert.equal(triangles,primitives.reduce((sum,part)=>sum+json.accessors[part.indices??part.attributes.POSITION].count/3,0),'Load every declared triangle');
 assert.ok(byMaterial.size>1,'The new GLB contains distinct authored PBR materials');
 const centreY=(alignedBounds.min.y+alignedBounds.max.y)/2,factor=ROCKET_LENGTH/(alignedBounds.max.y-alignedBounds.min.y);
 const template=prepareRocketTemplate(gltf.scene),meshes=collect(template),groups=Array.from(byMaterial.values());
@@ -75,24 +103,40 @@ for(let groupIndex=0;groupIndex<groups.length;groupIndex++){
   assert.equal((mesh.geometry.index?.count||position.count)/3,group.triangles,'Merging preserves every triangle');
   assert.notStrictEqual(mesh.material,group.material,'The template clones each authored material');
   samePbr(mesh.material,sourceMaterials.get(group.material),'Grouped material '+groupIndex);
-  assert.ok(mesh.material.vertexColors&&mesh.geometry.attributes.color,'Keep the authored vertex colours');
-  for(const {range,points} of group.parts)for(let i=0;i<points.length;i++){
+  assert.equal(!!mesh.geometry.attributes.color,!!group.parts[0].mesh.geometry.attributes.color,'Preserve presence or absence of authored vertex colours');
+  for(const {range,points,mesh:part,normalMatrix} of group.parts)for(let i=0;i<points.length;i++){
     near(position.getX(range.start+i),points[i].x*factor,'Preserve authored X');
     near(position.getY(range.start+i),(points[i].y-centreY)*factor,'Preserve authored Y');
     near(position.getZ(range.start+i),points[i].z*factor,'Preserve authored Z');
+    for(const [name,attribute] of Object.entries(part.geometry.attributes)){
+      if(name==='position')continue;
+      const target=mesh.geometry.attributes[name];assert.ok(target,'Keep authored '+name);
+      if(name==='normal'){
+        const expected=new T.Vector3().fromBufferAttribute(attribute,i).applyNormalMatrix(normalMatrix);
+        near(target.getX(range.start+i),expected.x,'Preserve transformed normal X');
+        near(target.getY(range.start+i),expected.y,'Preserve transformed normal Y');
+        near(target.getZ(range.start+i),expected.z,'Preserve transformed normal Z');
+      }else for(let channel=0;channel<attribute.itemSize;channel++)assert.equal(target.getComponent(range.start+i,channel),attribute.getComponent(i,channel),'Preserve authored '+name+' data');
+    }
   }
 }
 const size=new T.Box3().setFromObject(template).getSize(new T.Vector3());
 near(size.y,ROCKET_LENGTH,'Rocket length remains40');
 assert.ok(size.y>size.x&&size.y>size.z,'Align the long axis to game Y');
-for(const [name,front] of [['nose_highlight_trim',true],['dark_exhaust_mouth',false]]){
+// These are the nose cone and emissive exhaust in the replacement user GLB.
+// Check their extremities, since the cone also contains the full tapered base.
+for(const [name,front] of [['Cone_1',true],['Cylinder002_2',false]]){
   const range=ranges.get(name);assert.ok(range,'Missing authored part '+name);
   const position=range.group.template.geometry.attributes.position;
-  for(let i=range.start;i<range.start+range.count;i++)assert.ok(front?position.getY(i)>19:position.getY(i)<-19,'Nose faces +Y and exhaust -Y');
+  const ys=Array.from({length:range.count},(_,i)=>position.getY(range.start+i));
+  near(front?Math.max(...ys):Math.min(...ys),front?ROCKET_LENGTH/2:-ROCKET_LENGTH/2,'Nose faces +Y and exhaust -Y');
+  assert.ok(front?Math.min(...ys)>0:Math.max(...ys)<0,'Nose and exhaust stay on their authored ends');
 }
-const body=ranges.get('body_core'),bodyPosition=body.group.template.geometry.attributes.position,axis=new T.Vector3();
-for(let i=body.start;i<body.start+body.count;i++)axis.add(new T.Vector3().fromBufferAttribute(bodyPosition,i));
-axis.divideScalar(body.count);assert.ok(Math.abs(axis.x)<1e-5&&Math.abs(axis.z)<1e-5,'The cylindrical body stays on the roll axis');
+const body=ranges.get('Cylinder');assert.ok(body,'Missing authored cylindrical body');
+const bodyPosition=body.group.template.geometry.attributes.position,bodyBounds=new T.Box3();
+for(let i=body.start;i<body.start+body.count;i++)bodyBounds.expandByPoint(new T.Vector3().fromBufferAttribute(bodyPosition,i));
+const axis=bodyBounds.getCenter(new T.Vector3());
+assert.ok(Math.abs(axis.x)<1e-5&&Math.abs(axis.z)<1e-5,'The cylindrical body stays on the roll axis');
 
 const templateGeometry=meshes.map(mesh=>geometryState(mesh.geometry));
 const factory=createRocketFactory(template),first=collect(factory()),second=collect(factory());
@@ -106,12 +150,10 @@ for(let i=0;i<meshes.length;i++){
   samePbr(second[i].material,materialState(meshes[i].material),'Another rocket stays independent '+i);
 }
 const painted=[0,1,2,3].map(index=>collect(litFactory(index)));
-const teamColours=[0x28bce8,0xf232a3,0x47df3f,0xffd83d].map(hex=>new T.Color(hex));
-const bodyGroup=groups.indexOf(body.group),bodyColours=painted.map(visual=>new T.Vector3().fromBufferAttribute(visual[bodyGroup].geometry.attributes.color,body.start));
-assert.ok(bodyColours[0].z>bodyColours[0].x&&bodyColours[0].y>bodyColours[0].x,'Player1 paint is blue');
-assert.ok(bodyColours[1].x>bodyColours[1].y&&bodyColours[1].z>bodyColours[1].y,'Player2 paint is fuchsia');
-assert.ok(bodyColours[2].y>bodyColours[2].x&&bodyColours[2].y>bodyColours[2].z,'Player3 paint is green');
-assert.ok(bodyColours[3].x>bodyColours[3].z*3&&bodyColours[3].y>bodyColours[3].z*3,'Player4 paint is yellow');
+// The replacement user GLB has no COLOR_0: its fuchsia is a PBR material.
+// Current runtime preserves that authored material for every team. Do not claim
+// that this actual asset recolours; exercise vertex paint separately below.
+assert.ok(primitives.every(part=>part.attributes.COLOR_0===undefined),'The replacement GLB uses authored material paint, not vertex paint');
 let paintedVertices=0,detailVertices=0;
 for(const [team,visual] of painted.entries()){
   const repeat=collect(litFactory(team));
@@ -121,26 +163,13 @@ for(const [team,visual] of painted.entries()){
     assert.notStrictEqual(coloured,painted[(team+1)%4][i].geometry,'Team colour buffers remain independent');
     assert.notStrictEqual(visual[i].material,repeat[i].material,'Cached team geometry never shares mutable opacity');
     samePbr(visual[i].material,materialState(meshes[i].material),'Team'+team+' material'+i,environment);
-    const attributes=geometryState(coloured);delete attributes.attributes.color;
-    const original=geometryState(authored);delete original.attributes.color;
-    assert.deepEqual(attributes,original,'Painting changes neither shape nor normals/UVs/index');
-    const a=authored.attributes.color,b=coloured.attributes.color;
-    for(let v=0;v<a.count;v++){
-      const paint=a.getX(v)>a.getY(v)*3&&a.getZ(v)>a.getY(v)*3&&a.getX(v)>a.getZ(v);
-      if(paint){
-        paintedVertices++;
-        const colour=new T.Vector3(b.getX(v),b.getY(v),b.getZ(v)),tone=teamColours[team],hue=new T.Vector3(tone.r,tone.g,tone.b);
-        assert.ok(colour.dot(hue)>0&&colour.clone().cross(hue).length()<colour.length()*hue.length()*1e-5,'Every painted vertex keeps the selected team hue and authored shading');
-        continue;
-      }
-      detailVertices++;
-      for(let channel=0;channel<3;channel++)assert.equal(b.getComponent(v,channel),a.getComponent(v,channel),'Preserve non-paint metal, seams and lamps');
-    }
+    const checked=checkPaint(authored,coloured,team,'User GLB team '+team+' mesh '+i);
+    paintedVertices+=checked.painted;detailVertices+=checked.details;
     visual[i].material.opacity=.21;visual[i].material.transparent=true;
     samePbr(repeat[i].material,materialState(meshes[i].material),'Another mounted/team rocket stays opaque',environment);
   }
 }
-assert.ok(paintedVertices>0&&detailVertices>0,'The real GLB exercises both paint and untouched details');
+assert.equal(paintedVertices+detailVertices,0,'The material-painted user model does not enter the vertex-colour path');
 for(const [geometry,state] of sourceGeometry)assert.deepEqual(geometryState(geometry),state,'Preparation does not mutate original GLB geometry');
 for(const [material,state] of sourceMaterials)samePbr(material,state,'Original GLB material stays untouched');
 for(let i=0;i<meshes.length;i++){
@@ -164,12 +193,13 @@ physical.userData={authoredPbr:'retained'};
 const standard=new T.MeshStandardMaterial({vertexColors:true,metalness:.61,roughness:.29});
 const synthetic=new T.Group(),geometry=new T.CylinderGeometry(1,1,12,8);geometry.rotateX(Math.PI/2);
 const colours=new Float32Array(geometry.attributes.position.count*3);
-for(let i=0;i<colours.length;i+=3)colours.set([.95,.12,.62],i);
+for(let i=0;i<colours.length;i+=3)colours.set(i%9===0?[.1,.11,.12]:i%9===3?[.95,.12,.62]:[.65,.06,.35],i);
 geometry.setAttribute('color',new T.BufferAttribute(colours,3));
 synthetic.add(new T.Mesh(geometry,physical));
 const other=new T.Mesh(geometry,standard);other.position.x=3;synthetic.add(other);
 const originals=[materialState(physical),materialState(standard)],syntheticGeometry=geometryState(geometry);
 const physicalTemplate=prepareRocketTemplate(synthetic),physicalMeshes=collect(physicalTemplate),physicalFactory=createRocketFactory(physicalTemplate,environment);
+const physicalGeometry=physicalMeshes.map(mesh=>geometryState(mesh.geometry));
 assert.equal(physicalMeshes.length,2,'Different PBR materials stay distinct');
 for(const team of [0,1,2,3]){
   const instance=collect(physicalFactory(team));
@@ -177,6 +207,9 @@ for(const team of [0,1,2,3]){
     samePbr(physicalMeshes[i].material,originals[i],'Synthetic template'+i);
     samePbr(instance[i].material,originals[i],'Physical team'+team+' material'+i,environment);
     assert.equal(instance[i].material.isMeshPhysicalMaterial,i===0?true:undefined,'Keep Physical/Standard class');
+    const checked=checkPaint(physicalMeshes[i].geometry,instance[i].geometry,team,'Vertex-paint fixture team '+team+' material '+i);
+    assert.ok(checked.painted>0&&checked.details>0,'The vertex-colour fixture exercises painted shades and untouched details for every team');
+    assert.deepEqual(geometryState(physicalMeshes[i].geometry),physicalGeometry[i],'Painting never mutates the synthetic template');
   }
   assert.strictEqual(instance[0].material.envMap,authoredEnvironment,'An authored environment overrides the shared fallback');
   assert.strictEqual(instance[1].material.envMap,environment,'Unmapped material receives the shared environment');
@@ -185,4 +218,5 @@ samePbr(physical,originals[0],'Original Physical material');samePbr(standard,ori
 assert.deepEqual(geometryState(geometry),syntheticGeometry,'Synthetic input geometry remains untouched');
 
 console.log(`Rocket GLB OK: ${sourceMeshes.length} parts -> ${meshes.length} material groups; ${totalVertices} vertices; ${triangles} triangles; length40; nose +Y; stable roll axis`);
-console.log('Rocket PBR OK: authored scalars/maps/Physical properties, original materials, four paints, shared environments and independent opacity');
+console.log('Rocket PBR OK: actual authored finish/geometry/normals/UVs preserved; shared environments and independent opacity');
+console.log('Rocket paint: user GLB has no COLOR_0 and retains authored material for all teams; separate fixture validates four vertex paints/shades/details and Physical properties/maps');

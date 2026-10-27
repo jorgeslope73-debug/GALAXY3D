@@ -8,13 +8,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Galaxy Combat">
-<link rel="manifest" href="manifest.webmanifest?v=V23.93">
-<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=V23.93">
-<link rel="stylesheet" href="style.css?v=V23.93">
-<link rel="stylesheet" href="menu-portada.css?v=V23.93">
-<link rel="stylesheet" href="voz.css?v=V23.93">
-<link rel="stylesheet" href="view-3d.css?v=V23.93">
-<script src="build-version.js?v=V23.93"></script>
+<link rel="manifest" href="manifest.webmanifest?v=V23.94">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=V23.94">
+<link rel="stylesheet" href="style.css?v=V23.94">
+<link rel="stylesheet" href="menu-portada.css?v=V23.94">
+<link rel="stylesheet" href="voz.css?v=V23.94">
+<link rel="stylesheet" href="view-3d.css?v=V23.94">
+<script src="build-version.js?v=V23.94"></script>
 <script>
 (() => {
   const ua=navigator.userAgent||'';
@@ -341,7 +341,8 @@ html:not(.handheld-device) #lobby .lobby-chat{width:min(500px,100%)}
         </div>
       </div>
       <div class="menu-scene">
-        <img class="menu-art" src="assets/sprites/INTRO.png" width="1920" height="1080" alt="" fetchpriority="high" draggable="false">
+        <!-- The permanent 3D menu paints its background in CSS; keep this hidden layout element without downloading the old 2D cover. -->
+        <img class="menu-art" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201920%201080'/%3E" width="1920" height="1080" alt="" draggable="false">
         <canvas id="menuDecor" class="menu-decor-canvas" width="1280" height="720" aria-hidden="true"></canvas>
         <h1 id="menuTitle" class="menu-sr-only">GALAXY COMBAT</h1>
         <div class="galaxy3d-brand" aria-hidden="true">
@@ -536,29 +537,29 @@ html:not(.handheld-device) #lobby .lobby-chat{width:min(500px,100%)}
   <button id="voicePtt" class="voice-ptt hidden" type="button" data-i18n-aria="holdToTalk" aria-label="Mantener para hablar"><span data-i18n="activateVoice">ACTIVAR MICRO</span></button>
   <button id="mobileExit" class="mobile-exit hidden" type="button" data-i18n-aria="exitAria" aria-label="Salir de la partida y volver al inicio"><span data-i18n="exit">SALIR</span></button>
 </div>
-<script src="config.js?v=V23.93"></script>
-<script src="render-3d.js?v=V23.93"></script>
-<script src="menu-loader.js?v=V23.93"></script>
-<script src="menu-decor.js?v=V23.93"></script>
-<script src="i18n.js?v=V23.93"></script>
-<script src="campaign-config.js?v=V23.93"></script>
-<script src="manual.js?v=V23.93"></script>
-<script src="impactos.js?v=V23.93"></script>
-<script src="voz.js?v=V23.93"></script>
-<script src="auth.js?v=V23.93"></script>
-<script src="ranking.js?v=V23.93"></script>
-<script src="net-protocol.js?v=V23.93"></script>
-<script src="collision-profiles.js?v=V23.93"></script>
-<script src="physics-core.js?v=V23.93"></script>
-<script src="local-cpu.js?v=V23.93"></script>
-<script src="host-physics.js?v=V23.93"></script>
-<script src="net-state-codec.js?v=V23.93"></script>
-<script src="p2p-network.js?v=V23.93"></script>
-<script src="motion-prediction.js?v=V23.93"></script>
-<script src="network-playback.js?v=V23.93"></script>
-<script src="startup-preparation.js?v=V23.93"></script>
-<script src="game.js?v=V23.93"></script>
-<script src="pwa.js?v=V23.93"></script>
+<script src="config.js?v=V23.94"></script>
+<script src="render-3d.js?v=V23.94"></script>
+<script src="menu-loader.js?v=V23.94"></script>
+<script src="menu-decor.js?v=V23.94"></script>
+<script src="i18n.js?v=V23.94"></script>
+<script src="campaign-config.js?v=V23.94"></script>
+<script src="manual.js?v=V23.94"></script>
+<script src="impactos.js?v=V23.94"></script>
+<script src="voz.js?v=V23.94"></script>
+<script src="auth.js?v=V23.94"></script>
+<script src="ranking.js?v=V23.94"></script>
+<script src="net-protocol.js?v=V23.94"></script>
+<script src="collision-profiles.js?v=V23.94"></script>
+<script src="physics-core.js?v=V23.94"></script>
+<script src="local-cpu.js?v=V23.94"></script>
+<script src="host-physics.js?v=V23.94"></script>
+<script src="net-state-codec.js?v=V23.94"></script>
+<script src="p2p-network.js?v=V23.94"></script>
+<script src="motion-prediction.js?v=V23.94"></script>
+<script src="network-playback.js?v=V23.94"></script>
+<script src="startup-preparation.js?v=V23.94"></script>
+<script src="game.js?v=V23.94"></script>
+<script src="pwa.js?v=V23.94"></script>
 <script>
 (() => {
   // Última red de seguridad independiente de menu-loader.js.

@@ -13,7 +13,8 @@ function checkContract(){
   assert.ok(dependency>=0);
   for(const consumer of ['host-physics.js','p2p-network.js','game.js'])assert.ok(index.indexOf('src="'+consumer+'?')>dependency,'cargar el contrato antes de '+consumer);
   assert.ok(read('docs/build-version.js').includes("'net-protocol.js'"));
-  assert.ok(read('docs/sw.js').includes("'./net-protocol.js'"));
+  // Offline code is captured after loading rather than downloaded twice at install.
+  assert.ok(fs.existsSync('tools/check-resource-cache.js'));
   const context={seriesId:'a'.repeat(32),hostEpoch:4,rankRound:3};
   const valid=PROTOCOL.stamp(context,{t:'ctrl'});
   assert.equal(PROTOCOL.matches(valid,context),true);
