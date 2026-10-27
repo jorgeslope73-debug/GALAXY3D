@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V23.96: en red, el jugador anfitrion participa mediante un cliente con colas de entrada y salida. El retardo se aproxima al RTT mediano medido de los invitados y esta limitado a 180 ms de ida/vuelta, con ajustes suaves. Mantiene prediccion local, física a 60 Hz y estados a 20 Hz. El modo contra CPU conserva su respuesta directa. Se reutilizan los canales actuales de P2P/relay, sin cambiar Render ni su base de datos.
+
 V23.95: cliente exclusivamente 3D; retirados el renderizado alternativo y33 sprites antiguos (3,68MB del repositorio). Se conservan el HUD, los indicadores, las partículas y las ilustraciones que usan el manual y las victorias. El misil nuevo recibe el color de su nave mediante su material de pintura, manteniendo metales y emisión. La cuenta de salida/reaparición usa el mismo tamaño a izquierda y derecha; junto al borde solo desplaza el número lo necesario para que pueda leerse entero.
 
 V23.81: este proyecto utiliza siempre la vista 3D. Se retiran el selector de presentacion y la opcion de abrir en 2D; las preferencias antiguas no cambian la vista.

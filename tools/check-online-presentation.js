@@ -43,13 +43,16 @@ const positions=vm.createContext({localCpuActive:false,isHost:true,hostPhysics:{
 vm.runInContext(source.slice(start,end)+'return {x,y,r};}',positions);
 const pilot={i:0,x:500,y:450,r:30,vx:0,vy:0};
 assert.deepEqual(JSON.parse(JSON.stringify(positions.drawShip(pilot,{...pilot,x:100},.2,1000))),{x:500,y:450,r:30},'the host draws its own final simulation tick without prediction or packet interpolation');
+positions.hostPhysics.renderEveryStep=false;
+assert.deepEqual(JSON.parse(JSON.stringify(positions.drawShip(pilot,pilot,1,1000))),{x:5,y:6,r:7},'the separated host client uses the same immediate prediction as a guest');
 positions.isHost=false;
 assert.deepEqual(JSON.parse(JSON.stringify(positions.drawShip(pilot,pilot,1,1000))),{x:5,y:6,r:7},'the guest keeps its immediate local input prediction');
 positions.guestMotion.ready=false;
 assert.deepEqual(JSON.parse(JSON.stringify(positions.drawShip({...pilot,i:1},pilot,1,1000,{interpolated:true,simTime:1}))),{x:500,y:450,r:30},'remote playback poses do not pass through a second easing clock');
 const calls={render:0,states:0,fallback:0};
 const host=vm.createContext({isHost:true,hostPhysics:null,state:null,roomCode:'TEST',playerToken:'token',hostEpoch:1,onlineSeriesId:'c'.repeat(32),onlineTestProfile:'standard',lobbyPlayers:[],handle:m=>{host.state=m;calls.render++;},p2p:{broadcastState:()=>calls.states++},sendHostFallbackState:()=>calls.fallback++,window:{GalaxyHostPhysics:class{constructor(options){Object.assign(this,options);}start(){return true;}setTestProfile(){}}}});
-vm.runInContext(extract('startHostPhysics'),host);assert.equal(host.startHostPhysics([]),true);assert.equal(host.hostPhysics.renderEveryStep,true);
+host.hostClientLink=null;host.localCpuActive=false;
+vm.runInContext(['activeHostClient','closeHostClient','routeHostSnapshot','startHostPhysics'].map(extract).join('\n'),host);assert.equal(host.startHostPhysics([]),true);assert.equal(host.hostPhysics.renderEveryStep,true);
 const a={seq:1},b={seq:2};host.hostPhysics.onState(a);host.hostPhysics.onRenderState(a);assert.deepEqual(calls,{render:1,states:1,fallback:1},'one shared snapshot is handled once when both paths publish');
 host.hostPhysics.onRenderState(b);assert.deepEqual(calls,{render:2,states:1,fallback:1},'an additional host render frame sends no additional network state');
 host.hostPhysics.onState({seq:3});assert.deepEqual(calls,{render:3,states:2,fallback:2},'roster/restart states outside advance still update the host');

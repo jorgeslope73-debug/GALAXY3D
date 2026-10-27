@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.95
+V23.96
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -336,3 +336,15 @@ RETIRADA DEL MUNDO 2D Y MISIL NUEVO - V23.95
 - Misil: docs/assets/models/cohete_galaxy_combat.glb. El nuevo GLB no tiene COLOR_0; rocket-model.js cambia exclusivamente baseColor del material fucsia por azul/fucsia/verde/amarillo. Conserva metalness, roughness, metales, escape y luces. Geometria compartida entre equipos.
 - Cuenta3-0 de salida y reaparicion: misma fuente y animacion para todos los puntos; no encoge por cercania al borde. El marcador conserva el punto reservado, el digito se ajusta dentro de la pantalla si hace falta. Todo se dibuja localmente.
 - Sin cambios de fisica, controles, protocolo, cadencias o backend.
+
+
+CLIENTE DEL ANFITRION CON RETARDO EN RED - V23.96
+- docs/host-client.js separa la entrega al jugador local de la simulacion autoritativa. Solo se activa en partidas online; contra CPU conserva el circuito directo.
+- Controles y acciones especiales del anfitrion pasan por una cola de entrada; estados, efectos y ACK por una cola de salida. El jugador ya no recibe los estados privados de cada tick de fisica.
+- Ambos clientes predicen su nave y disparos normales, y usan el mismo reloj interpolado para los rivales. La fisica permanece a60Hz y los estados a20Hz, con los avisos inmediatos de disparo ya existentes.
+- Se mide RTT host-invitado con un identificador breve en snapshots cada2segundos y un eco por el canal de acciones actual (P2P o relay). No hay cambios del backend de Render ni de base de datos.
+- Usa la mediana de los invitados humanos con muestras recientes, ajustes suaves y limite de180ms de ida/vuelta artificial (90ms por sentido). Hasta medir usa80ms; sin invitados humanos no agrega retardo de transporte. No iguala pings ni rendimiento distintos de forma exacta.
+- La fase visual de salida tambien sigue la entrega al cliente; la simulacion no espera su propio retardo. Las colas se vacian al cambiar serie/epoca/ronda o salir, no reactivan controles antiguos tras suspension y deduplican acciones.
+- El diagnostico optativo ?netdebug=1 muestra RTT medido, retardo local, colas y prediccion.
+- Compensacion historica de impactos: no forma parte de este cambio; los resultados siguen confirmandose en la simulacion autoritativa.
+- Relay: presupuesto de cadencia con margen de un snapshot ante jitter; conserva aproximadamente20Hz aunque las publicaciones alternen48/52ms, sin ampliar la frecuencia sostenida ni quitar el limite de backpressure.

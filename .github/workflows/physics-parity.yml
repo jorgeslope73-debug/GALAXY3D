@@ -11,6 +11,9 @@ on:
       - 'docs/p2p-network.js'
       - 'docs/net-state-codec.js'
       - 'docs/network-playback.js'
+      - 'docs/host-client.js'
+      - 'tools/check-host-client.js'
+      - 'tools/check-host-client-integration.js'
       - 'docs/motion-prediction.js'
       - 'docs/game.js'
       - 'docs/startup-preparation.js'
@@ -96,6 +99,9 @@ on:
       - 'docs/p2p-network.js'
       - 'docs/net-state-codec.js'
       - 'docs/network-playback.js'
+      - 'docs/host-client.js'
+      - 'tools/check-host-client.js'
+      - 'tools/check-host-client-integration.js'
       - 'docs/motion-prediction.js'
       - 'docs/game.js'
       - 'docs/startup-preparation.js'
@@ -192,6 +198,8 @@ jobs:
         run: node tools/check-state-codec.js
       - name: Check prediction and compact states through the unchanged relay
         run: node tools/check-relay-prediction.js
+      - name: Check bounded online host client transport and comparable response
+        run: node tools/check-host-client.js && node tools/check-host-client-integration.js
       - name: Check controller mapping and transported actions
         run: node tools/check-joystick-controls.js
   shared-physics-parity:

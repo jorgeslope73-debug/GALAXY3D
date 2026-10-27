@@ -262,7 +262,7 @@ const frameQueue=new Map();let frameId=0,paintedState=null,currentState=null;
 const frameContext=vm.createContext({window:{},console,setTimeout,clearTimeout,
   requestAnimationFrame:fn=>{frameQueue.set(++frameId,fn);return frameId;},
   cancelAnimationFrame:id=>frameQueue.delete(id),performance:{now:()=>16},
-  gameAssetsReady:true,sampleDisplayRefresh(){},flushPendingState(){},
+  gameAssetsReady:true,sampleDisplayRefresh(){},flushPendingState(){},pumpHostClient(){},activeHostClient:()=>false,simulationPreparing:()=>false,
   paint(){paintedState=currentState;}});
 vm.runInContext(read('docs/net-protocol.js'),frameContext);
 vm.runInContext(read('docs/p2p-network.js'),frameContext);

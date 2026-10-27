@@ -321,7 +321,8 @@
   // El nivel solo avanza si gana el jugador humano (J1).
   let localCampaignLevel=1,localCampaignAwaitingContinue=false,localCampaignComplete=false,localCampaignGameOver=false;
   let cpuLearningControl={autoTrainingEnabled:false,localHardEnabled:false,ready:false};
-  let p2p=null,hostPhysics=null,lobbyPlayers=[],cpuFillEnabled=false;
+  let p2p=null,hostPhysics=null,hostClientLink=null,lobbyPlayers=[],cpuFillEnabled=false;
+  let lastLinkProbeKey='';
   let netStartAt=0,lastP2PStateAt=0,lastFallbackRequestAt=0,lastFallbackStateSentAt=0;
   let fallbackActive=false,p2pStableCount=0;
   const fallbackPeers=new Set(),fallbackReconnectAt=new Map(),fallbackCodecPeers=new Map();
@@ -2550,6 +2551,47 @@
     if(['lobby','playing','round-finished','series-finished'].includes(m.seriesPhase))onlineSeriesPhase=m.seriesPhase;
   }
   function onlinePacket(payload,round){return PROTOCOL.stamp(onlineContext(round),payload);}
+  function activeHostClient(){
+    return typeof hostClientLink!=='undefined'&&!!hostClientLink?.active&&isHost&&!localCpuActive;
+  }
+  function closeHostClient(){
+    if(typeof hostClientLink!=='undefined'&&hostClientLink)hostClientLink.close();
+    hostClientLink=null;
+  }
+  function routeHostSnapshot(message){
+    if(!activeHostClient()){handle(message);return message;}
+    const now=performance.now();
+    hostClientLink.setContext(message);
+    hostClientLink.setPeers(startPreparationPeers());
+    const packet=hostClientLink.decorateState(message,now);
+    hostClientLink.enqueueView('state',packet,now);
+    return packet;
+  }
+  function pumpHostClient(now){
+    if(typeof hostClientLink==='undefined'||!hostClientLink)return;
+    if(!isHost||localCpuActive||!hostPhysics){closeHostClient();return;}
+    hostClientLink.setContext(onlineContext());
+    hostClientLink.flushView(now);
+    if(hostClientLink?.startUiPending&&!hostClientLink.preparing(now)){
+      hostClientLink.startUiPending=false;activateGameUi();playSound('start');
+    }
+  }
+  function replyLinkProbe(message){
+    const probe=message?.linkProbe;
+    if(isHost||localCpuActive||!probe||probe.v!==1||!Number.isSafeInteger(probe.id)||probe.id<1)return;
+    const key=[message.seriesId,message.hostEpoch,message.rankRound,probe.id].join(':');
+    if(key===lastLinkProbeKey)return;
+    const action='gc-link:1:'+probe.id;
+    let sent=false;
+    if(!fallbackActive&&!clientNeedsFallback())sent=!!p2p?.sendAction?.(action,message.rankRound);
+    if(!sent&&ws&&ws.readyState===WebSocket.OPEN)sent=sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-action',action,inputSessionId})));
+    if(sent)lastLinkProbeKey=key;
+  }
+  function receiveLinkPong(index,message){
+    if(!activeHostClient()||!isCurrentOnlinePacket(message)||typeof message.action!=='string')return false;
+    const match=/^gc-link:1:([1-9][0-9]{0,15})$/.exec(message.action);
+    return !!(match&&hostClientLink.pong(Number(index),Number(match[1]),performance.now()));
+  }
   function isCurrentOnlinePacket(packet,options){return PROTOCOL.matches(packet,onlineContext(),options);}
   function acknowledgeInputAction(m){
     if(!isCurrentOnlinePacket(m)||m.inputSessionId!==inputSessionId)return false;
@@ -2577,8 +2619,12 @@
     const expired=typeof m.simTime!=='number'||!Number.isFinite(m.simTime)||m.simTime>hostPhysics.fxClock+.1||hostPhysics.fxClock-m.simTime>PROTOCOL.ACTION_TTL_MS/1000;
     const accepted=!duplicate&&!expired&&hostPhysics.applyInputAction(Number(index),m.kind,m.actionId,m.inputSessionId);
     if(!accepted&&!duplicate&&!expired)return false;
-    if(p2p)p2p.sendInputAck(Number(index),m);
-    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-input-ack',to:Number(index),kind:m.kind,actionId:m.actionId,inputSessionId:m.inputSessionId})));
+    if(Number(index)===Number(myIndex)&&activeHostClient()){
+      hostClientLink.enqueueView('event',onlinePacket({t:'input-ack',kind:m.kind,actionId:m.actionId,inputSessionId:m.inputSessionId}),performance.now());
+    }else{
+      if(p2p)p2p.sendInputAck(Number(index),m);
+      if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-input-ack',to:Number(index),kind:m.kind,actionId:m.actionId,inputSessionId:m.inputSessionId})));
+    }
     return !!(accepted||duplicate);
   }
   function onlineRoundResultPresent(message){
@@ -2611,7 +2657,9 @@
         handle(m);
       },
       onEvent:m=>{
-        if(m&&m.t==='p2p-input-action'&&isHost&&hostPhysics){
+        if(m&&m.t==='p2p-action'&&typeof m.action==='string'&&m.action.startsWith('gc-link:1:')){
+          receiveLinkPong(Number(m.from),m);
+        }else if(m&&m.t==='p2p-input-action'&&isHost&&hostPhysics){
           applyOnlineInputAction(Number(m.from),m);
         }else if(m&&m.t==='p2p-action'&&m.action==='start-ready'){
           receiveStartPreparationReady(Number(m.from),m);
@@ -2624,6 +2672,7 @@
     return p2p;
   }
   function stopP2P(){
+    closeHostClient();lastLinkProbeKey='';
     if(typeof networkPlayback!=='undefined'&&networkPlayback)networkPlayback.reset();
     if(p2p)p2p.close();
     p2p=null;
@@ -2748,7 +2797,10 @@
     if(Number(ws.bufferedAmount||0)>128*1024)return false;
     const now=performance.now();
     if(now-lastFallbackStateSentAt<FALLBACK_STATE_MS-1)return false;
-    lastFallbackStateSentAt=now;
+    // Keep a cadence budget, with at most one snapshot of jitter allowance.
+    // Resetting it to every arrival made alternating48/52ms frames fall to10Hz.
+    lastFallbackStateSentAt=lastFallbackStateSentAt
+      ?Math.max(lastFallbackStateSentAt+FALLBACK_STATE_MS,now-FALLBACK_STATE_MS):now;
     const codec=window.GalaxyStateCodec,modern=[],legacy=[];
     for(const index of fallbackPeers){
       const capability=fallbackCodecPeers.get(index),player=hostPhysics?.players.find(p=>p.index===index);
@@ -2787,14 +2839,26 @@
   }
   function startHostPhysics(players,rankRound=1){
     if(!isHost||typeof window.GalaxyHostPhysics!=='function')return false;
+    closeHostClient();
+    if(roomCode!=='LOCAL'&&typeof window.GalaxyHostClient==='function'){
+      hostClientLink=new window.GalaxyHostClient({context:onlineContext(rankRound),peers:startPreparationPeers(),
+        onControl:m=>{if(isHost&&hostPhysics&&isCurrentOnlinePacket(m)&&!matchStartGate?.blocked)hostPhysics.setControl(Number(myIndex),m.turn,m.thrust,m.fire,m);},
+        onAction:m=>{if(isHost&&hostPhysics&&!matchStartGate?.blocked)applyOnlineInputAction(Number(myIndex),m);},
+        onState:m=>{if(isHost&&isCurrentOnlinePacket(m))handle(m);},
+        onEvent:m=>receiveOnlineEvent(m)
+      });
+    }
     hostPhysics=new window.GalaxyHostPhysics({
       code:roomCode,rankRound,rankHostToken:playerToken,hostEpoch,seriesId:onlineSeriesId,
-      renderEveryStep:true,
-      onRenderState:m=>{if(state!==m)handle(m);},
-      onState:m=>{handle(m);if(p2p)p2p.broadcastState(m);sendHostFallbackState(m);},
+      renderEveryStep:!hostClientLink,
+      onRenderState:m=>{if(!activeHostClient()&&state!==m)handle(m);},
+      onState:m=>{const packet=routeHostSnapshot(m);if(p2p)p2p.broadcastState(packet);sendHostFallbackState(packet);},
       onEvent:m=>{
         if(m&&m.t==='victory')submitOnlineSeriesRound(m.winner,(hostPhysics&&hostPhysics.rankRound)||1);
-        receiveOnlineEvent(m);
+        // Restart is authority control flow: pause the simulation for readiness now.
+        // Its visible phase snapshots still pass through the local client transport.
+        if(activeHostClient()&&m.t!=='restarted')hostClientLink.enqueueView('event',m,performance.now());
+        else receiveOnlineEvent(m);
         if(p2p)p2p.broadcastEvent(m);
         sendHostFallbackEvent(m,m&&m.t==='victory');
       }
@@ -3110,7 +3174,8 @@
       }
       if(m&&m.t==='input-ack'){acknowledgeInputAction(m);return;}
       if(m&&m.t==='fallback-action'){
-        if(typeof m.action==='string'&&m.action.startsWith('gc-ctrl:1:'))receiveRelayControl(m);
+        if(typeof m.action==='string'&&m.action.startsWith('gc-link:1:'))receiveLinkPong(Number(m.from),m);
+        else if(typeof m.action==='string'&&m.action.startsWith('gc-ctrl:1:'))receiveRelayControl(m);
         else if(m.action==='start-ready')receiveStartPreparationReady(Number(m.from),m);
         else if(isHost&&m.action==='restart'&&hostPhysics)restartOnlineRoundAuthoritatively(m.rankRound,m.hostEpoch);
         return;
@@ -3250,7 +3315,7 @@
       hostPhysics.finished=true;hostPhysics.winner=winner;
       const player=hostPhysics.players.find(p=>p.index===winner);
       if(player)player.kills=5;
-      handle(hostPhysics.publicState());
+      routeHostSnapshot(hostPhysics.publicState());
     }
     queueVictory(winner);
   }
@@ -3263,6 +3328,10 @@
     if(localCpuActive&&localCpu){
       if(typeof localCpu.applyInputAction==='function')return localCpu.applyInputAction(action,id);
       return false;
+    }
+    if(isHost&&activeHostClient()){
+      const now=performance.now();if(hostClientLink.preparing(now))return false;
+      return hostClientLink.enqueueInput('action',PROTOCOL.stamp(context,{kind:action,actionId:id,inputSessionId,simTime:context.simTime}),now);
     }
     if(inGame&&p2p){
       const now=performance.now();
@@ -3292,7 +3361,7 @@
     if(!Object.prototype.hasOwnProperty.call(inputActionSeq,action))return false;
     const actionId=++inputActionSeq[action];
     if(localCpuActive)return sendInputAction(action,actionId);
-    const simTime=isHost&&hostPhysics?hostPhysics.fxClock:Number(state&&state.simTime)||0;
+    const simTime=isHost&&hostPhysics&&!activeHostClient()?hostPhysics.fxClock:Number(state&&state.simTime)||0;
     pendingInputActions.push(onlinePacket({kind:action,actionId,inputSessionId,simTime,createdAt:performance.now(),sentAt:null}));
     if(pendingInputActions.length>32)pendingInputActions.shift();
     flushPendingInputActions();
@@ -3307,8 +3376,12 @@
       if(turn!==lastSubmittedTurn){lastTurnControlSeq=seq;lastSubmittedTurn=turn;}
       controlSeq=seq;return true;
     };
-    if(typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready&&!isHost&&!inputSuspended){
+    if(typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready&&(!isHost||activeHostClient())&&!inputSuspended){
       actions={...actions,motion:guestMotion.packet()};
+    }
+    if(isHost&&activeHostClient()){
+      if(!hostClientLink.enqueueInput('control',onlinePacket({controlSeq:seq,inputSessionId,turn,thrust:!!thrust,fire:!!fire,...actions}),performance.now()))return false;
+      return accepted();
     }
     if(inGame&&p2p){
       const now=performance.now();
@@ -3353,7 +3426,7 @@
   function updateGuestPrediction(now,input){
     if(!guestMotion)return;
     const player=state&&state.players&&state.players.find(p=>p.i===myIndex);
-    if(isHost||localCpuActive||!inGame||inputSuspended||((fallbackActive||clientNeedsFallback(now))&&!relayPredictionAvailable())||!player){
+    if((isHost&&!activeHostClient())||localCpuActive||!inGame||inputSuspended||(!isHost&&(fallbackActive||clientNeedsFallback(now))&&!relayPredictionAvailable())||!player){
       guestMotion.reset();return;
     }
     const context=hostEpoch+':'+onlineSeriesId+':'+currentOnlineSeriesRound();
@@ -3969,7 +4042,7 @@
         lastAcceptedStateRound=incomingRound;lastAcceptedStateSeq=incomingSeq;
       }
       const now=performance.now();
-      const delayedVisuals=typeof networkPlayback!=='undefined'&&networkPlayback&&!isHost&&!localCpuActive;
+      const delayedVisuals=typeof networkPlayback!=='undefined'&&networkPlayback&&(!isHost||activeHostClient())&&!localCpuActive;
       if(!delayedVisuals){
         if(impactFX)impactFX.consume(m,myIndex,now);
         consumeGameFeelFx(m,now);
@@ -4084,7 +4157,8 @@
       rebuildPreviousLookup(previousState);
       state=m;lastStateTime=now;
       applyStartPreparationState(m);
-      if(typeof networkPlayback!=='undefined'&&networkPlayback&&!isHost&&!localCpuActive)networkPlayback.push(m,now);
+      if(typeof networkPlayback!=='undefined'&&networkPlayback&&(!isHost||activeHostClient())&&!localCpuActive)networkPlayback.push(m,now);
+      replyLinkProbe(m);
       if(netDebug){
         if(netMetrics.lastState)netMetrics.maxGap=Math.max(netMetrics.maxGap,now-netMetrics.lastState);
         netMetrics.lastState=now;netMetrics.states++;
@@ -5061,6 +5135,7 @@
       const seconds=Math.max(.001,(performance.now()-netMetrics.lastReport)/1000);
       panel.textContent=`RED ${mode} | ${isHost?'ANFITRION':'INVITADO'}\nWS ${serverProtocolReady?'listo':'reconectando'} | RTT servidor ${fresh?Math.round(ws.rttMs)+' ms':'n/d'}\nP2P ${peers} peers | colas WS ${Math.round((ws?.bufferedAmount||0)/1024)} KiB / P2P ${Math.round(queued/1024)} KiB\nAcciones pendientes ${pendingInputActions.length} | reintentos consecutivos ${reconnectFailures}`;
       panel.textContent+=`\nFPS ${(netMetrics.frames/seconds).toFixed(0)} | estados/s ${(netMetrics.states/seconds).toFixed(1)} | pausa estados ${Math.round(netMetrics.maxGap)} ms`;
+      if(activeHostClient())panel.textContent+=`\nCLIENTE HOST | ida/vuelta local ${(hostClientLink.delayMs*2).toFixed(0)} ms | RTT grupo ${Math.round(hostClientLink.stats.rttMs)} ms | medidos ${hostClientLink.stats.measuredPeers}/${hostClientLink.peers.size} | colas ${hostClientLink.inputs.length}/${hostClientLink.views.length}`;
       if(guestMotion&&guestMotion.ready)panel.textContent+=`\nPrediccion por ticks | pendientes ${guestMotion.history.length} | ACK ${guestMotion.ack} | correccion ${guestMotion.stats.correction.toFixed(2)}`;
       netMetrics.frames=0;netMetrics.states=0;netMetrics.maxGap=0;netMetrics.lastReport=performance.now();
     },1000);
@@ -5365,7 +5440,7 @@
     drawSpawnCountdownMarker(view.x,view.y,Number(myIndex),digit,age,alpha,now);
   }
   function drawLocalEntryCountdown(now){
-    const gate=matchStartGate;
+    const gate=typeof hostClientLink!=='undefined'&&hostClientLink?.viewGate||matchStartGate;
     if(!inGame||!gate||!['countdown','go'].includes(gate.phase)||!state||state.finished)return;
     if(gate.phase==='go'&&now-gate.goAt>=280)return;
     const player=(state.players||[]).find(p=>Number(p.i)===Number(myIndex));
@@ -5456,7 +5531,7 @@
       // aumentaba con la velocidad. Ahora avanzamos una pose visual continua y
       // reconciliamos suavemente contra la posicion autoritativa del servidor.
       const age=Math.min(.05,Math.max(0,(now-lastStateTime)/1000));
-      const guestOnline=!isHost&&!localCpuActive&&roomCode&&roomCode!=='LOCAL';
+      const guestOnline=(!isHost||activeHostClient())&&!localCpuActive&&roomCode&&roomCode!=='LOCAL';
       const hasControlAck=Number.isInteger(p.appliedControlSeq)&&p.appliedControlSeq>=0;
       const pendingMotion=guestOnline&&hasControlAck&&
         (lastControlTurn!==lastSubmittedTurn||lastControlThrust!==lastSubmittedThrust||p.appliedControlSeq<lastMotionControlSeq);
@@ -6126,8 +6201,12 @@
     if(onlineStartTimer){clearTimeout(onlineStartTimer);onlineStartTimer=null;}
     onlineStartAt=0;onlineGoAt=0;onlineStartEndAt=0;onlineStartRankRound=1;
   }
-  function onlinePreparing(now=performance.now()){
+  function simulationPreparing(now=performance.now()){
     return onlineStartPending||!!matchStartGate?.blocked||(onlineGoAt>0&&now<onlineGoAt);
+  }
+  function onlinePreparing(now=performance.now()){
+    if(activeHostClient())return onlineStartPending||hostClientLink.preparing(now);
+    return simulationPreparing(now);
   }
   function activateGameUi(){
     topbar.classList.remove('hidden');
@@ -6140,15 +6219,16 @@
       startHostPhysics(lobbyPlayers,onlineStartRankRound);
       if(typeof matchStartGate!=='undefined'&&matchStartGate)publishStartPreparation();
     }
-    activateGameUi();playSound('start');
+    if(activeHostClient())hostClientLink.startUiPending=true;
+    else{activateGameUi();playSound('start');}
   }
   function publishStartPreparation(){
     if(roomCode==='LOCAL'||!isHost||!hostPhysics||!matchStartGate)return;
     const packet={...hostPhysics.publicState(),startGate:matchStartGate.snapshot()};
-    handle(packet);p2p?.broadcastState?.(packet);
+    const outgoing=routeHostSnapshot(packet);p2p?.broadcastState?.(outgoing);
     // Three reliable phase snapshots also cover peers whose direct channel is
     // still opening. The existing relay accepts these states unchanged.
-    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-state',to:[],state:packet})));
+    if(ws&&ws.readyState===WebSocket.OPEN)sendSocketRaw(ws,JSON.stringify(onlinePacket({t:'fallback-state',to:[],state:outgoing})));
   }
   function startPreparationPeers(){
     return lobbyPlayers.filter(p=>!p.cpu&&Number(p.i)!==Number(myIndex)).map(p=>Number(p.i));
@@ -6220,15 +6300,18 @@
     }catch(error){console.warn('[GALAXY3D] Preparacion de partida pendiente:',error?.message||error);}
   }
   function drawOnlineStartAnnouncement(now){
-    if(!inGame||!menu.classList.contains('hidden')||!lobby.classList.contains('hidden')||!onlineStartAt||now<onlineStartAt||now>=onlineStartEndAt)return;
-    if(matchStartGate?.phase==='countdown')return;
+    const gate=typeof hostClientLink!=='undefined'&&hostClientLink?.viewGate||matchStartGate;
+    const goAt=gate?.phase==='go'&&gate.goAt?gate.goAt:onlineGoAt;
+    const endAt=gate?.phase==='go'?goAt+ONLINE_GO_MS:onlineStartEndAt;
+    if(!inGame||!menu.classList.contains('hidden')||!lobby.classList.contains('hidden')||!onlineStartAt||now<onlineStartAt||now>=endAt)return;
+    if(gate?.phase==='countdown')return;
     warmOnlineStartCaches();
     const age=now-onlineStartAt;
     ctx.save();
     try{
       ctx.translate(W/2,H*.48);
       ctx.textAlign='center';ctx.textBaseline='middle';
-      if(matchStartGate?.phase==='preparing'||!matchStartGate&&age<ONLINE_READY_MS){
+      if(gate?.phase==='preparing'||!gate&&age<ONLINE_READY_MS){
         const t=clamp(age/ONLINE_READY_MS,0,1);
         const intro=clamp(age/240,0,1);
         const ease=1-Math.pow(1-intro,3);
@@ -6262,7 +6345,7 @@
           ctx.shadowBlur=0;
         }
       }else{
-        const goAge=now-onlineGoAt;
+        const goAge=now-goAt;
         const intro=clamp(goAge/180,0,1);
         const ease=1-Math.pow(1-intro,3);
         const remaining=ONLINE_GO_MS-goAge;
@@ -6767,6 +6850,7 @@
     // El RAF propio del transporte sigue como respaldo fuera del juego.
     if(p2p)p2p.flushPendingState();
     flushPendingState(false,now);
+    pumpHostClient(now);
     if(isHost&&pendingCriticalServerOps.length)flushCriticalServerOps();
     if(joystickEnabled&&joystickToggleButton&&!inGame){
       const before=joystickConnected;
@@ -6775,8 +6859,10 @@
     }
     pumpVictoryJoystick(now);
     pumpControls(now);
+    if(activeHostClient())hostClientLink.flushInputs(now);
     if(localCpuActive&&localCpu&&!onlinePreparing(now))localCpu.advance(now);
-    if(hostPhysics&&isHost&&!onlinePreparing(now))hostPhysics.advance(now);
+    if(hostPhysics&&isHost&&!simulationPreparing(now))hostPhysics.advance(now);
+    pumpHostClient(now);
 
     // V20.86: fuera de una partida no repintamos el canvas del combate.
     // El RAF sigue vivo para joystick, red, reconexion y tareas de interfaz,
@@ -6848,7 +6934,7 @@
     }
     if((MATCH_BACKGROUNDS[currentMatchBackground]||MATCH_BACKGROUNDS[0]).stars)drawDecorativeStars(now);
     if(onlineStartPending||!state){drawOnlineStartAnnouncement(now);return;}
-    const playback=!localCpuActive&&!isHost&&networkPlayback?networkPlayback.sample(now):null;
+    const playback=!localCpuActive&&(!isHost||activeHostClient())&&networkPlayback?networkPlayback.sample(now):null;
     const ownPilot=playback?(state.players||[]).find(p=>p.i===myIndex):null;
     const ownShots=playback&&guestMotion?.ready&&typeof guestMotion.projectiles==='function'?guestMotion.projectiles(ownPilot,state.bullets||[],now):null;
     const renderState=networkDrawingState(playback,state,myIndex,ownShots);
