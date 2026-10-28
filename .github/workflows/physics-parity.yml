@@ -12,6 +12,9 @@ on:
       - 'docs/net-state-codec.js'
       - 'docs/network-playback.js'
       - 'docs/host-client.js'
+      - 'docs/shot-history.js'
+      - 'docs/impactos.js'
+      - 'tools/check-shot-feedback.js'
       - 'tools/check-host-client.js'
       - 'tools/check-host-client-integration.js'
       - 'docs/motion-prediction.js'
@@ -100,6 +103,9 @@ on:
       - 'docs/net-state-codec.js'
       - 'docs/network-playback.js'
       - 'docs/host-client.js'
+      - 'docs/shot-history.js'
+      - 'docs/impactos.js'
+      - 'tools/check-shot-feedback.js'
       - 'tools/check-host-client.js'
       - 'tools/check-host-client-integration.js'
       - 'docs/motion-prediction.js'
@@ -196,6 +202,8 @@ jobs:
         run: node tools/check-host-continuity.js
       - name: Check compact packets and negotiated compatibility
         run: node tools/check-state-codec.js
+      - name: Check compensated shots and immediate visual feedback
+        run: node tools/check-shot-feedback.js
       - name: Check prediction and compact states through the unchanged relay
         run: node tools/check-relay-prediction.js
       - name: Check bounded online host client transport and comparable response

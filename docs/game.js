@@ -3377,7 +3377,9 @@
       controlSeq=seq;return true;
     };
     if(typeof guestMotion!=='undefined'&&guestMotion&&guestMotion.ready&&(!isHost||activeHostClient())&&!inputSuspended){
-      actions={...actions,motion:guestMotion.packet()};
+      const motion=guestMotion.packet();
+      if(state?.shotCaps===1&&Number.isFinite(networkPlayback?.cursor))motion.viewTime=Math.max(0,networkPlayback.cursor/1000);
+      actions={...actions,motion};
     }
     if(isHost&&activeHostClient()){
       if(!hostClientLink.enqueueInput('control',onlinePacket({controlSeq:seq,inputSessionId,turn,thrust:!!thrust,fire:!!fire,...actions}),performance.now()))return false;
@@ -4311,7 +4313,7 @@
       updateOnlineSeriesRoundUi(onlineSeriesRound);
       if(m.rankRound>previous&&!m.roundFinished)handle(onlinePacket({t:'restarted'},m.rankRound));
     }
-    else if(m.t==='sound'){playSound(m.kind);}
+    else if(m.t==='sound'){if(!impactFX||impactFX.shotSound(m,myIndex))playSound(m.kind);}
     else if(m.t==='cpu-learning'){submitCpuLearning(m.deltas);}
     else if(m.t==='victory'){
       // V21.72: la CPU emite VICTORY antes de publicar el snapshot final.
@@ -5473,7 +5475,12 @@
   function networkDrawingState(sample,authoritative,index,ownShots=null){
     if(!sample)return authoritative;
     const visible=sample.state,local=(authoritative.players||[]).find(p=>p.i===index);
-    const players=(visible.players||[]).map(p=>p.i===index&&local?local:p);
+    const immediate=new Set((authoritative.fx||[]).filter(e=>e.kind==='explosion'&&Number(e.so)===Number(index)).map(e=>e.i));
+    const players=(visible.players||[]).map(p=>{
+      if(p.i===index&&local)return local;
+      const confirmed=immediate.has(p.i)&&(authoritative.players||[]).find(q=>q.i===p.i&&q.dead&&Number(q.d)>=Number(p.d||0));
+      return confirmed||p;
+    });
     if(local&&!players.some(p=>p.i===index))players.push(local);
     // Local normal shots share the pilot's current command clock. Remote
     // projectiles and guided missiles retain their authoritative playback.
@@ -5481,9 +5488,9 @@
     const localShots=Array.isArray(ownShots)?ownShots:(authoritative.bullets||[]).filter(ownNormal);
     const bullets=[...(visible.bullets||[]).filter(b=>!ownNormal(b)),...localShots.filter(ownNormal)];
     const elapsed=Math.max(0,(sample.simTime-(sample.previous.simTime||0))*1000);
-    const fx=(visible.fx||[]).filter(e=>Number(e.i)!==Number(index)).map(e=>({...e,age:Math.max(0,Number(e.age)||0)+elapsed}));
-    for(const e of authoritative.fx||[])if(Number(e.i)===Number(index))fx.push(e);
-    return {...visible,players,bullets,fx};
+    const fx=(visible.fx||[]).filter(e=>Number(e.i)!==Number(index)&&Number(e.so)!==Number(index)).map(e=>({...e,age:Math.max(0,Number(e.age)||0)+elapsed}));
+    for(const e of authoritative.fx||[])if(Number(e.i)===Number(index)||Number(e.so)===Number(index))fx.push(e);
+    return {...visible,seq:authoritative.seq,players,bullets,fx};
   }
   function wrappedDelta(from,to,size){
     let d=to-from;
@@ -6957,7 +6964,10 @@
       // projectile, ammunition, impacts and confirmations remain untouched.
       renderState.bullets=guestShotOcclusion.filter(renderState,myIndex,now,{
         prediction:guestMotion,authoritative:state,front:4,tail:7.5,radius:4,
-        playerVisible:p=>!(Number(p.camo)>0)||ghostRevealAlpha(p,now)>0
+        playerVisible:p=>!(Number(p.camo)>0)||ghostRevealAlpha(p,now)>0,
+        onImpact:e=>{
+          if(impactFX&&impactFX.predictShotHit(e,myIndex,now)&&impactFX.shotSound(e,myIndex))playSound('impact');
+        }
       });
     }
 

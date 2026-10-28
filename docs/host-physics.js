@@ -159,6 +159,7 @@
       this.fxSeq=0;
       this.fxEvents=[];
       this.fxLastHit=new Map();
+      this.shotHistory=window.GalaxyShotHistory?new window.GalaxyShotHistory():null;
       this.bullets=[];
       this.flares=[];
       this.pickups=[];
@@ -441,7 +442,7 @@
       if(list.length<2)return false;
       this.players=[];
       this.controls.clear();
-      this.seq=0;this.fxClock=0;this.fxSeq=0;this.fxEvents=[];this.fxLastHit.clear();
+      this.seq=0;this.fxClock=0;this.fxSeq=0;this.fxEvents=[];this.fxLastHit.clear();if(this.shotHistory)this.shotHistory.reset();
       this.bullets=[];this.flares=[];this.pickups=[];this.meteors=[];this.giant=null;this.ufo=null;this.activeShockwaves=[];
       this.nextPickup=1;this.firstShower=999999;this.showerLeft=0;this.nextMeteor=0;this.nextShower=0;
       this.noDeathTime=0;this.hazardCycleAge=0;this.hazardCycleDuration=360;this.nextGiant=999999;this.nextUfo=999999;
@@ -662,7 +663,7 @@
     restart(targetRound=null){
       if(!this.finished||this.players.length<2)return false;
       this.started=false;this.finished=false;this.winner=null;this.seq=0;this.rankReportSent=false;
-      this.fxClock=0;this.fxSeq=0;this.fxEvents=[];this.fxLastHit.clear();
+      this.fxClock=0;this.fxSeq=0;this.fxEvents=[];this.fxLastHit.clear();if(this.shotHistory)this.shotHistory.reset();
       this.bullets=[];this.flares=[];this.pickups=[];this.meteors=[];this.giant=null;this.ufo=null;this.activeShockwaves=[];
       this.nextPickup=1;this.firstShower=999999;this.showerLeft=0;this.nextMeteor=0;this.nextShower=0;
       this.noDeathTime=0;this.hazardCycleAge=0;this.hazardCycleDuration=360;this.nextGiant=999999;this.nextUfo=999999;
@@ -720,7 +721,7 @@
         retry();
       }
     }
-    emitShipImpact(player,source=null,destroyed=false){
+    emitShipImpact(player,source=null,destroyed=false,projectile=source){
       if(!player||!Number.isFinite(player.x)||!Number.isFinite(player.y))return;
       if(player.dead&&!destroyed)return;
       if(!destroyed){
@@ -734,7 +735,7 @@
       }
       this.fxEvents.push({
         id:++this.fxSeq,i:player.index,x:+x.toFixed(1),y:+y.toFixed(1),
-        kind:destroyed?'explosion':'hit',hidden:!destroyed&&player.camo>0,at:this.fxClock
+        kind:destroyed?'explosion':'hit',hidden:!destroyed&&player.camo>0,at:this.fxClock,...this.shotIdentity(projectile)
       });
       if(this.fxEvents.length>32)this.fxEvents.splice(0,this.fxEvents.length-32);
     }
@@ -917,7 +918,7 @@
       }
       return{turn:clamp(err/30,-1,1),thrust:Math.abs(err)<68,fire:false};
     }
-    destroyShip(victim,attacker=null,weaponTheft=false,scorePenalty=false){
+    destroyShip(victim,attacker=null,weaponTheft=false,scorePenalty=false,projectile=null){
       if(victim.dead||this.finished)return;
       if(victim.protection>0||victim.shield>0){this.emitShipImpact(victim,attacker,false);return;}
       victim.dead=true;victim.respawn=3;victim.vx=victim.vy=0;victim.deaths++;
@@ -939,7 +940,7 @@
       if(attacker&&attacker!==victim)this.dropDefeatedLoadout(victim);
 
       victim.bullets=0;victim.cadence=30;victim.speed=1;victim.shield=0;victim.camo=0;victim.reload=0;victim.guided=false;victim.guidedTarget=-1;victim.guidedAmmo=0;victim.joystickRocketHeld=false;victim.flareHold=0;victim.flareGesture=false;victim.specialReleaseLock=false;victim.shockwave=false;victim.shockReachAt=0;victim.shockExplodeAt=0;victim.shockOwner=-1;
-      this.noDeathTime=0;this.emitShipImpact(victim,null,true);this.emit({t:'sound',kind:'impact'});
+      this.noDeathTime=0;this.emitShipImpact(victim,null,true,projectile);this.emit({t:'sound',kind:'impact',...this.shotIdentity(projectile)});
       if(attacker&&attacker!==victim){
         attacker.kills++;
         if(attacker.kills>=SCORE_TO_WIN){
@@ -1695,6 +1696,7 @@
           this.players,dirFromRot,uid,CPU_ARMED_WARNING_SECONDS
         );
         if(projectile){
+          if(this.shotHistory)this.shotHistory.stamp(projectile,p,c,this.fxClock);
           this.bullets.push(projectile);
           if(!p.cpu)this.humanShotPending=true;
           this.emit({t:'sound',kind:'laser'});
@@ -1704,6 +1706,13 @@
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
       this.updateAsteroids(dt);this.updateFlares(dt);this.updateBullets(dt);this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      if(this.shotHistory)this.shotHistory.capture(this);
+    }
+    shotIdentity(b){
+      return b&&!b.guided&&Number.isSafeInteger(b.se)&&Number.isSafeInteger(b.st)?{so:b.owner,si:b.id,se:b.se,st:b.st}:{};
+    }
+    queryProjectileShipHit(b){
+      return this.shotHistory?this.shotHistory.query(b,this,sweptCircles):PHYSICS_CORE.projectileShipHit(b,this.players,sweptCircles,BULLET_RADIUS,SHIP_RADIUS,BRUTAL_SHOT_DISTANCE,260);
     }
     reloadTime(p){return PHYSICS_CORE.reloadTimeFor(p);}
     bulletSpeed(p){return PHYSICS_CORE.bulletSpeedFor(p);}
@@ -1879,7 +1888,7 @@
           }
         }
         if(!remove){
-          const shipHit=PHYSICS_CORE.projectileShipHit(
+          const shipHit=typeof this.queryProjectileShipHit==='function'?this.queryProjectileShipHit(b):PHYSICS_CORE.projectileShipHit(
             b,this.players,sweptCircles,BULLET_RADIUS,SHIP_RADIUS,BRUTAL_SHOT_DISTANCE,260
           );
           if(shipHit){
@@ -1905,7 +1914,7 @@
                 this.emit({t:'sound',kind:'sparkle'});
               }
               // El atacante suma su baja; la victima no pierde punto por baja ajena.
-              this.destroyShip(p,attacker);
+              this.destroyShip(p,attacker,false,false,b);
             }else{
               this.emitShipImpact(p,b,false);
               if(shipHit.guided){
@@ -1918,6 +1927,7 @@
             remove=true;
           }
         }
+        if(b.historyBlocked)remove=true;
         if(!remove){
           const ufoHit=PHYSICS_CORE.projectileUfoHit(
             b,this.ufo,sweptCircles,BULLET_RADIUS,UFO_RADIUS,UFO_HP
@@ -2412,11 +2422,11 @@
       }
       return{
         ...PROTOCOL.context(this),t:'state',seq:++this.seq,round:this.rankRound,code:this.code,mode:'p2p',testProfile:this.testProfile,started:this.started,finished:this.finished,winner:this.winner,
-        w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,relayCaps:typeof window.GalaxyStateCodec?.decodeRelayControl==='function'?1:0,simTime:round3(this.fxClock),
-        fx:this.fxEvents.map(e=>({id:e.id,i:e.i,x:e.x,y:e.y,kind:e.kind,hidden:e.hidden,age:Math.max(0,Math.round((this.fxClock-e.at)*1000))})),
+        w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,shotCaps:1,relayCaps:typeof window.GalaxyStateCodec?.decodeRelayControl==='function'?1:0,simTime:round3(this.fxClock),
+        fx:this.fxEvents.map(e=>({id:e.id,i:e.i,x:e.x,y:e.y,kind:e.kind,hidden:e.hidden,age:Math.max(0,Math.round((this.fxClock-e.at)*1000)),...(e.so===undefined?{}:{so:e.so,si:e.si,se:e.se,st:e.st})})),
         players:this.players.map(p=>({i:p.index,n:p.name,cpu:p.cpu,motion:!p.cpu&&p.motionStream?{v:1,epoch:p.motionStream.epoch,ack:p.motionStream.ack,active:p.motionStream.active,x:p.x,y:p.y,rot:p.rot,vx:p.vx,vy:p.vy,bank:Number(p.bank)||0}:undefined,appliedControlSeq:Number(p.appliedControlSeq)||0,x:round1(p.x),y:round1(p.y),r:round1(p.rot),b:round3(Number(p.bank)||0),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn),...(p.dead&&p.pendingSpawn?{spawnX:round1(p.pendingSpawn.x),spawnY:round1(p.pendingSpawn.y)}:{})})),
         asteroids:this.asteroids.map(a=>({id:a.id,x:round1(a.x),y:round1(a.y),type:a.type,s:round3(Number(a.spin)||0),r:round3(Number(a.r)||ASTEROID_RADIUS),fragment:!!a.fragment})),
-        bullets:this.bullets.map(b=>({id:b.id,o:b.owner,owner:b.owner,x:round1(b.x),y:round1(b.y),vx:round1(b.vx),vy:round1(b.vy),g:!!b.guided,guided:!!b.guided,gt:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,target:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,wt:(!b.decoyed&&b.guided&&Number.isInteger(b.target))?b.target:-1})),
+        bullets:this.bullets.map(b=>({id:b.id,o:b.owner,owner:b.owner,...(b.se===undefined?{}:{se:b.se,st:b.st}),x:round1(b.x),y:round1(b.y),vx:round1(b.vx),vy:round1(b.vy),g:!!b.guided,guided:!!b.guided,gt:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,target:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,wt:(!b.decoyed&&b.guided&&Number.isInteger(b.target))?b.target:-1})),
         flares:this.flares.map(f=>({id:f.id,o:f.owner,x:round1(f.x),y:round1(f.y),a:round1(f.angle),life:round2(Math.max(0,f.life))})),
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),

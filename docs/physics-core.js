@@ -717,7 +717,8 @@
     stream.requested=true;
     if(!stream.active&&stream.queue.size===0&&packet.frames.length)stream.ack=packet.frames[0][0]-1;
     for(const f of packet.frames)if(f[0]>stream.ack&&!stream.queue.has(f[0])){
-      stream.queue.set(f[0],{turn:f[1],thrust:!!f[2],fire:!!f[3],directFire:!!f[4]});
+      const viewTime=Number.isFinite(packet.viewTime)?packet.viewTime-(packet.frames.at(-1)[0]-f[0])/60:undefined;
+      stream.queue.set(f[0],{turn:f[1],thrust:!!f[2],fire:!!f[3],directFire:!!f[4],...(viewTime===undefined?{}:{viewTime})});
     }
     // Start with three consecutive commands. Starting at the first command
     // lets the 60 Hz consumer overtake the 30 Hz sender between packets,

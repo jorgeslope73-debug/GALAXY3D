@@ -2637,7 +2637,7 @@
           }
         }
         if(!remove){
-          const shipHit=PHYSICS_CORE.projectileShipHit(
+          const shipHit=typeof this.queryProjectileShipHit==='function'?this.queryProjectileShipHit(b):PHYSICS_CORE.projectileShipHit(
             b,this.players,sweptCircles,BULLET_RADIUS,SHIP_RADIUS,BRUTAL_SHOT_DISTANCE,260
           );
           if(shipHit){
@@ -2663,7 +2663,7 @@
                 this.emit({t:'sound',kind:'sparkle'});
               }
               // El atacante suma su baja; la victima no pierde punto por baja ajena.
-              this.destroyShip(p,attacker);
+              this.destroyShip(p,attacker,false,false,b);
             }else{
               this.emitShipImpact(p,b,false);
               if(shipHit.guided){
@@ -2676,6 +2676,7 @@
             remove=true;
           }
         }
+        if(b.historyBlocked)remove=true;
         if(!remove){
           const ufoHit=PHYSICS_CORE.projectileUfoHit(
             b,this.ufo,sweptCircles,BULLET_RADIUS,UFO_RADIUS,UFO_HP

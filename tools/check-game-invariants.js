@@ -190,7 +190,7 @@ const buildVersion=buildVersionMatch?buildVersionMatch[1]:'';
 const indexVersions=[...index.matchAll(/[?&]v=(V\d+\.\d+)/g)].map(m=>m[1]);
 if(!indexVersions.length)fail(errors,'version: index no lleva cache-busting estático');
 if(indexVersions.some(v=>v!==buildVersion))fail(errors,'version: index y build-version.js están desincronizados');
-for(const script of ['build-version.js','config.js','menu-loader.js','menu-decor.js','i18n.js','campaign-config.js','manual.js','impactos.js','voz.js','auth.js','ranking.js','physics-core.js','local-cpu.js','host-physics.js','p2p-network.js','host-client.js','game.js','pwa.js']){
+for(const script of ['build-version.js','config.js','menu-loader.js','menu-decor.js','i18n.js','campaign-config.js','manual.js','impactos.js','voz.js','auth.js','ranking.js','physics-core.js','shot-history.js','local-cpu.js','host-physics.js','p2p-network.js','host-client.js','game.js','pwa.js']){
   if(!index.includes(script+'?v='+buildVersion))fail(errors,'version: falta '+script+' sincronizado en index');
 }
 if(!index.includes("handheld?4000:15000"))fail(errors,'mobile loader: falta fallback independiente en index');

@@ -72,6 +72,8 @@
       if (event.hidden && event.i !== localIndex) return;
       if (!Number.isFinite(event.x) || !Number.isFinite(event.y)) return;
       if (Math.abs(event.x) > 10000 || Math.abs(event.y) > 10000) return;
+      const shot=this.shotKey(event);
+      if(event.kind==='hit'&&shot&&Number(event.so)===Number(localIndex)&&!this.remember('contact:'+shot))return;
       const kind = event.kind === 'explosion' ? 'explosion' : (event.kind === 'disintegrate' || event.kind === 'selfMissile') ? 'disintegrate' : 'hit';
       const duration = durationFor(kind);
       const age = Number.isFinite(event.age) ? Math.max(0, event.age) : 0;
@@ -104,6 +106,18 @@
       this.bursts.push(burst);
     }
 
+    shotKey(e){
+      return Number.isInteger(e.so)&&Number.isSafeInteger(e.se)&&Number.isSafeInteger(e.st)?'shot:'+e.so+':'+e.se+':'+e.st:null;
+    }
+    shotSound(e,localIndex){
+      const key=this.shotKey(e);
+      return !key||Number(e.so)!==Number(localIndex)||this.remember('sound:'+key);
+    }
+    predictShotHit(e,localIndex,now=clock()){
+      const key=this.shotKey(e);if(!key||Number(e.so)!==Number(localIndex))return false;
+      if(this.seen.has('contact:'+key))return false;
+      this.enqueue({...e,kind:'hit',i:e.i,age:0},'prediction:'+key,localIndex,now);return true;
+    }
     consume(snapshot, localIndex, now = clock()) {
       if (!snapshot || !Array.isArray(snapshot.players) || !Number.isFinite(now)) return;
       if (typeof snapshot.code === 'string' && snapshot.code !== this.room) {

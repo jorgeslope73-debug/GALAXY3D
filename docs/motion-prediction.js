@@ -127,6 +127,10 @@
         let match=null,best=24;
         for(const b of fresh){
           if(used.has(b.id))continue;
+          if(Number.isSafeInteger(b.se)&&Number.isSafeInteger(b.st)){
+            if(b.se===this.epoch&&b.st===s.tick){match=b;break;}
+            continue;
+          }
           const speed=Math.hypot(b.vx,b.vy),rawSpeed=Math.hypot(s.rawVx,s.rawVy);
           if(Math.abs(speed-rawSpeed)>1||(b.vx*s.rawVx+b.vy*s.rawVy)<speed*rawSpeed*.9994)continue;
           const error=Math.hypot(b.x-ex,b.y-ey);if(error<best){best=error;match=b;}
@@ -145,7 +149,7 @@
       const result=own.filter(b=>time-(this.seenProjectiles.get(b.id)??time)<=3000).map(b=>({...b,x:b.x+b.vx*lead,y:b.y+b.vy*lead}));
       for(const s of this.shots)if(s.confirmedId===null){
         const age=(this.tick-s.tick+1+fraction)/60;
-        result.push({id:s.id,o:player.i,owner:player.i,x:s.x+s.vx*age,y:s.y+s.vy*age,vx:s.vx,vy:s.vy,g:false,guided:false,gt:-1,target:-1,wt:-1,predicted:true});
+        result.push({id:s.id,o:player.i,owner:player.i,x:s.x+s.vx*age,y:s.y+s.vy*age,vx:s.vx,vy:s.vy,g:false,guided:false,gt:-1,target:-1,wt:-1,se:this.epoch,st:s.tick,predicted:true});
       }
       return result;
     }
@@ -207,14 +211,14 @@
       }
       return result;
     }
-    contact(geometry,body,radius){
+    contactInfo(geometry,body,radius){
       // Existing outline queries discard arena-wrap jumps. Shots never wrap,
       // so split unusually long first samples into ordinary linear segments.
       const pieces=Math.max(1,Math.min(64,Math.ceil(Math.max(Math.abs(body.x-body.px)/900,Math.abs(body.y-body.py)/500))));
       for(let i=0;i<pieces;i++){
         const a=i/pieces,b=(i+1)/pieces,segment={px:body.px+(body.x-body.px)*a,py:body.py+(body.y-body.py)*a,
           x:body.px+(body.x-body.px)*b,y:body.py+(body.y-body.py)*b};
-        let first=Infinity;
+        let first=Infinity,obstacleHit=null;
         for(const obstacle of geometry){
           let t=Infinity;
           if(obstacle.kind==='circle')t=circleShotTime(segment,obstacle.body,obstacle.radius+radius);
@@ -224,13 +228,14 @@
                 core.asteroidHitsCircle(obstacle.body,segment,radius,()=>false);
             if(hit)t=Number.isFinite(hit.t)?hit.t:0;
           }
-          first=Math.min(first,t);
+          if(t<first){first=t;obstacleHit=obstacle;}
         }
-        if(Number.isFinite(first))return (i+first)/pieces;
+        if(Number.isFinite(first))return {t:(i+first)/pieces,obstacle:obstacleHit};
       }
-      return Infinity;
+      return null;
     }
-    filter(visibleState,ownerIndex,now,{prediction,authoritative=visibleState,front=4,tail=7.5,radius=4,playerVisible}={}){
+    contact(geometry,body,radius){return this.contactInfo(geometry,body,radius)?.t??Infinity;}
+    filter(visibleState,ownerIndex,now,{prediction,authoritative=visibleState,front=4,tail=7.5,radius=4,playerVisible,onImpact}={}){
       const bullets=Array.isArray(visibleState?.bullets)?visibleState.bullets:[],authority=authoritative||visibleState||{};
       const owner=(authority.players||[]).find(p=>Number(p.i)===Number(ownerIndex));
       const epoch=owner?.motion?.epoch??null,context=[authority.code,authority.seriesId,authority.hostEpoch,authority.round??authority.rankRound].join(':');
@@ -257,7 +262,7 @@
       }
       front=Math.max(0,Number(front)||0);tail=Math.max(0,Number(tail)||0);radius=Math.max(0,Number(radius)||0);
       let obstacles=null;
-      const hit=body=>this.contact(obstacles||(obstacles=this.geometry(visibleState,ownerIndex,playerVisible)),body,radius);
+      const hit=body=>this.contactInfo(obstacles||(obstacles=this.geometry(visibleState,ownerIndex,playerVisible)),body,radius);
       const keep=[];
       for(const bullet of bullets){
         if(!normalOwn(bullet,ownerIndex)||!point(bullet)||!Number.isFinite(bullet.vx)||!Number.isFinite(bullet.vy)){keep.push(bullet);continue;}
@@ -277,7 +282,7 @@
           const contactClock=record.contactMode===mode?record.contactTick:record.contactSimTick;
           const confirmedClock=record.contactMode===mode?confirm:simClock;
           if(raw&&point(raw)&&fresh&&confirmedClock+1e-7>=contactClock&&
-            !Number.isFinite(hit({px:raw.x,py:raw.y,...end}))&&!Number.isFinite(hit(stroke))){
+            !hit({px:raw.x,py:raw.y,...end})&&!hit(stroke)){
             record.blocked=false;keep.push(bullet);
           }
         }else{
@@ -288,9 +293,16 @@
           if(start.mode!==mode)startClock=mode==='sim'?start.simClock+start.clock-start.ack:ack+start.clock-simClock;
           startClock=Math.min(clock,Number.isFinite(startClock)?startClock:clock);
           const sweep=hit({px:start.x,py:start.y,...end}),trace=hit(stroke);
-          if(Number.isFinite(sweep)||Number.isFinite(trace)){
-            let contactTick=Number.isFinite(sweep)?Math.ceil(startClock+(clock-startClock)*sweep-1e-7):Math.ceil(clock-1e-7);
+          if(sweep||trace){
+            let contactTick=sweep?Math.ceil(startClock+(clock-startClock)*sweep.t-1e-7):Math.ceil(clock-1e-7);
             if(Number.isFinite(record.shotTick))contactTick=Math.max(contactTick,record.shotTick);
+            const contact=sweep||trace,obstacle=contact.obstacle;
+            if(obstacle?.kind==='ship'&&!record.feedbackPlayed&&typeof onImpact==='function'){
+              record.feedbackPlayed=true;
+              const body=sweep?{px:start.x,py:start.y,...end}:stroke;
+              onImpact({i:obstacle.body.index,so:ownerIndex,se:bullet.se??epoch,st:bullet.st??shot?.tick,
+                x:body.px+(body.x-body.px)*contact.t,y:body.py+(body.y-body.py)*contact.t});
+            }
             record.blocked=true;record.contactTick=contactTick;record.contactMode=mode;
             record.contactSimTick=predicted?simClock+contactTick-ack:contactTick;
             record.blockSeq=Number(authority.seq)||0;record.blockSim=simClock;record.blockAck=ack;

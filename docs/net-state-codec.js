@@ -163,17 +163,18 @@
       else runs.push([f[0],1,f[1],bits]);
       previous=f[0];
     }
-    return [motion.epoch,runs];
+    if(motion.viewTime!==undefined&&(!finite(motion.viewTime)||motion.viewTime<0))return null;
+    return motion.viewTime===undefined?[motion.epoch,runs]:[motion.epoch,runs,Math.round(motion.viewTime*1000)];
   }
   function unpackCommands(row){
-    if(!isArray(row)||row.length!==2||!safeInteger(row[0])||row[0]<1||!isArray(row[1])||row[1].length>60)return null;
+    if(!isArray(row)||(row.length!==2&&row.length!==3)||row.length===3&&(!safeInteger(row[2])||row[2]<0)||!safeInteger(row[0])||row[0]<1||!isArray(row[1])||row[1].length>60)return null;
     const frames=[];let previous=0;
     for(const run of row[1]){
       if(!isArray(run)||run.length!==4||!safeInteger(run[0])||run[0]<=previous||!safeInteger(run[1])||run[1]<1||frames.length+run[1]>60||run[0]>Number.MAX_SAFE_INTEGER-(run[1]-1)||!finite(run[2])||Math.abs(run[2])>1||!integer(run[3])||run[3]<0||run[3]>7)return null;
       for(let n=0;n<run[1];n++)frames.push([run[0]+n,run[2],run[3]&1,run[3]>>1&1,run[3]>>2&1]);
       previous=run[0]+run[1]-1;
     }
-    return {v:1,epoch:row[0],frames};
+    return {v:1,epoch:row[0],frames,...(row.length===3?{viewTime:row[2]/1000}:{})};
   }
   function validControlRow(row){
     return isArray(row)&&(row.length===8||row.length===9)&&safeInteger(row[0])&&row[0]>0&&validId(row[1])&&safeInteger(row[2])&&row[2]>0&&safeInteger(row[3])&&row[3]>=0&&validId(row[4])&&safeInteger(row[5])&&row[5]>0&&finite(row[6])&&Math.abs(row[6])<=1&&integer(row[7])&&row[7]>=0&&row[7]<=7;

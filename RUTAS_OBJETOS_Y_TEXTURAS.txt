@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.96
+V23.97
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -338,7 +338,7 @@ RETIRADA DEL MUNDO 2D Y MISIL NUEVO - V23.95
 - Sin cambios de fisica, controles, protocolo, cadencias o backend.
 
 
-CLIENTE DEL ANFITRION CON RETARDO EN RED - V23.96
+CLIENTE DEL ANFITRION CON RETARDO EN RED - V23.97
 - docs/host-client.js separa la entrega al jugador local de la simulacion autoritativa. Solo se activa en partidas online; contra CPU conserva el circuito directo.
 - Controles y acciones especiales del anfitrion pasan por una cola de entrada; estados, efectos y ACK por una cola de salida. El jugador ya no recibe los estados privados de cada tick de fisica.
 - Ambos clientes predicen su nave y disparos normales, y usan el mismo reloj interpolado para los rivales. La fisica permanece a60Hz y los estados a20Hz, con los avisos inmediatos de disparo ya existentes.
@@ -348,3 +348,12 @@ CLIENTE DEL ANFITRION CON RETARDO EN RED - V23.96
 - El diagnostico optativo ?netdebug=1 muestra RTT medido, retardo local, colas y prediccion.
 - Compensacion historica de impactos: no forma parte de este cambio; los resultados siguen confirmandose en la simulacion autoritativa.
 - Relay: presupuesto de cadencia con margen de un snapshot ante jitter; conserva aproximadamente20Hz aunque las publicaciones alternen48/52ms, sin ampliar la frecuencia sostenida ni quitar el limite de backpressure.
+
+IMPACTOS EN RED - V23.97
+- docs/shot-history.js: historial local del anfitrion (500 ms, maximo 32 muestras).
+- Compensacion de balas normales limitada a 300 ms, con perfil real, escudo, proteccion, vida y obstaculos.
+- docs/motion-prediction.js: oculta la bala propia al contacto y comunica el golpe visual al cliente.
+- docs/impactos.js: destello/particulas, deduplicacion de golpe y audio por disparo.
+- Identidad so/si/se/st: tirador, bala, epoca y tick. Solo el anfitrion confirma la baja y puntuacion.
+- El instante de escena viaja en el paquete de controles existente, como un entero de milisegundos en relay.
+- Render, servidor de senalizacion y base de datos sin cambios.
