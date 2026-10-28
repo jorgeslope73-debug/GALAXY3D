@@ -19,25 +19,39 @@ function fixture(offset=.1,owner=0){
  return e;
 }
 function projectile(owner=0,offset=.1){return {id:42,owner,x:500,y:500,px:500,py:500,vx:0,vy:0,age:0,travel:150,guided:false,se:4+owner,st:20,lagOffset:offset};}
-function obstacleFixture(kind,offset=.1,velocity=0){
- const e=new ctx.window.GalaxyHostPhysics({code:'TEST',seriesId:'a'.repeat(32)});
- e.setTestProfile('hard');e.start([{i:0,n:'J1'},{i:1,n:'J2'}]);
- for(const p of e.players)Object.assign(p,{x:100+p.index*1400,y:900,px:100+p.index*1400,py:900,protection:0,spawnFx:0});
+function obstacleFixture(kind,offset=.1,velocity=0,profile='hard',mode='online'){
+ const online=mode==='online',e=new ctx.window[online?'GalaxyHostPhysics':'GalaxyLocalCpu']({code:'TEST',seriesId:'a'.repeat(32)});
+ if(online){e.setTestProfile(profile);e.start([{i:0,n:'J1'},{i:1,n:'J2'}]);}
+ else{e.setTrainingTestProfile(profile);if(mode==='training')e.startTraining(null);else e.start('J1');}
+ for(const p of e.players){const x=p.index%2?1800:100,y=p.index<2?900:100;Object.assign(p,{x,y,px:x,py:y,protection:0,spawnFx:0});}
  Object.assign(e,{asteroids:[],meteors:[],flares:[],pickups:[],bullets:[],ufo:null,giant:null,activeShockwaves:[]});
  const body={id:45,x:500,y:500,px:500,py:500,vx:velocity,vy:0,hp:1,type:1,angle:0,owner:1};
  if(kind==='ufo')e.ufo=body;else e[kind]=[body];
- for(let tick=0;tick<=30;tick++){e.fxClock=tick/60;body.x=500+velocity*(e.fxClock-(.5-offset));body.px=body.x;e.shotHistory.capture(e);}
+ for(let tick=0;tick<=30;tick++){e.fxClock=tick/60;body.x=500+velocity*(e.fxClock-(.5-offset));body.px=body.x;e.shotHistory?.capture(e);}
  return e;
 }
 let obstacleCases=0;
-for(const kind of ['ufo','meteors','flares','pickups'])for(const offset of [.075,.10,.25,.30])for(const velocity of [0,240])for(const owner of [0,1]){
- const e=obstacleFixture(kind,offset,velocity);e.bullets=[projectile(owner,offset)];
- assert.equal(e.players[owner].cadence,1,'actual HARD loadout uses maximum cadence');
+for(const profile of ['standard','hard'])for(const kind of ['ufo','meteors','flares','pickups'])for(const offset of [.075,.10,.25,.30])for(const velocity of [0,240])for(const owner of [0,1]){
+ const e=obstacleFixture(kind,offset,velocity,profile);e.bullets=[projectile(owner,offset)];
+ assert.equal(e.players[owner].cadence,profile==='hard'?1:30,'each profile retains its actual initial cadence');
  e.updateBullets(DT);assert.equal(e.bullets.length,0);
  assert.equal(kind==='ufo'?e.ufo!==null:e[kind].some(p=>p.id===45),false,kind+' resolves the historical contact against its live identity');
  assert.equal(e.players.some(p=>p.dead),false,'an obstacle contact never damages a player');
  if(kind==='ufo'){assert.equal(e.pickups.length,1);assert.equal(e.fxEvents.filter(f=>f.kind==='explosion').length,1);}
  obstacleCases++;
+}
+let sweptCases=0;
+for(const mode of ['online','local','training'])for(const profile of ['standard','hard'])for(const cadence of [30,20,10,1])for(const kind of ['ufo','meteors'])for(const owner of [0,1])for(const compensated of (mode==='online'?[false,true]:[false])){
+ const e=obstacleFixture(kind,.1,0,profile,mode),p=e.players[owner];p.cadence=cadence;
+ const speed=e.bulletSpeed(p),length=speed*DT,radius=(kind==='ufo'?30:14)+4;
+ const y=500+Math.sqrt(radius*radius-(length/4)**2),start=500-length/2,end=500+length/2;
+ // Both endpoints miss the collision circle; only the swept segment crosses it.
+ assert.ok(Math.hypot(start-500,y-500)>radius);assert.ok(Math.hypot(end-500,y-500)>radius);
+ const b={...projectile(owner),x:start,y,vx:speed,vy:0};if(!compensated)delete b.lagOffset;
+ e.bullets=[b];e.updateBullets(DT);
+ assert.equal(e.bullets.length,0,mode+'/'+profile+' consumes a crossing shot at speed '+speed);
+ assert.equal(kind==='ufo'?e.ufo!==null:e.meteors.length>0,false,mode+'/'+profile+' detects the crossed '+kind+' at speed '+speed);
+ sweptCases++;
 }
 for(const kind of ['ufo','meteors']){
  const unchanged=obstacleFixture(kind),missile={...projectile(),guided:true};unchanged.bullets=[missile];unchanged.updateBullets(DT);
@@ -124,4 +138,4 @@ const view={code:'TEST',seriesId:'a'.repeat(32),hostEpoch:1,round:1,simTime:.4,s
  const other=ctx.networkDrawingState({state:view,previous:view,simTime:.4},confirmation,1);assert.equal(other.players[0],view.players[0]);
  const denied={...view,seq:7,simTime:.6};const deniedView=ctx.networkDrawingState({state:view,previous:view,simTime:.4},denied,0);assert.equal(deniedView.players[1].dead,false,'an unconfirmed spark never hides/kills a ship');
 }
-console.log('Shot feedback OK: '+cases+' authority/history cases plus '+obstacleCases+' destructive obstacle contacts in HARD; both shooters, 75–300 ms offsets, moving/static targets, replacement identity, 32-round burst with one UFO reward/explosion, immunity/lives/shields, bounds, relay timestamp, prediction/confirmation/audio dedup, immediate confirmed death and immutable authority.');
+console.log('Shot feedback OK: '+cases+' authority/history cases, '+obstacleCases+' destructive obstacle contacts in STANDARD/HARD, '+sweptCases+' actual swept crossings at500/750/900/1000 units/s in online/local/training; both shooters, 75–300 ms offsets, moving/static targets, replacement identity, 32-round burst with one UFO reward/explosion, immunity/lives/shields, bounds, relay timestamp, prediction/confirmation/audio dedup, immediate confirmed death and immutable authority.');
