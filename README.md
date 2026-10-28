@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V23.98: el perfil HARD de cpu-training equipa cadencia maxima desde el inicio y al reaparecer, con las mismas reservas de 500 balas, 500 misiles y 100 bengalas. El perfil privado compartido aplica el mismo ajuste en local y online. ESTANDAR conserva su cadencia habitual.
+
 V23.97: reaccion visual inmediata del disparo propio, identidad por tick y confirmacion sin retraso extra de reproduccion. El anfitrion comprueba balas normales con hasta 300 ms de historial de colisiones, respetando obstaculos, escudos y vidas. Los clientes no deciden bajas ni puntos. Se mantienen los transportes, Render y base de datos actuales.
 
 V23.96: en red, el jugador anfitrion participa mediante un cliente con colas de entrada y salida. El retardo se aproxima al RTT mediano medido de los invitados y esta limitado a 180 ms de ida/vuelta, con ajustes suaves. Mantiene prediccion local, física a 60 Hz y estados a 20 Hz. El modo contra CPU conserva su respuesta directa. Se reutilizan los canales actuales de P2P/relay, sin cambiar Render ni su base de datos.

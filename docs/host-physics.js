@@ -196,8 +196,9 @@
     asteroidMaxActive(){return ASTEROID_MAX_ACTIVE;}
     applyHardLoadout(p,respawn=false){
       if(!p||!this.hardMode())return false;
-      // V22.38: HARD online modifica solo armamento.
+      // V23.98: el perfil HARD compartido incluye cadencia maxima.
       p.bullets=500;
+      p.cadence=1;
       p.guidedAmmo=500;
       p.flare=100;
       p.guided=true;

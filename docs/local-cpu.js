@@ -187,9 +187,8 @@
       this.perfTickMs=0;this.perfTickMax=0;this.perfTicks=0;this.perfCatchupDrops=0;
       this.brain=null;
       this.trainingMode=false;
-      // V22.35: perfil de pruebas exclusivo de cpu-training.html.
-      // STANDARD conserva exactamente la simulacion existente; HARD solo se
-      // activa cuando trainingMode=true y nunca afecta al juego local normal.
+      // Perfil privado seleccionado desde cpu-training.html. STANDARD conserva
+      // la configuracion habitual; HARD se activa solo al elegir ese perfil.
       this.trainingTestProfile='standard';
       this.learningEnabled=true;
       this.learningByCpu=new Map();
@@ -223,8 +222,9 @@
     }
     applyTrainingHardLoadout(p,respawn=false){
       if(!p||!this.trainingHardMode())return false;
-      // V22.38: HARD modifica solo reservas de armamento.
+      // V23.98: HARD equipa armamento y la cadencia maxima del juego.
       p.bullets=500;
+      p.cadence=1;
       p.guidedAmmo=500;
       p.flare=100;
       p.guided=true;

@@ -298,7 +298,7 @@ if(!local.includes("this.trainingTestProfile='standard'"))fail(errors,'V22.35: S
 if(!local.includes("p.bullets=500"))fail(errors,'V22.38: HARD local no carga 500 balas');
 if(!local.includes("p.guidedAmmo=500"))fail(errors,'V22.38: HARD local no carga 500 misiles');
 if(!local.includes("p.flare=100"))fail(errors,'V22.38: HARD local no carga 100 bengalas');
-if(local.includes("p.cadence=1"))fail(errors,'V22.38: HARD local vuelve a alterar cadencia');
+if(!method(local,'applyTrainingHardLoadout').includes('p.cadence=1'))fail(errors,'HARD local debe equipar cadencia maxima');
 if(local.includes("p.speed=2"))fail(errors,'V22.38: HARD local vuelve a alterar velocidad');
 if(!local.includes("return ASTEROID_MAX_ACTIVE"))fail(errors,'V22.38: HARD local debe conservar densidad estándar');
 const training=read('docs/cpu-training.html');
@@ -309,7 +309,7 @@ if(!game.includes("hostPhysics.setTestProfile(onlineTestProfile)"))fail(errors,'
 if(!host.includes("testProfile:this.testProfile"))fail(errors,'V22.37: snapshot online no conserva perfil HARD');
 if(!host.includes("p.bullets=500")||!host.includes("p.guidedAmmo=500"))fail(errors,'V22.38: HARD online no equipa 500 balas/misiles');
 if(!host.includes("p.flare=100"))fail(errors,'V22.38: HARD online no equipa 100 bengalas');
-if(host.includes("p.cadence=1"))fail(errors,'V22.38: HARD online vuelve a alterar cadencia');
+if(!method(host,'applyHardLoadout').includes('p.cadence=1'))fail(errors,'HARD online debe equipar cadencia maxima');
 if(host.includes("p.speed=2"))fail(errors,'V22.38: HARD online vuelve a alterar velocidad');
 if(!host.includes("asteroidMaxActive(){return ASTEROID_MAX_ACTIVE;}"))fail(errors,'V22.38: HARD online debe conservar densidad estándar');
 if(!local.includes("return this.trainingTestProfile==='hard'"))fail(errors,'V22.37: HARD local sigue limitado a cpu-training');
