@@ -78,7 +78,8 @@
       const contact=hit&&core.shipHitsCircle(hit.target,projectile,4);
       // Historical geometry must also allow the shot. A rewind never grants a
       // hit through a meteor, rock, flare or pickup visible to the shooter.
-      let blocker=Infinity;
+      let blocker=Infinity,obstacle=null;
+      const block=(t,kind,body)=>{if(Number.isFinite(t)&&t<blocker){blocker=t;obstacle={kind,id:body.id};}};
       const motion=(field,body)=>{
         const old=Array.isArray(start[field])?start[field].find(p=>p.id===body.id):start[field];
         return {...body,px:old?.x??body.x,py:old?.y??body.y,pspin:old?.spin??body.spin,previousPoseTime:startTime,poseTime:endTime};
@@ -86,12 +87,16 @@
       for(const rock of end.asteroids){
         const body=motion('asteroids',rock);
         const t=core.isMediumRock(body)?core.asteroidHitsCircle(body,projectile,4,()=>false)?.t:circleTime(projectile,body,(body.r||17)+4);
-        if(Number.isFinite(t))blocker=Math.min(blocker,t);
+        block(t,'asteroid',rock);
       }
-      if(end.giant)blocker=Math.min(blocker,core.giantHitsCircle(motion('giant',end.giant),projectile,4)?.t??Infinity);
-      for(const [field,r] of [['meteors',14],['flares',12],['pickups',22]])for(const body of end[field])blocker=Math.min(blocker,circleTime(projectile,motion(field,body),r+4));
-      if(end.ufo)blocker=Math.min(blocker,circleTime(projectile,motion('ufo',end.ufo),34));
-      if(Number.isFinite(blocker)&&(!contact||blocker<=contact.t+1e-6)){projectile.historyBlocked=true;return null;}
+      if(end.giant)block(core.giantHitsCircle(motion('giant',end.giant),projectile,4)?.t,'giant',end.giant);
+      for(const [field,r] of [['meteors',14],['flares',12],['pickups',22]])for(const body of end[field])block(circleTime(projectile,motion(field,body),r+4),field,body);
+      if(end.ufo)block(circleTime(projectile,motion('ufo',end.ufo),34),'ufo',end.ufo);
+      if(Number.isFinite(blocker)&&(!contact||blocker<=contact.t+1e-6)){
+        projectile.historyBlocked=true;
+        projectile.historyImpact={...obstacle,x:lerp(projectile.px,projectile.x,blocker),y:lerp(projectile.py,projectile.y,blocker)};
+        return null;
+      }
       if(!hit||!contact)return null;
       hit.target=current.get(hit.target.index);hit.attacker=current.get(projectile.owner)||null;
       hit.shielded=hit.shielded||hit.target.shield>0;

@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V23.99: corrige las balas normales compensadas que se consumian al tocar un ovni o un meteorito de lluvia sin resolver su dano/destruccion. El anfitrion aplica el contacto al mismo objeto por ID, conserva las reglas de meteoritos grandes y evita destruir sustitutos o duplicar recompensas con rafagas. Tambien resuelve las bengalas y mejoras impactadas, sin nuevos paquetes de red.
+
 V23.98: el perfil HARD de cpu-training equipa cadencia maxima desde el inicio y al reaparecer, con las mismas reservas de 500 balas, 500 misiles y 100 bengalas. El perfil privado compartido aplica el mismo ajuste en local y online. ESTANDAR conserva su cadencia habitual.
 
 V23.97: reaccion visual inmediata del disparo propio, identidad por tick y confirmacion sin retraso extra de reproduccion. El anfitrion comprueba balas normales con hasta 300 ms de historial de colisiones, respetando obstaculos, escudos y vidas. Los clientes no deciden bajas ni puntos. Se mantienen los transportes, Render y base de datos actuales.

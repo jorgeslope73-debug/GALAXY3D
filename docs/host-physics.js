@@ -1715,6 +1715,31 @@
     queryProjectileShipHit(b){
       return this.shotHistory?this.shotHistory.query(b,this,sweptCircles):PHYSICS_CORE.projectileShipHit(b,this.players,sweptCircles,BULLET_RADIUS,SHIP_RADIUS,BRUTAL_SHOT_DISTANCE,260);
     }
+    resolveHistoricalProjectileImpact(b){
+      const hit=b&&b.historyImpact;
+      if(!hit||b.guided||b.historyResolved)return false;
+      b.historyResolved=true;
+      // The host resolves the original contact against the same live identity.
+      // A retired object must not damage its replacement or grant a second reward.
+      if(hit.kind==='ufo'){
+        if(!this.ufo||this.ufo.id!==hit.id)return false;
+        const impact=PHYSICS_CORE.projectileUfoHit(b,this.ufo,()=>true,BULLET_RADIUS,UFO_RADIUS,UFO_HP);
+        if(!impact)return false;
+        if(impact.destroyed)this.destroyUfo(impact.owner);
+        else this.emit({t:'sound',kind:'impact'});
+        return true;
+      }
+      const list=hit.kind==='meteors'?this.meteors:hit.kind==='pickups'?this.pickups:hit.kind==='flares'?this.flares:null;
+      if(!list)return false; // Normal rounds retain the existing rock/giant rules.
+      const index=list.findIndex(body=>body.id===hit.id);if(index<0)return false;
+      if(hit.kind==='flares'){
+        const flare=list[index];
+        this.emitRocketDisintegrateAt(flare.x,flare.y,flare.owner);
+      }
+      list.splice(index,1);
+      if(hit.kind!=='pickups')this.emit({t:'sound',kind:'impact'});
+      return true;
+    }
     reloadTime(p){return PHYSICS_CORE.reloadTimeFor(p);}
     bulletSpeed(p){return PHYSICS_CORE.bulletSpeedFor(p);}
     updateAsteroids(){
@@ -1928,7 +1953,10 @@
             remove=true;
           }
         }
-        if(b.historyBlocked)remove=true;
+        if(b.historyBlocked){
+          if(typeof this.resolveHistoricalProjectileImpact==='function')this.resolveHistoricalProjectileImpact(b);
+          remove=true;
+        }
         if(!remove){
           const ufoHit=PHYSICS_CORE.projectileUfoHit(
             b,this.ufo,sweptCircles,BULLET_RADIUS,UFO_RADIUS,UFO_HP

@@ -2676,7 +2676,10 @@
             remove=true;
           }
         }
-        if(b.historyBlocked)remove=true;
+        if(b.historyBlocked){
+          if(typeof this.resolveHistoricalProjectileImpact==='function')this.resolveHistoricalProjectileImpact(b);
+          remove=true;
+        }
         if(!remove){
           const ufoHit=PHYSICS_CORE.projectileUfoHit(
             b,this.ufo,sweptCircles,BULLET_RADIUS,UFO_RADIUS,UFO_HP

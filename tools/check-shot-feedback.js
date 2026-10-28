@@ -19,6 +19,46 @@ function fixture(offset=.1,owner=0){
  return e;
 }
 function projectile(owner=0,offset=.1){return {id:42,owner,x:500,y:500,px:500,py:500,vx:0,vy:0,age:0,travel:150,guided:false,se:4+owner,st:20,lagOffset:offset};}
+function obstacleFixture(kind,offset=.1,velocity=0){
+ const e=new ctx.window.GalaxyHostPhysics({code:'TEST',seriesId:'a'.repeat(32)});
+ e.setTestProfile('hard');e.start([{i:0,n:'J1'},{i:1,n:'J2'}]);
+ for(const p of e.players)Object.assign(p,{x:100+p.index*1400,y:900,px:100+p.index*1400,py:900,protection:0,spawnFx:0});
+ Object.assign(e,{asteroids:[],meteors:[],flares:[],pickups:[],bullets:[],ufo:null,giant:null,activeShockwaves:[]});
+ const body={id:45,x:500,y:500,px:500,py:500,vx:velocity,vy:0,hp:1,type:1,angle:0,owner:1};
+ if(kind==='ufo')e.ufo=body;else e[kind]=[body];
+ for(let tick=0;tick<=30;tick++){e.fxClock=tick/60;body.x=500+velocity*(e.fxClock-(.5-offset));body.px=body.x;e.shotHistory.capture(e);}
+ return e;
+}
+let obstacleCases=0;
+for(const kind of ['ufo','meteors','flares','pickups'])for(const offset of [.075,.10,.25,.30])for(const velocity of [0,240])for(const owner of [0,1]){
+ const e=obstacleFixture(kind,offset,velocity);e.bullets=[projectile(owner,offset)];
+ assert.equal(e.players[owner].cadence,1,'actual HARD loadout uses maximum cadence');
+ e.updateBullets(DT);assert.equal(e.bullets.length,0);
+ assert.equal(kind==='ufo'?e.ufo!==null:e[kind].some(p=>p.id===45),false,kind+' resolves the historical contact against its live identity');
+ assert.equal(e.players.some(p=>p.dead),false,'an obstacle contact never damages a player');
+ if(kind==='ufo'){assert.equal(e.pickups.length,1);assert.equal(e.fxEvents.filter(f=>f.kind==='explosion').length,1);}
+ obstacleCases++;
+}
+for(const kind of ['ufo','meteors']){
+ const unchanged=obstacleFixture(kind),missile={...projectile(),guided:true};unchanged.bullets=[missile];unchanged.updateBullets(DT);
+ assert.equal(kind==='ufo'?unchanged.ufo!==null:unchanged.meteors.length>0,false,'guided projectile behavior remains destructive without rewind');
+ const e=obstacleFixture(kind),replacement={id:46,x:500,y:500,px:500,py:500,vx:0,vy:0,hp:1,type:1};
+ if(kind==='ufo')e.ufo=replacement;else e.meteors=[replacement];
+ const b=projectile();e.bullets=[b];e.updateBullets(DT);
+ assert.equal(kind==='ufo'?e.ufo:e.meteors[0],replacement,'a stale historical ID cannot destroy a replacement '+kind);
+ assert.equal(replacement.hp,1);assert.equal(e.pickups.length,0);assert.equal(e.bullets.length,0);
+}
+{
+ const e=obstacleFixture('ufo');e.ufo.hp=3;
+ e.bullets=Array.from({length:32},(_,i)=>({...projectile(i%2),id:100+i,st:100+i}));
+ e.updateBullets(DT);assert.equal(e.ufo,null);assert.equal(e.bullets.length,0);
+ assert.equal(e.pickups.length,1,'a burst cannot grant more than one UFO reward');
+ assert.equal(e.fxEvents.filter(f=>f.kind==='explosion').length,1,'a burst cannot duplicate the UFO explosion');
+}
+{
+ const e=obstacleFixture('meteors'),b=projectile();e.bullets=[b];e.updateBullets(DT);
+ e.meteors.push({id:99,x:500,y:500});assert.equal(e.resolveHistoricalProjectileImpact(b),false,'the same projectile is resolved only once');assert.equal(e.meteors.length,1);
+}
 let cases=0;
 for(const offset of [.075,.10,.15,.25,.30])for(const owner of [0,1]){
  const e=fixture(offset,owner),b=projectile(owner,offset),actual=e.players[1-owner];
@@ -84,4 +124,4 @@ const view={code:'TEST',seriesId:'a'.repeat(32),hostEpoch:1,round:1,simTime:.4,s
  const other=ctx.networkDrawingState({state:view,previous:view,simTime:.4},confirmation,1);assert.equal(other.players[0],view.players[0]);
  const denied={...view,seq:7,simTime:.6};const deniedView=ctx.networkDrawingState({state:view,previous:view,simTime:.4},denied,0);assert.equal(deniedView.players[1].dead,false,'an unconfirmed spark never hides/kills a ship');
 }
-console.log('Shot feedback OK: '+cases+' authority/history cases, both shooters, 75–300 ms view offset, current baseline misses, obstacles, immunity/lives/shields, bounds, relay timestamp, prediction/confirmation/audio dedup, immediate confirmed death and immutable authority.');
+console.log('Shot feedback OK: '+cases+' authority/history cases plus '+obstacleCases+' destructive obstacle contacts in HARD; both shooters, 75–300 ms offsets, moving/static targets, replacement identity, 32-round burst with one UFO reward/explosion, immunity/lives/shields, bounds, relay timestamp, prediction/confirmation/audio dedup, immediate confirmed death and immutable authority.');
