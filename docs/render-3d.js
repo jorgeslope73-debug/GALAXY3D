@@ -225,7 +225,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V24.03';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.04';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -528,8 +528,10 @@
         // never changes gameplay records, camera, physics or network state.
         if(!winnerStage){
           const stage=new T.Scene(),turntable=new T.Group();stage.add(turntable);
+          turntable.position.y=4; // Keep the enlarged nose inside the frame through the full turn.
           for(const object of scene.children)if(object.isHemisphereLight||object.isDirectionalLight)stage.add(object.clone());
           const view=new T.PerspectiveCamera(32,1,.1,500);
+          view.zoom=1.15;
           view.position.set(0,45,95);view.lookAt(0,0,0);
           winnerStage={scene:stage,turntable,camera:view,ships:new Map()};
           reflectionsReady.then(reflections=>{stage.environment=reflections.texture;});
