@@ -229,7 +229,7 @@ if(!game.includes("t:'series-round-result'"))fail(errors,'series: host no report
 if(!index.includes('id="seriesChampion"'))fail(errors,'series: falta markup de campeon');
 if(!index.includes('id="seriesRoundMini"'))fail(errors,'series: falta contador de ronda durante partida');
 if(!style.includes('.series-champion-cup'))fail(errors,'series: falta copa grande en CSS');
-if(!style.includes('#victory .series-champion-ship{')||!style.includes('width:min(280px,100%)'))fail(errors,'series: falta encuadre adaptable de la nave 3D campeona');
+if(!style.includes('#victory .series-champion{\n  display:grid;')||!style.includes('#victory .series-champion-ship{'))fail(errors,'series: falta composicion adaptable de copa y nave 3D lado a lado');
 if(!server.includes('scheduleSeriesLobby(r,wss,30000)'))fail(errors,'series: falta retorno automático de seguridad tras CONTINUAR');
 if(!server.includes('lastSeriesChampionToken'))fail(errors,'series: el servidor no conserva la identidad del campeon anterior');
 if(!server.includes('champion:!!(r.lastSeriesChampionToken'))fail(errors,'series: roster humano no marca al campeon');
