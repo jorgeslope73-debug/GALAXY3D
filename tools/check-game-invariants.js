@@ -228,8 +228,8 @@ if(!game.includes('champShip.dataset.player=String(Number(index))')||!index.incl
 if(!game.includes("t:'series-round-result'"))fail(errors,'series: host no reporta ganador de ronda');
 if(!index.includes('id="seriesChampion"'))fail(errors,'series: falta markup de campeon');
 if(!index.includes('id="seriesRoundMini"'))fail(errors,'series: falta contador de ronda durante partida');
-if(!style.includes('.series-champion-cup'))fail(errors,'series: falta copa grande en CSS');
-if(!style.includes('#victory .series-champion{\n  display:grid;')||!style.includes('#victory .series-champion-ship{'))fail(errors,'series: falta composicion adaptable de copa y nave 3D lado a lado');
+if(index.includes('class="series-champion-cup"'))fail(errors,'series: la copa decorativa retirada no debe reaparecer');
+if(!style.includes('#victory .series-champion{\n  display:grid;')||!style.includes('#victory .series-champion-ship{'))fail(errors,'series: falta presentacion adaptable de la nave 3D campeona');
 if(!server.includes('scheduleSeriesLobby(r,wss,30000)'))fail(errors,'series: falta retorno automático de seguridad tras CONTINUAR');
 if(!server.includes('lastSeriesChampionToken'))fail(errors,'series: el servidor no conserva la identidad del campeon anterior');
 if(!server.includes('champion:!!(r.lastSeriesChampionToken'))fail(errors,'series: roster humano no marca al campeon');
@@ -247,7 +247,7 @@ const rankingPos=index.indexOf('id="sessionRanking"');
 const continuePos=index.indexOf('id="seriesChampionContinue"');
 if(!(championPos>=0&&rankingPos>championPos&&continuePos>rankingPos))fail(errors,'V22.30 series: CONTINUAR debe quedar debajo de la clasificacion');
 if(!style.includes('overflow-wrap:anywhere'))fail(errors,'V22.30 series: el nombre largo del campeon puede volver a recortarse');
-if(!style.includes('#victory.series-champion-mode #victoryText{\n  margin-bottom:0;'))fail(errors,'V22.30 series: separacion vertical de titulo/copa no protegida');
+if(!style.includes('#victory.series-champion-mode #victoryText{\n  margin-bottom:0;'))fail(errors,'V22.30 series: separacion vertical de titulo/nave no protegida');
 
 if(!server.includes('function currentHost(r)'))fail(errors,'host migration: falta resolver host actual');
 if(!server.includes('function promoteHost(r,wss'))fail(errors,'host migration: falta promocion automatica');

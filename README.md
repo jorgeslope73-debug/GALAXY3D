@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.03: retira la copa decorativa del campeon y centra la nave 3D un poco mas arriba. Conserva su tamano, el giro sin halo y el marcador completo.
+
 V24.02: copa a la izquierda y nave 3D a la derecha en la pantalla del campeon, con la nave mas grande y el nombre debajo de ambas. Conserva la clasificacion completa, el giro 360 y la nave sin halo; composicion adaptable a escritorio y movil.
 
 V24.01: la presentacion del campeon repinta siempre la clasificacion completa de la serie, incluidos los jugadores con cero victorias. La nave 3D mantiene el giro sin halo exterior, con una composicion mas compacta para dejar visibles el marcador y CONTINUAR.
