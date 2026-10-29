@@ -57,4 +57,36 @@ assert.match(read('index.html'),/<canvas id="seriesChampionShip"/);
 assert.ok(read('index.html').includes('winner-preview.js?')&&read('build-version.js').includes("'winner-preview.js'"),'both boot paths load the preview');
 assert.ok(!read('game.js').includes("champShip.src="),'winner never requests an old sprite');
 assert.ok(!/new (?:Image|WebSocket|Worker)|fetch\(|import\(/.test(source),'preview reuses loaded resources and sends no data');
-console.log('Winner preview OK: all four players, full looping turn, repeated exit/re-entry, load/visibility/WebGL/page lifecycle, bounded resolution and one throttled animation loop; no sprite or network traffic.');
+// Exercise the actual champion entry point with the real series ranking helpers.
+const game=read('game.js'),start=game.indexOf('  function onlineSessionPlayerKey('),end=game.indexOf('  function enterLobbyAfterSeries(',start);
+assert.ok(start>=0&&end>start);
+for(const count of [2,4])for(const allZero of [false,true]){
+  const elements=new Map(),roster=Array.from({length:count},(_,i)=>({i,n:'PILOTO '+(i+1)}));
+  const element=id=>{
+    if(!elements.has(id)){
+      const classes=new Set(['hidden']);
+      elements.set(id,{textContent:'',innerHTML:'',dataset:{},style:{setProperty(){}},setAttribute(){},
+        classList:{add:(...names)=>names.forEach(n=>classes.add(n)),remove:(...names)=>names.forEach(n=>classes.delete(n)),contains:n=>classes.has(n)}});
+    }
+    return elements.get(id);
+  };
+  const wins=new Map(roster.map(p=>[p.i+'|'+p.n,allZero?0:p.i===0?3:p.i===1?1:0]));
+  const c=vm.createContext({document:{getElementById:element},victory:element('victory'),lobbyPlayers:roster,state:null,
+    roomCode:'ONLINE',localCpuActive:false,onlineSessionWins:wins,onlineSeriesRound:5,onlineSeriesComplete:false,onlineSeriesChampion:-1,
+    ONLINE_SERIES_BASE_ROUNDS:5,playerColors:['blue','pink','green','yellow'],sinTildes:s=>s,escapeHtml:s=>s,
+    tr:key=>key==='gameWon'?'PARTIDA GANADA':'PARTIDAS GANADAS'});
+  vm.runInContext(game.slice(start,end),c);
+  for(let pass=0;pass<2;pass++){
+    element('sessionRanking').classList.add('hidden');element('sessionRankingList').innerHTML='';
+    c.showOnlineSeriesChampion(0);
+    assert.equal(element('sessionRanking').classList.contains('hidden'),false,'champion entry always restores scores');
+    const html=element('sessionRankingList').innerHTML;
+    assert.equal((html.match(/class="session-ranking-row/g)||[]).length,count,'every player remains visible');
+    for(const p of roster)assert.ok(html.includes(p.n),'include player '+p.i);
+    if(count===4||allZero)assert.ok(html.includes('0 PARTIDAS GANADAS'),'zero-score players remain in the ranking');
+    if(!allZero)assert.ok(html.includes('3 PARTIDAS GANADAS')&&html.includes('1 PARTIDA GANADA'),'use current series scores');
+  }
+}
+const shipCSS=read('style.css').match(/#victory \.series-champion-ship\{([^}]+)\}/)?.[1];
+assert.ok(shipCSS&&/filter:\s*none/.test(shipCSS)&&!shipCSS.includes('drop-shadow'),'3D champion ship has no exterior glow');
+console.log('Winner preview OK: all four players, complete scores (including zero), repeated champion entry, full looping turn, page/visibility/WebGL lifecycle, bounded resolution and one throttled loop; no exterior ship glow, sprite or network traffic.');

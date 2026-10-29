@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.01: la presentacion del campeon repinta siempre la clasificacion completa de la serie, incluidos los jugadores con cero victorias. La nave 3D mantiene el giro sin halo exterior, con una composicion mas compacta para dejar visibles el marcador y CONTINUAR.
+
 V24.00: la pantalla final del campeon de la serie online muestra su nave GLB con su textura actual, girando 360 grados en bucle sobre su eje vertical (frontal, lateral, trasera y regreso). Comparte el renderizador y los recursos 3D del juego; se detiene al salir de la pantalla u ocultar la pestana, sin trafico de red adicional.
 
 V23.99: corrige las balas normales compensadas que se consumian al tocar un ovni o un meteorito de lluvia sin resolver su dano/destruccion. El anfitrion aplica el contacto al mismo objeto por ID, conserva las reglas de meteoritos grandes y evita destruir sustitutos o duplicar recompensas con rafagas. Tambien resuelve las bengalas y mejoras impactadas, sin nuevos paquetes de red.

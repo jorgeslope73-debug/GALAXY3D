@@ -4676,6 +4676,7 @@
   function showOnlineSeriesChampion(index){
     if(roomCode==='LOCAL')return;
     onlineSeriesComplete=true;onlineSeriesChampion=Number(index);
+    renderOnlineSessionRanking();
     const roster=currentVictoryRoster();
     const winner=roster.find(p=>p.i===Number(index))||null;
     const victoryText=document.getElementById('victoryText');

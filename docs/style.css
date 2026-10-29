@@ -517,13 +517,13 @@ label{display:block;text-align:left;margin:10px 0 6px}input,select,button{font:i
   align-items:center;
   justify-content:center;
   width:100%;
-  gap:9px;
-  margin:12px auto 6px;
-  padding-top:10px;
+  gap:5px;
+  margin:8px auto 4px;
+  padding-top:0;
 }
 #victory .series-champion.hidden{display:none!important}
 #victory .series-champion-cup{
-  font-size:clamp(68px,10vw,112px);
+  font-size:clamp(48px,8vh,64px);
   line-height:1;
   margin:4px auto 2px;
   filter:drop-shadow(0 0 18px rgba(255,220,70,.65));
@@ -532,9 +532,9 @@ label{display:block;text-align:left;margin:10px 0 6px}input,select,button{font:i
 #victory .series-champion-ship{
   display:block;
   width:min(280px,100%);
-  height:180px;
+  height:140px;
   image-rendering:auto;
-  filter:drop-shadow(0 0 12px var(--winner-color,#d8a7ff));
+  filter:none;
   animation:galaxyChampionShip 1.05s ease-out both;
 }
 #victory .series-champion-name{
@@ -546,7 +546,7 @@ label{display:block;text-align:left;margin:10px 0 6px}input,select,button{font:i
   white-space:normal;
   overflow-wrap:anywhere;
   word-break:break-word;
-  font:900 clamp(25px,4.6vw,48px)/1.05 'Flashback',Arial,sans-serif;
+  font:900 clamp(22px,3.8vw,32px)/1.05 'Flashback',Arial,sans-serif;
   letter-spacing:.045em;
   text-align:center;
   text-shadow:0 0 12px currentColor;
@@ -561,7 +561,7 @@ label{display:block;text-align:left;margin:10px 0 6px}input,select,button{font:i
   margin-bottom:0;
 }
 #victory.series-champion-mode #sessionRanking{
-  opacity:.86;
+  opacity:1;
   transform:none;
   margin:10px auto 0;
 }
@@ -576,9 +576,9 @@ label{display:block;text-align:left;margin:10px 0 6px}input,select,button{font:i
 }
 @media (pointer:coarse),(max-width:900px){
   #topbar .series-round-mini{font-size:11px}
-  #victory .series-champion{margin-top:10px;padding-top:8px;gap:7px}
-  #victory .series-champion-cup{font-size:68px;margin-top:3px}
-  #victory .series-champion-ship{width:min(240px,100%);height:150px}
+  #victory .series-champion{margin-top:8px;padding-top:0;gap:5px}
+  #victory .series-champion-cup{font-size:48px;margin-top:3px}
+  #victory .series-champion-ship{width:min(240px,100%);height:130px}
   #victory .series-champion-name{font-size:clamp(22px,7vw,30px);line-height:1.04;padding:0 4px}
 }
 @media (max-height:600px){
