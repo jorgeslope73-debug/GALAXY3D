@@ -84,6 +84,8 @@ on:
       - 'tools/check-graphics-prewarm.js'
       - 'tools/check-model-texture-cache.js'
       - 'docs/menu-decor.js'
+      - 'docs/winner-preview.js'
+      - 'tools/check-winner-preview.js'
       - 'tools/check-menu-resources.js'
       - 'tools/check-3d-only-assets.js'
       - 'tools/check-menu-art.js'
@@ -175,6 +177,8 @@ on:
       - 'tools/check-graphics-prewarm.js'
       - 'tools/check-model-texture-cache.js'
       - 'docs/menu-decor.js'
+      - 'docs/winner-preview.js'
+      - 'tools/check-winner-preview.js'
       - 'tools/check-menu-resources.js'
       - 'tools/check-3d-only-assets.js'
       - 'tools/check-menu-art.js'
@@ -253,7 +257,7 @@ jobs:
       - name: Check projectile collisions against the real ship silhouette
         run: node tools/check-ship-projectile-collisions.js
       - name: Check 3D presentation syntax
-        run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js
+        run: node --check docs/render-3d.js && node --check docs/ship-model.js && node --check docs/rocket-model.js && node --check docs/meteor-model.js && node --check docs/menu-decor.js && node --check docs/winner-preview.js
       - name: Check bounded local green projectile lights
         run: node tools/check-projectile-lighting.mjs
       - name: Check ship GLB orientation and embedded resources
@@ -293,7 +297,7 @@ jobs:
       - name: Check shader and GPU prewarming before match readiness
         run: node tools/check-graphics-prewarm.js
       - name: Check resource loading, idle cache maintenance and visual fallbacks
-        run: node tools/check-3d-only-assets.js && node tools/check-menu-resources.js && node tools/check-menu-art.js && node tools/check-game-resources.js && node tools/check-resource-cache.js && node tools/check-pwa-resource-idle.js
+        run: node tools/check-3d-only-assets.js && node tools/check-menu-resources.js && node tools/check-winner-preview.js && node tools/check-menu-art.js && node tools/check-game-resources.js && node tools/check-resource-cache.js && node tools/check-pwa-resource-idle.js
       - name: Check existing gameplay invariants
         run: node tools/check-game-invariants.js
       - name: Run 5-minute simulated gameplay stress

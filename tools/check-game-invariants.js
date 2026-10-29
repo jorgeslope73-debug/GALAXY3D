@@ -224,12 +224,12 @@ if(!server.includes('round>=5&&leaders.length===1'))fail(errors,'series: falta r
 if(!server.includes("t:'series-lobby'"))fail(errors,'series: falta retorno autoritativo a sala');
 if(!game.includes('ONLINE_SERIES_BASE_ROUNDS=5'))fail(errors,'series: cliente no define serie base de 5 rondas');
 if(!game.includes('showOnlineSeriesChampion'))fail(errors,'series: falta pantalla final de campeon');
-if(!game.includes("assets/sprites/coete'+(Number(index)+1)+'.png'"))fail(errors,'series: falta nave del campeon');
+if(!game.includes('champShip.dataset.player=String(Number(index))')||!index.includes('<canvas id="seriesChampionShip"'))fail(errors,'series: falta nave 3D del campeon con su color');
 if(!game.includes("t:'series-round-result'"))fail(errors,'series: host no reporta ganador de ronda');
 if(!index.includes('id="seriesChampion"'))fail(errors,'series: falta markup de campeon');
 if(!index.includes('id="seriesRoundMini"'))fail(errors,'series: falta contador de ronda durante partida');
 if(!style.includes('.series-champion-cup'))fail(errors,'series: falta copa grande en CSS');
-if(!style.includes('#victory .series-champion-ship{\n  width:100px;\n  height:100px;'))fail(errors,'series: la nave campeona no mantiene 100x100 px');
+if(!style.includes('#victory .series-champion-ship{')||!style.includes('width:min(280px,100%)'))fail(errors,'series: falta encuadre adaptable de la nave 3D campeona');
 if(!server.includes('scheduleSeriesLobby(r,wss,30000)'))fail(errors,'series: falta retorno automático de seguridad tras CONTINUAR');
 if(!server.includes('lastSeriesChampionToken'))fail(errors,'series: el servidor no conserva la identidad del campeon anterior');
 if(!server.includes('champion:!!(r.lastSeriesChampionToken'))fail(errors,'series: roster humano no marca al campeon');

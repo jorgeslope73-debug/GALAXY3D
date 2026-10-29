@@ -43,6 +43,10 @@
       if(world.preparing)return true;
       try{world.menu(ctx,now);return true;}catch(error){fallback(error);return false;}
     },
+    winner(ctx,player,angle){
+      if(!this.active||world.preparing)return false;
+      try{world.winner(ctx,player,angle);return true;}catch(error){fallback(error);return false;}
+    },
     flush(ctx){
       if(!this.active)return false;
       try{world.flush(ctx);return true;}catch(error){fallback(error);return false;}
@@ -79,7 +83,7 @@
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffe14a];
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
-    let menuActors=null,menuFlight=null;
+    let menuActors=null,menuFlight=null,winnerStage=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -221,7 +225,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V23.99';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.00';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -518,6 +522,35 @@
         ctx.canvas.dataset.menuUfo=visitor?visitor.phase:'idle';
         ctx.canvas.dataset.menuUfoTarget=visitor?.target||'';
         this.flush(ctx);
+      },
+      winner(ctx,player,angle){
+        // Reuse the renderer, loaded GLB and shared paints. This separate scene
+        // never changes gameplay records, camera, physics or network state.
+        if(!winnerStage){
+          const stage=new T.Scene(),turntable=new T.Group();stage.add(turntable);
+          for(const object of scene.children)if(object.isHemisphereLight||object.isDirectionalLight)stage.add(object.clone());
+          const view=new T.PerspectiveCamera(32,1,.1,500);
+          view.position.set(0,45,95);view.lookAt(0,0,0);
+          winnerStage={scene:stage,turntable,camera:view,ships:new Map()};
+          reflectionsReady.then(reflections=>{stage.environment=reflections.texture;});
+        }
+        const stage=winnerStage,index=Math.max(0,Math.min(3,Math.trunc(Number(player)||0)));
+        if(!stage.ships.has(index)){
+          const ship=createImportedShip(index);
+          // Game assets lie in XY with their upper deck along +Z. Stand the
+          // deck upright, then turn around world Y: front, side, rear, side.
+          ship.rotation.x=-Math.PI/2;
+          stage.ships.set(index,ship);stage.turntable.add(ship);
+        }
+        for(const [team,ship]of stage.ships)ship.visible=team===index;
+        stage.turntable.rotation.y=Math.PI+(Number.isFinite(angle)?angle:0);
+        const width=ctx.canvas.width,height=ctx.canvas.height;
+        if(surface.width!==width||surface.height!==height)renderer.setSize(width,height,false);
+        stage.camera.aspect=width/height;stage.camera.updateProjectionMatrix();
+        renderer.render(stage.scene,stage.camera);
+        ctx.clearRect(0,0,width,height);ctx.drawImage(surface,0,0,width,height);
+        ctx.canvas.dataset.shipModel='nave-glb';
+        ctx.canvas.dataset.view='3d';
       }
     };
     async function waitForGpu(){

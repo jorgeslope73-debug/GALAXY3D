@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V23.99
+V24.00
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -357,3 +357,8 @@ IMPACTOS EN RED - V23.97
 - Identidad so/si/se/st: tirador, bala, epoca y tick. Solo el anfitrion confirma la baja y puntuacion.
 - El instante de escena viaja en el paquete de controles existente, como un entero de milisegundos en relay.
 - Render, servidor de senalizacion y base de datos sin cambios.
+
+V24.00 - Nave del campeon online:
+- docs/winner-preview.js: giro 360 local mientras se muestra la pantalla final.
+- docs/render-3d.js: escena de exposicion con el mismo renderizador y modelo del juego.
+- Modelo y pinturas: docs/assets/models/nave.glb y las cuatro pinturas activas de ship-model.js.

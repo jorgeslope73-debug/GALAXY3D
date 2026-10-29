@@ -4691,8 +4691,8 @@
       champName.style.color=playerColors[Number(index)]||'#fff';
     }
     if(champShip){
-      champShip.src='assets/sprites/coete'+(Number(index)+1)+'.png';
-      champShip.alt=winner?sinTildes(winner.n):'Nave ganadora';
+      champShip.dataset.player=String(Number(index));
+      champShip.setAttribute('aria-label','Nave 3D de '+(winner?sinTildes(winner.n):'la persona ganadora')+', girando 360 grados');
     }
     if(champ)champ.classList.remove('hidden');
     if(continueBtn){continueBtn.classList.remove('hidden');continueBtn.disabled=false;continueBtn.textContent='CONTINUAR';}
