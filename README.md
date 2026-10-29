@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.05: desplaza ligeramente a la izquierda la nave del campeon, conservando su tamano, altura, giro y el marcador completo.
+
 V24.04: amplia aproximadamente un 15% la nave de la pantalla del campeon en su vista local. Ajusta el encuadre para mostrarla entera durante el giro, conservando la nave elevada sin halo y el espacio del marcador.
 
 V24.03: retira la copa decorativa del campeon y centra la nave 3D un poco mas arriba. Conserva su tamano, el giro sin halo y el marcador completo.
