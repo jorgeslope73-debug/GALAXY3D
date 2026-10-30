@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V24.06
+V24.07
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -281,6 +281,10 @@ LUZ DE BALA MAS INTENSA Y TAMAÑOS DE MEDIANOS - V23.86
 TAMAÑOS DE MEDIANOS EQUIPROBABLES - V23.87
 - Los tres tamaños tienen la misma probabilidad de aparicion: un tercio cada uno. El reparto concreto puede variar en una partida corta.
 - Se mantiene la seleccion al nacer, sin llamadas aleatorias adicionales ni cambios en el calendario, los tamaños, los perfiles de colision o el formato de red.
+
+VARIANTE MAYOR DEL MEDIANO - V24.07
+- Radios actuales: 51.75, 59.513 y 74.003. La variante mayor crece un 10% respecto a su radio anterior de 67.275.
+- Modelo, contorno irregular y contactos usan el mismo radio en CPU y red; las tres variantes conservan la misma probabilidad.
 
 AVISO PERSONAL POR IMPACTO DE MISIL PROPIO - V23.88
 - Al recibir un misil propio, en casco o escudo, solo su propietario ve «¡UPSS!» durante aproximadamente un segundo.

@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.07: aumenta un 10% la variante mayor de los tres asteroides medianos, de radio 67.275 a 74.003. El mismo radio escala el modelo y su perfil de colision irregular en CPU y red. Conserva los otros dos tamanos, la probabilidad de cada variante, la poblacion y el formato de red.
+
 V24.06: sustituye el OVNI por el GLB del usuario de 1.384 triangulos (antes 50.000). Conserva sus materiales y texturas originales y reproduce Luces_Random_Loop mediante claves de forma, en bucle e independientemente en cada instancia. Portada y partida comparten recursos; el reloj de animacion es local y no cambia la fisica ni los datos de red.
 
 V24.05: desplaza ligeramente a la izquierda la nave del campeon, conservando su tamano, altura, giro y el marcador completo.

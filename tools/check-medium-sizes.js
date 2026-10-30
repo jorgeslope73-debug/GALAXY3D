@@ -16,7 +16,7 @@ check('current size is the minimum and larger variants stay in the medium collis
   assert.ok(Object.isFrozen(core.MEDIUM_ROCK_RADII));assert.equal(radii.length,3);
   assert.equal(radii[0],51.75);
   assert.ok(Math.abs(radii[1]/radii[0]-1.15)<.00002);
-  assert.ok(Math.abs(radii[2]/radii[0]-1.30)<.00002);
+  assert.ok(Math.abs(radii[2]/67.275-1.10)<.00002,'only the largest variant grows ten percent from its previous size');
   const counts=new Map(radii.map(r=>[r,0]));
   vm.runInContext('globalThis.sizeSavedRandom=Math.random;Math.random=()=>{throw Error("size consumed random");};',ctx);
   try{
@@ -116,4 +116,4 @@ check('existing r field carries each size exactly through codec and renderer',()
     }
   }
 });
-console.log('Medium sizes OK: current minimum, +15%, +30%; same birth flow, scaled contacts, population and wire format.');
+console.log('Medium sizes OK: unchanged lower variants, largest +10% from its previous size; same birth flow, scaled contacts, population and wire format.');

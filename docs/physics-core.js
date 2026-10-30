@@ -3,7 +3,7 @@
   const TARGET_MIN_ALIGN=.8660254038; // cos(30 grados)
   // Shared linear scale for the giant artwork, its concave contacts and rendering.
   const GIANT_RADIUS=189,GIANT_DIAMETER=GIANT_RADIUS*2;
-  const MEDIUM_ROCK_RADII=Object.freeze([51.75,59.513,67.275]);
+  const MEDIUM_ROCK_RADII=Object.freeze([51.75,59.513,74.003]);
   function mediumRockRadius(id){
     // Stable birth variation uses the existing ID, without consuming another
     // random number or changing the spawn/calendar random sequence.
