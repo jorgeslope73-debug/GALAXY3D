@@ -64,7 +64,7 @@ Se conserva la inclinación progresiva de hasta 60 grados en los giros más cerr
 
 Se retiran las llamas geométricas de naves y misiles; la propulsión conserva las partículas existentes del juego. La iluminación es blanca y equilibrada para mostrar el color y el relieve del modelo. Las naves conservan el aumento visual del 50 % y la vista cenital cuando no giran, con morro arriba en giro cero. Se mantienen las reglas y los tamaños de colisión.
 
-Las rocas 3D usan el modelo y la textura integrada de `mas/final/meteor.glb`, incluidos los asteroides y sus fragmentos. La copia de publicación en `docs/assets/models/meteor.glb` es idéntica al archivo aportado.
+Las rocas 3D usan `docs/assets/models/asteroidemediano.glb` para los medianos, `docs/assets/models/Rocky_Asteroid_5.glb` para el gigante y `docs/assets/models/meteorito3.glb` para los fragmentos y la lluvia. Cada modelo conserva sus texturas integradas.
 
 - La nave de `mas/final/nave.glb` se publica en `docs/assets/models/nave.glb`, con sus materiales y texturas incluidos. El original se conserva sin modificar.
 - Se ajustan visualmente el centro, el tamaño y la orientación. Las cuatro texturas conservan los UV y el mapa de normales del GLB. Se usan los archivos preparados en Adobe sin recolorearlos durante el juego.

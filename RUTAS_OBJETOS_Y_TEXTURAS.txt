@@ -65,13 +65,11 @@ COLISIONES DEL METEORITO MEDIANO
 - Balas/misiles, naves/escudos, bengalas, OVNI y mejoras comprueban el borde real.
 - Respaldo 2D: docs/assets/sprites/asteroidemediano.png, misma silueta y giro.
 - Original de Downloads sin modificar; copia web de 636.932 bytes, 6.000 triangulos y mapas de 1024 px.
-- meteorito1.glb y meteorito2.glb quedan como recursos anteriores, sin carga en partida ni precache.
 
 TEXTURAS DE LOS METEORITOS
 - Color, normales y metal/rugosidad incluidos dentro de cada GLB activo.
 - Rocky_Asteroid_5 conserva su color/rugosidad; su mapa de altura original se ha convertido a normales tangentes para corregir el sombreado.
 - Copia web: 615.520 bytes, 12.852 triangulos y tres mapas de 1024 px; original de Downloads sin modificar.
-- meteorito1.glb y meteorito2.glb se conservan como recursos anteriores; no se cargan ni se precargan.
 - meteorito3.glb: fragmentos, 192.564 bytes, 3.000 triangulos, mapas JPEG de 512 px.
 - Cada GLB activo se carga una sola vez y comparte geometria, materiales y mapas entre sus instancias.
 - El material utiliza los mapas originales de cada GLB.
