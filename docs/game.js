@@ -5232,17 +5232,15 @@
       // V20.96/V20.98: halo + materializacion visual. No cambia el radio real.
       const phase=(String(pk.id||'').charCodeAt(0)||0)*.07;
       const pulse=.5+.5*Math.sin(nowSec*3.7+phase);
-      if(pk.type!=='shield'){
-        ctx.save();
-        ctx.globalAlpha=alpha*(.18+.14*pulse);
-        ctx.strokeStyle='rgba(160,235,255,.95)';
-        ctx.lineWidth=1.5;
-        ctx.beginPath();ctx.arc(x,y,(27+4*pulse)*introScale,0,Math.PI*2);ctx.stroke();
-        ctx.globalAlpha=alpha*(.08+.08*pulse);
-        ctx.fillStyle='rgba(95,190,255,.9)';
-        ctx.beginPath();ctx.arc(x,y,(22+3*pulse)*introScale,0,Math.PI*2);ctx.fill();
-        ctx.restore();
-      }
+      ctx.save();
+      ctx.globalAlpha=alpha*(.18+.14*pulse);
+      ctx.strokeStyle='rgba(160,235,255,.95)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(x,y,(27+4*pulse)*introScale,0,Math.PI*2);ctx.stroke();
+      ctx.globalAlpha=alpha*(.08+.08*pulse);
+      ctx.fillStyle='rgba(95,190,255,.9)';
+      ctx.beginPath();ctx.arc(x,y,(22+3*pulse)*introScale,0,Math.PI*2);ctx.fill();
+      ctx.restore();
       drawImageCentered(images[pickupSpriteMap[pk.type]],x,y,(45+2*pulse)*introScale,0,alpha);
       return;
     }

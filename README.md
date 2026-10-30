@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.09: el icono flotante del escudo aparece dentro del mismo aro y halo que las demas mejoras.
+
 V24.08: la mejora flotante del escudo usa el icono escudo.png aportado por el usuario en lugar del circulo. Se precarga con las mejoras y conserva la materializacion y el parpadeo al caducar; el escudo protector de la nave mantiene su comportamiento.
 
 V24.07: aumenta un 10% la variante mayor de los tres asteroides medianos, de radio 67.275 a 74.003. El mismo radio escala el modelo y su perfil de colision irregular en CPU y red. Conserva los otros dos tamanos, la probabilidad de cada variante, la poblacion y el formato de red.
