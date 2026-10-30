@@ -48,10 +48,10 @@ function imageFixture(mobile){
 
 async function checkImages(mobile){
   const f=imageFixture(mobile),{api}=f;
-  const eager=['pantA','pantB','pantC','pantD','ammo1','ammo3','cadence','speed','bengala','bengalahud','ojo','mira1','localizaA','localizaB','localizaC','localizaD'];
+  const eager=['pantA','pantB','pantC','pantD','ammo1','ammo3','cadence','speed','bengala','bengalahud','ojo','mira1','shield','localizaA','localizaB','localizaC','localizaD'];
   if(mobile)eager.push('bg');
   assert.deepEqual(Object.keys(api.images).sort(),eager.sort(),'all active 3D HUD, flares and localization images remain eager');
-  assert.equal(f.requests.length,mobile?17:16);assert.equal(f.tracked.length,f.requests.length);
+  assert.equal(f.requests.length,mobile?18:17);assert.equal(f.tracked.length,f.requests.length);
   assert.deepEqual(Object.keys(api.assetList).sort(),[...eager.filter(key=>key!=='bg'),'bg','bg02','bg03','bg04','bg05'].sort(),'only HUD and round backgrounds remain in the game image manifest');
   assert.equal(api.imageReady(undefined),false);
   assert.equal(f.c.drawImageCentered(undefined,0,0,56),false,'a missing overlay icon does not throw');

@@ -225,7 +225,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V24.07';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.08';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -481,6 +481,7 @@
       },
       pickup(id,x,y,type){
         const record=take('pickup',id);place(record.root,x,y,-8);
+        record.torus.visible=type!=='shield';
         record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
         record.torus.rotation.set(.2,0,now*.0005);
       },

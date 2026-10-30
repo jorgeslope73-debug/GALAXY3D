@@ -1275,7 +1275,7 @@
     pantA:'assets/sprites/pantA.png',pantB:'assets/sprites/pantB.png',pantC:'assets/sprites/pantC.png',pantD:'assets/sprites/pantD.png',
     ammo1:'assets/sprites/municion1.png',ammo3:'assets/sprites/municion3.png',cadence:'assets/sprites/cadencia.png',speed:'assets/sprites/velocidad.png',
     bengala:'assets/sprites/bengala.png',bengalahud:'assets/sprites/bengalahud.png',ojo:'assets/sprites/ojo.png',
-    mira1:'assets/sprites/mira1.png',
+    mira1:'assets/sprites/mira1.png',shield:'assets/sprites/escudo.png',
     localizaA:'assets/sprites/localizaA.png',localizaB:'assets/sprites/localizaB.png',localizaC:'assets/sprites/localizaC.png',localizaD:'assets/sprites/localizaD.png'
   };
   const deferredGameImageKeys=new Set([
@@ -1308,7 +1308,7 @@
     if(!url)return Promise.resolve(false);
     const im=new Image();
     im.decoding='async';
-    const critical=k==='bg'||k.startsWith('pant')||k==='ammo1'||k==='ammo3'||k==='cadence'||k==='speed'||k==='bengala'||k==='bengalahud'||k==='ojo';
+    const critical=k==='bg'||k.startsWith('pant')||k==='ammo1'||k==='ammo3'||k==='cadence'||k==='speed'||k==='bengala'||k==='bengalahud'||k==='ojo'||k==='shield';
     if('fetchPriority' in im)im.fetchPriority=critical?'high':'auto';
     const ready=new Promise(resolve=>{
       let settled=false;
@@ -5185,7 +5185,7 @@
     if(!imageReady(im))return false;
     return drawImageCentered(im,x,y,78,0,alpha);
   }
-  const pickupSpriteMap={ammo1:'ammo1',ammo3:'ammo3',cadence:'cadence',speed:'speed',mira:'mira1',flare:'bengalahud',camo:'ojo'};
+  const pickupSpriteMap={ammo1:'ammo1',ammo3:'ammo3',cadence:'cadence',speed:'speed',mira:'mira1',flare:'bengalahud',camo:'ojo',shield:'shield'};
   function drawDeployedFlare(f,x,y,nowSec=0){
     const life=Math.max(0,Number(f&&f.life)||0);
     // V19.67: la bengala nace a tamaño completo y se encoge de forma continua
@@ -5232,15 +5232,17 @@
       // V20.96/V20.98: halo + materializacion visual. No cambia el radio real.
       const phase=(String(pk.id||'').charCodeAt(0)||0)*.07;
       const pulse=.5+.5*Math.sin(nowSec*3.7+phase);
-      ctx.save();
-      ctx.globalAlpha=alpha*(.18+.14*pulse);
-      ctx.strokeStyle='rgba(160,235,255,.95)';
-      ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.arc(x,y,(27+4*pulse)*introScale,0,Math.PI*2);ctx.stroke();
-      ctx.globalAlpha=alpha*(.08+.08*pulse);
-      ctx.fillStyle='rgba(95,190,255,.9)';
-      ctx.beginPath();ctx.arc(x,y,(22+3*pulse)*introScale,0,Math.PI*2);ctx.fill();
-      ctx.restore();
+      if(pk.type!=='shield'){
+        ctx.save();
+        ctx.globalAlpha=alpha*(.18+.14*pulse);
+        ctx.strokeStyle='rgba(160,235,255,.95)';
+        ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(x,y,(27+4*pulse)*introScale,0,Math.PI*2);ctx.stroke();
+        ctx.globalAlpha=alpha*(.08+.08*pulse);
+        ctx.fillStyle='rgba(95,190,255,.9)';
+        ctx.beginPath();ctx.arc(x,y,(22+3*pulse)*introScale,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
       drawImageCentered(images[pickupSpriteMap[pk.type]],x,y,(45+2*pulse)*introScale,0,alpha);
       return;
     }
@@ -5256,10 +5258,6 @@
       ctx.strokeStyle='rgba(160,215,255,.9)';
       ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(0,0,24+2*pulse,0,Math.PI*2);ctx.stroke();
-    }
-    else if(pk.type==='shield'){
-      ctx.strokeStyle='#8ff5ff';ctx.lineWidth=4;ctx.globalAlpha=.9*alpha;ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();
-      ctx.globalAlpha=.25*alpha;ctx.fillStyle='#5adfff';ctx.fill();
     }
     else if(pk.type==='camo'){
       // Invisibilidad: ojo tachado vectorial. Evita un asset adicional y
