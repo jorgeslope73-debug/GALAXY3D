@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareUfoTemplate,createUfoFactory,setUfoPose,setUfoLights,UFO_DIAMETER,UFO_LEAN_LIMIT,UFO_LEAN_FULL_SPEED,UFO_LIGHT_PERIOD_MS} from '../docs/ufo-model.js';
+import {prepareUfoTemplate,createUfoFactory,setUfoPose,setUfoLights,UFO_DIAMETER,UFO_LEAN_LIMIT,UFO_LEAN_FULL_SPEED} from '../docs/ufo-model.js';
 
 const bytes=await readFile(new URL('../docs/assets/models/ovni.glb',import.meta.url));
 const gameSource=await readFile(new URL('../docs/game.js',import.meta.url),'utf8');
@@ -26,64 +26,84 @@ for(const id of [0,1,2,37,99999]){
 assert.equal(bytes.toString('ascii',0,4),'glTF');assert.equal(bytes.readUInt32LE(8),bytes.length);
 assert.ok(bytes.length<3*1024*1024,'The web copy must stay small enough for mobile startup');
 const jsonSize=bytes.readUInt32LE(12),json=JSON.parse(bytes.subarray(20,20+jsonSize).toString());
-assert.equal(json.meshes.length,1,'Only the supplied UFO, without scene helpers');
-assert.ok(!json.animations?.length&&!json.skins?.length);
-assert.ok(json.images.length===3&&json.images.every(i=>Number.isInteger(i.bufferView)));
+assert.deepEqual(json.scenes[json.scene].nodes,[3],'Use the authored UFO scene; the separate Cube scene is not loaded');
+assert.equal(json.animations.length,1);assert.equal(json.animations[0].name,'Luces_Random_Loop');
+assert.ok(!json.skins?.length);
+assert.ok(json.animations[0].channels.every(c=>c.target.path==='weights'),'The lamp clip must not move the collision centre');
+assert.ok(json.images.length===2&&json.images.every(i=>Number.isInteger(i.bufferView)));
 assert.ok(json.buffers.every(b=>!b.uri));
-function jpegSize(b){
-  assert.equal(b.readUInt16BE(0),0xffd8);let at=2;
-  while(at<b.length){
-    assert.equal(b[at],255);const marker=b[at+1],length=b.readUInt16BE(at+2);
-    if([0xc0,0xc1,0xc2].includes(marker))return [b.readUInt16BE(at+7),b.readUInt16BE(at+5)];
-    at+=length+2;
-  }
-  throw Error('Missing JPEG size');
-}
 for(const image of json.images){
   const v=json.bufferViews[image.bufferView],start=28+jsonSize+(v.byteOffset||0);
-  assert.equal(image.mimeType,'image/jpeg');
-  assert.deepEqual(jpegSize(bytes.subarray(start,start+v.byteLength)),[1024,1024]);
+  const png=bytes.subarray(start,start+v.byteLength);
+  assert.equal(image.mimeType,'image/png');
+  assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+  assert.deepEqual([png.readUInt32BE(16),png.readUInt32BE(20)],[2048,1024],'Preserve the supplied UV atlas dimensions');
 }
 const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
 const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
-const template=prepareUfoTemplate(gltf.scene),bounds=new T.Box3().setFromObject(template),size=bounds.getSize(new T.Vector3());
+const clip=gltf.animations[0],duration=clip.duration;
+const template=prepareUfoTemplate(gltf.scene,gltf.animations),bounds=new T.Box3().setFromObject(template,true),size=bounds.getSize(new T.Vector3());
 assert.ok(bounds.getCenter(new T.Vector3()).length()<1e-5);
 assert.ok(Math.abs(Math.max(size.x,size.y)-UFO_DIAMETER)<1e-4);
 assert.ok(Math.abs(size.x-size.y)<1&&size.z>8&&size.z<30,'The disc lies in the arena plane');
 let triangles=0,top=-Infinity,topRadius=0,maxRadius=0,meshes=0;
 template.traverse(o=>{
   if(!o.isMesh)return;meshes++;
-  assert.ok(o.material.map&&o.material.normalMap&&o.material.metalnessMap&&o.material.roughnessMap,'Keep every authored PBR texture');
+  assert.ok(!o.name.includes('Cube'),'Other GLB scenes must stay outside the game');
+  if(o.material.map)assert.ok(o.material.normalMap&&o.material.metalness>.9,'Keep the hull PBR maps and authored metal');
+  if(o.morphTargetInfluences)assert.equal(o.morphTargetInfluences.length,12);
   triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;
   const a=o.geometry.attributes.position;
   for(let i=0;i<a.count;i++){
-    const p=new T.Vector3().fromBufferAttribute(a,i).applyMatrix4(o.matrixWorld);
+    const p=o.getVertexPosition(i,new T.Vector3()).applyMatrix4(o.matrixWorld);
     maxRadius=Math.max(maxRadius,Math.hypot(p.x,p.y));
     if(p.z>top){top=p.z;topRadius=Math.hypot(p.x,p.y);}
   }
 });
-assert.equal(meshes,1);assert.equal(triangles,50000);
+assert.equal(meshes,6);assert.equal(triangles,1384);assert.ok(triangles<2000,'Keep the supplied low-polygon UFO');
 assert.ok(maxRadius<31&&maxRadius>29,'The artwork fits the existing radius-30 collision');
 assert.ok(top>0&&topRadius<18,'The upper dome faces the overhead camera');
-const environment=new T.Texture(),factory=createUfoFactory(template,environment),a=factory(),b=factory();let ma,mb;
-a.traverse(o=>{if(o.isMesh)ma=o;});b.traverse(o=>{if(o.isMesh)mb=o;});
-assert.equal(ma.geometry,mb.geometry);assert.notEqual(ma.material,mb.material);
-assert.equal(ma.material.map,mb.material.map);assert.equal(ma.material.normalMap,mb.material.normalMap);
-assert.equal(ma.material.envMap,environment);assert.equal(mb.material.envMap,environment,'Menu and match UFOs share one reflection map');
-assert.equal(ma.material.envMapIntensity,mb.material.envMapIntensity);
-const shaderA={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};
-const shaderB={uniforms:{},vertexShader:'#include <begin_vertex>',fragmentShader:'#include <emissivemap_fragment>'};
-ma.material.onBeforeCompile(shaderA);mb.material.onBeforeCompile(shaderB);
-assert.ok(shaderA.fragmentShader.includes('ufoLampMask')&&shaderA.vertexShader.includes('ufoLampXY=position.xy'));
-setUfoLights(a,0);assert.ok(Math.abs(shaderA.uniforms.ufoLampPower.value-.1)<1e-9);
-assert.equal(shaderB.uniforms.ufoLampPower.value,1,'The other UFO keeps its independent light state');
-setUfoLights(a,UFO_LIGHT_PERIOD_MS/2);assert.equal(shaderA.uniforms.ufoLampPower.value,1);
-let previousPower=null;
-for(let time=0;time<=UFO_LIGHT_PERIOD_MS*2;time+=16){
-  setUfoLights(a,time);const power=shaderA.uniforms.ufoLampPower.value;
-  assert.ok(power>=.1-1e-9&&power<=1);
-  if(previousPower!==null)assert.ok(Math.abs(power-previousPower)<.018,'Light intensity changes gradually at 60 Hz');
-  previousPower=power;
+const environment=new T.Texture(),factory=createUfoFactory(template,environment),a=factory(),b=factory();
+const meshMap=root=>{const map=new Map();root.traverse(o=>{if(o.isMesh)map.set(o.name,o);});return map;};
+const am=meshMap(a),bm=meshMap(b);
+for(const [name,ma]of am){
+  const mb=bm.get(name);
+  assert.equal(ma.geometry,mb.geometry);assert.notEqual(ma.material,mb.material);
+  assert.equal(ma.material.map,mb.material.map);assert.equal(ma.material.normalMap,mb.material.normalMap);
+  assert.equal(ma.material.envMap,environment);assert.equal(mb.material.envMap,environment,'Menu and match share one reflection map');
+  assert.equal(ma.material.envMapIntensity,mb.material.envMapIntensity);
+  if(ma.morphTargetInfluences)assert.notEqual(ma.morphTargetInfluences,mb.morphTargetInfluences,'Each instance owns its lamp weights');
+  if(ma.material.name.startsWith('Luces'))assert.equal(ma.material.emissiveIntensity,2,'Use the authored lamp emission');
+}
+const weights=root=>[...meshMap(root).values()].filter(m=>m.morphTargetInfluences).flatMap(m=>m.morphTargetInfluences);
+const initialB=weights(b),seen=new Set();
+function checkAuthoredLights(root,time,phase=0,advance=true){
+  if(advance)setUfoLights(root,time,phase);
+  const clock=((time*.001+phase*duration/(Math.PI*2))%duration+duration)%duration,map=meshMap(root);
+  for(const track of clip.tracks){
+    const mesh=map.get(track.name.replace('.morphTargetInfluences',''));
+    assert.ok(mesh,'The clip binds each cloned lamp primitive');
+    const expected=track.createInterpolant().evaluate(clock);
+    assert.equal(mesh.morphTargetInfluences.length,expected.length);
+    expected.forEach((value,i)=>assert.ok(Math.abs(value-mesh.morphTargetInfluences[i])<1e-6,'Replay the supplied shape-key values'));
+  }
+}
+for(const time of [0,125,375,900,1700,2400,4100,7000,8040,12345,1000000000]){
+  checkAuthoredLights(a,time);seen.add(weights(a).join(','));
+  assert.deepEqual(weights(b),initialB,'Animating the game UFO must not alter the menu UFO');
+}
+assert.ok(seen.size>4,'The supplied random lamp sequence actually changes');
+checkAuthoredLights(a,1279);const loopPose=weights(a);
+for(const loops of [1,2,3,101]){
+  checkAuthoredLights(a,1279+loops*duration*1000);
+  weights(a).forEach((v,i)=>assert.ok(Math.abs(v-loopPose[i])<1e-6,'The authored light animation repeats indefinitely'));
+}
+checkAuthoredLights(a,701,.8);checkAuthoredLights(b,701,.8);
+assert.deepEqual(weights(a),weights(b),'Frame history and instance creation time do not affect the same local pose');
+for(const time of clip.tracks[0].times){
+  setUfoLights(a,time*1000);const actual=new T.Box3().setFromObject(a,true);
+  assert.ok(actual.getCenter(new T.Vector3()).length()<1e-5,'Blinking must not move the calibrated centre');
+  assert.ok(Math.abs(actual.getSize(new T.Vector3()).x-UFO_DIAMETER)<1e-4,'Blinking preserves the diameter and collision radius');
 }
 const root=new T.Group();root.position.set(100,200,13);root.add(a);const origin=root.position.clone();
 assert.ok(Math.abs(UFO_LEAN_LIMIT-Math.PI/4)<1e-9);
@@ -122,7 +142,8 @@ for(const step of [10,40]){
 assert.ok(settled[0].distanceTo(settled[1])<1e-9,'Bank smoothing is independent of frame rate');
 setUfoPose(root,0,1016,0,0,0,true);assert.ok(normal().distanceTo(up)<1e-9,'A reused UFO or new round clears the old bank');
 setUfoPose(root,72,1000);assert.ok(Math.abs(root.rotation.z-72*Math.PI/180)<1e-9);
-setUfoPose(root,0,0);assert.ok(Math.abs(shaderA.uniforms.ufoLampPower.value-.1)<1e-9);
-setUfoPose(root,0,UFO_LIGHT_PERIOD_MS/2);assert.equal(shaderA.uniforms.ufoLampPower.value,1,'The game pose update also animates the lights');
+setUfoPose(root,0,125);checkAuthoredLights(a,125,0,false);
+const poseLights=weights(a);setUfoPose(root,0,2400);checkAuthoredLights(a,2400,0,false);
+assert.notDeepEqual(weights(a),poseLights,'The production pose update also advances the authored lamp clip');
 assert.ok(b.rotation.x===0&&b.rotation.y===0&&b.rotation.z===0,'One UFO pose never rotates another instance');
-console.log(`UFO GLB OK: ${triangles} triangles, 3 embedded 1024px maps, shared geometry/textures, independent soft lamp pulses, smooth variable-speed spin and travel-directed bank up to 45 degrees.`);
+console.log(`UFO GLB OK: ${triangles} triangles, 2 embedded 2048x1024 PNG maps, shared geometry/textures, independent authored ${duration.toFixed(3)}s morph loops, exact keyframes across repeated loops, stable radius/centre, smooth variable-speed spin and travel-directed bank up to 45 degrees.`);

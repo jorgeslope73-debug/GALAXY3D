@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V24.05
+V24.06
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -87,7 +87,7 @@ METEORITO GRANDE DE LA PORTADA
 - Los tamanos de los meteoritos de la partida se mantienen en su configuracion de juego.
 
 OVNI DECORATIVO DE LA PORTADA
-- Reutiliza docs/assets/models/ovni.glb con vista lateral, giro y luces suaves.
+- Reutiliza docs/assets/models/ovni.glb con vista lateral, giro y su animacion de luces original en bucle.
 - Rutas y objetos flotantes: docs/menu-ufo.js; dibujo: docs/render-3d.js.
 - Primera visita tras 12-22 segundos de portada; entre visitas espera 60-100 segundos.
 - Observa dos objetos diferentes durante 1,6-2,5 segundos cada uno y sale por el lado contrario.
@@ -97,8 +97,12 @@ OVNI DECORATIVO DE LA PORTADA
 - Con movimiento reducido no se muestra este recorrido.
 
 TEXTURAS DEL OVNI
-- Color, normales y metal/rugosidad incluidos en docs/assets/models/ovni.glb.
-- Copia web optimizada a 1024 px; el original del usuario se conserva sin modificar.
+- Color y normales incluidos en docs/assets/models/ovni.glb: dos PNG originales de 2048x1024.
+- Materiales metalicos, cupula y luces originales del GLB; no hay recoloracion ni parpadeo por shader.
+- Modelo de 1.384 triangulos; se usa la escena predeterminada del OVNI y la escena del cubo no se incorpora al juego.
+- Luces_Random_Loop: animacion de claves de forma de aproximadamente 8 segundos, con repeticion continua.
+- docs/ufo-model.js conserva la jerarquia, comparte geometria/texturas y usa un AnimationMixer independiente por instancia.
+- Las luces se calculan con el reloj visual local. No se envian fotogramas ni pesos de animacion por red.
 - Portada y partida usan la misma fábrica de materiales y el mismo entorno de reflejos suaves.
 - El entorno se genera una sola vez en docs/ufo-model.js (sin descargas ni texturas nuevas).
 - El OVNI decorativo se muestra más grande y en vista lateral de tres cuartos para apreciar la cúpula.
