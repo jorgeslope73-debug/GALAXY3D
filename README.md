@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.14: asigna los objetivos de la nodriza segun su direccion de llegada: delanteras para el frente, traseras para atras y las del lado correspondiente para los laterales. Elige las torretas validas mas cercanas sin repetir objetivo y reevalua inmediatamente al cambiar de sector. La prediccion de punteria no puede apuntar al sector opuesto; las torretas sin objetivo exploran hacia fuera.
+
 V24.13: reduce un 10% la nodriza (540 unidades) y anade un giro suave de rumbo de +/-8 grados en ciclos de 14 segundos durante su cruce. El modelo, los perfiles de colision y las bocas de los canones comparten la nueva escala y la orientacion; conserva el balanceo de +/-15 grados.
 
 V24.12: aumenta el balanceo lateral de la nodriza a +/-15 grados, con el mismo ciclo suave de 10 segundos. Amplia a 31 los perfiles de casco para mantener los rebotes y la salida de las balas alineados durante la inclinacion.

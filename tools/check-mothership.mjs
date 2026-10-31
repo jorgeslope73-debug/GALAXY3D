@@ -67,7 +67,35 @@ assert.ok(Math.hypot(volley[0].x-volley[1].x,volley[0].y-volley[1].y)>16,'Twin b
 assert.equal(M.step(body,1/60,[player],()=>id++).shots.length,0,'Cadence is bounded, not a volley every frame');
 assert.equal(M.step(body,4,[{...player,dead:true}],()=>id++).shots.length,0);
 assert.ok(volley.every(s=>s.owner===-2&&s.guided===false));
-// Four side guns take turns; no two active guns share a player. The centre never fires.
+// Select the closest suitable mount in front, aft and both side sectors,
+// including the mothership's heading and bank rather than fixed screen axes.
+function targetAt(mother,index,x,y,extra={}){const c=Math.cos(mother.angle),s=Math.sin(mother.angle);return {...player,index,x:mother.x+x*c-y*s,y:mother.y+x*s+y*c,...extra};}
+function assignedGun(mother,index){return mother.turrets.findIndex(t=>t.target===index);}
+let sectorCases=0;
+for(const direction of [-1,1])for(const yaw of [-8,0,8])for(const bank of [-15,0,15]){
+  const mother=M.create(91,direction);mother.x=960;mother.y=540;mother.angle+=yaw*Math.PI/180;mother.bank=bank*Math.PI/180;
+  for(const [x,y,allowed]of [[0,-650,[3,4]],[0,650,[0,1]],[-650,0,[0,3]],[650,0,[1,4]]]){
+    const target=targetAt(mother,7,x,y);M.assignTargets(mother,[target]);
+    const gun=assignedGun(mother,7);assert.ok(allowed.includes(gun),'The arrival direction chooses the front, aft, upper or lower pair');
+    const distance=index=>{const p=M.pivot(mother,index);return Math.hypot(target.x-p.x,target.y-p.y);};
+    assert.ok(Math.abs(distance(gun)-Math.min(...allowed.map(distance)))<1e-8,'The nearest valid turret is selected');
+    assert.equal(mother.turrets.filter(t=>t.target>=0).length,1);assert.equal(mother.turrets[2].target,-1);sectorCases++;
+  }
+  const corners=[targetAt(mother,0,-650,-650),targetAt(mother,1,650,-650),targetAt(mother,2,-650,650),targetAt(mother,3,650,650)];
+  M.assignTargets(mother,corners);assert.deepEqual([0,1,2,3].map(i=>assignedGun(mother,i)),[3,4,0,1],'The four diagonal objectives use their own corner guns');
+  M.assignTargets(mother,[targetAt(mother,10,0,-650),targetAt(mother,11,-650,-650)]);
+  assert.equal(assignedGun(mother,10),4);assert.equal(assignedGun(mother,11),3,'A shared front-axis target cannot steal the only suitable mount of another objective');
+  for(const [x,y,expected]of [[-650,-650,3],[-650,650,0],[650,650,1],[650,-650,4]]){
+    M.assignTargets(mother,[targetAt(mother,25,x,y)]);assert.equal(assignedGun(mother,25),expected,'Sector changes transfer the target immediately, without the old seven-second wait');
+  }
+}
+const crossing=M.create(92);crossing.x=crossing.px=960;crossing.vx=0;crossing.age=-1/60;
+const crossingTarget={...player,x:1400,y:540,vx:-1000,vy:0};
+crossing.turrets.forEach((t,i)=>{const p=M.pivot(crossing,i);t.angle=Math.atan2(crossingTarget.y-p.y,crossingTarget.x-p.x);});
+M.step(crossing,1/60,[crossingTarget],()=>id++);
+const crossingGun=assignedGun(crossing,0),crossingPivot=M.pivot(crossing,crossingGun);
+assert.ok(Math.abs(crossing.turrets[crossingGun].angle-Math.atan2(crossingTarget.y-crossingPivot.y,crossingTarget.x-crossingPivot.x))<1e-8,'Prediction cannot make a front gun aim into the opposite sector');
+// No two active guns share a player. Spare sectors and the centre stay idle.
 let totalVolleys=0;
 for(const count of [1,2,4]){
   const mother=M.create(100);mother.x=mother.px=960;mother.vx=0;
@@ -78,6 +106,7 @@ for(const count of [1,2,4]){
     assert.ok(Math.abs(mother.angle-mother.heading-M.yawAt(mother.age))<1e-12,'Simulation and drawing receive the same gently changing heading');
     const assigned=mother.turrets.filter(t=>t.target>=0).map(t=>t.target);
     assert.equal(assigned.length,count);assert.equal(new Set(assigned).size,count,'Each active turret has a distinct objective');
+    mother.turrets.forEach((t,i)=>{if(t.target>=0)assert.ok(M.canTarget(mother,i,targets.find(p=>p.index===t.target)),'Every active target remains inside its mount sector');});
     assert.equal(mother.turrets[2].target,-1,'The central turret remains on standby');
     assert.ok(result.shots.length===0||result.shots.length===2,'No simultaneous mass volleys or catch-up bursts');
     if(!result.shots.length)continue;
@@ -88,7 +117,7 @@ for(const count of [1,2,4]){
     lastGun.set(guns[0],mother.age);lastVolley=mother.age;seenGuns.add(guns[0]);totalVolleys++;
     result.shots.forEach((shot,barrel)=>{const muzzle=M.muzzle(mother,guns[0],barrel);assert.ok(Math.hypot(shot.x-muzzle.x,shot.y-muzzle.y)<1e-7);assert.ok(Math.abs(Math.hypot(shot.vx,shot.vy)-400)<1e-8,'Enemy bullets are slower than the previous 600 units/s');});
   }
-  assert.equal(seenGuns.size,4,'The four side guns rotate through the waiting turns');
+  assert.equal(seenGuns.size,count,'Only mounts covering these separated target sectors fire');
   targets[0].dead=true;M.step(mother,1/60,targets,()=>id++);
   assert.ok(mother.turrets.every(t=>t.target!==0),'Dead targets are released immediately');
 }
@@ -147,4 +176,4 @@ engine.bullets=[
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.bullets[0].owner,-2,'Mounted guns can fire over their own deck; player shots stop at the real hull');
 engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating the opening level restores the test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
-console.log(`Mothership OK: original GLB at 540 units, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
+console.log(`Mothership OK: original GLB at 540 units, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, ${sectorCases} nearest-sector cases, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);

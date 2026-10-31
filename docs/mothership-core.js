@@ -4,7 +4,7 @@
   const data=window.GalaxyMothershipData,physics=window.GalaxyPhysicsCore;
   if(!data||!physics)throw new Error('Falta la geometria de la nodriza');
   const W=1920,H=1080,SPEED=90,SHOT_SPEED=400,SHOT_INTERVAL=8,VOLLEY_GAP=4;
-  const BANK_LIMIT=Math.PI/12,BANK_PERIOD=10,TARGET_PERIOD=7;
+  const BANK_LIMIT=Math.PI/12,BANK_PERIOD=10;
   const YAW_LIMIT=8*Math.PI/180,YAW_PERIOD=14;
   const firingTurrets=data.turrets.map((turret,index)=>turret.name==='AEGIS_Yaw_Centre'?-1:index).filter(index=>index>=0);
   const hullCache=new WeakMap(),rockCache=new WeakMap(),shipCache=new WeakMap();
@@ -12,7 +12,7 @@
   function rotate(x,y,a){const c=Math.cos(a),s=Math.sin(a);return {x:x*c-y*s,y:x*s+y*c};}
   function create(id,direction=1){
     const dir=direction<0?-1:1;
-    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,targetPhase:-1,targetRoster:'',
+    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,
       turrets:data.turrets.map(()=>({angle:dir>0?0:Math.PI,nextShot:0,target:-1}))};
   }
   function bankAt(seconds){return Math.sin(seconds*Math.PI*2/BANK_PERIOD)*BANK_LIMIT;}
@@ -31,20 +31,33 @@
     const yaw=yawFor(body,turret.angle),c=Math.cos(yaw),s=Math.sin(yaw);
     return project(body,p[0]+q[0]*c+q[2]*s,p[1]+q[1],p[2]-q[0]*s+q[2]*c);
   }
+  function canTarget(body,index,target){
+    if(!firingTurrets.includes(index))return false;
+    const local=rotate(target.x-body.x,target.y-body.y,-body.angle),mount=data.turrets[index].pivot;
+    const side=local.x*(mount[0]-data.center[0]),fore=local.y*(mount[2]-data.center[2]);
+    // +Z in the GLB is aft. Each arrival sector has the two guns on that side.
+    if(Math.abs(local.y)>Math.abs(local.x)+1e-6)return fore>=-1e-6;
+    if(Math.abs(local.x)>Math.abs(local.y)+1e-6)return side>=-1e-6;
+    return side>=-1e-6&&fore>=-1e-6;
+  }
   function assignTargets(body,players){
     const eligible=players.filter(p=>!p.dead&&!(p.spawnFx>0)&&!(p.protection>0)&&!(p.camo>0)).sort((a,b)=>a.index-b.index);
-    const phase=Math.floor(body.age/TARGET_PERIOD),roster=eligible.map(p=>p.index).join(',');
-    if(body.targetPhase!==phase||body.targetRoster!==roster){
-      body.targetPhase=phase;body.targetRoster=roster;
-      for(const turret of body.turrets)turret.target=-1;
-      const remaining=eligible.slice();
-      // At most one turret per live target. Spare guns scan and take turns next phase.
-      for(let offset=0;offset<firingTurrets.length&&remaining.length;offset++){
-        const index=firingTurrets[(phase+offset)%firingTurrets.length],p=pivot(body,index);let best=0,distance=Infinity;
-        for(let j=0;j<remaining.length;j++){const d=Math.hypot(remaining[j].x-p.x,remaining[j].y-p.y);if(d<distance){best=j;distance=d;}}
-        body.turrets[index].target=remaining.splice(best,1)[0].index;
+    const costs=firingTurrets.map(index=>{const p=pivot(body,index);return eligible.map(target=>canTarget(body,index,target)?Math.hypot(target.x-p.x,target.y-p.y):Infinity);});
+    const plan=Array(firingTurrets.length).fill(-1);let best=plan.slice(),bestCount=-1,bestCost=Infinity;
+    // Four guns/four players: find the closest valid matching without stealing
+    // the only suitable gun from another target or assigning a player twice.
+    function visit(slot,used,count,cost){
+      if(count+firingTurrets.length-slot<bestCount)return;
+      if(slot===firingTurrets.length){
+        if(count>bestCount||(count===bestCount&&cost<bestCost)){bestCount=count;bestCost=cost;best=plan.slice();}
+        return;
       }
+      plan[slot]=-1;visit(slot+1,used,count,cost);
+      for(let j=0;j<eligible.length;j++)if(!(used&(1<<j))&&Number.isFinite(costs[slot][j])){plan[slot]=j;visit(slot+1,used|(1<<j),count+1,cost+costs[slot][j]);}
     }
+    visit(0,0,0,0);
+    for(const turret of body.turrets)turret.target=-1;
+    for(let slot=0;slot<firingTurrets.length;slot++)if(best[slot]>=0)body.turrets[firingTurrets[slot]].target=eligible[best[slot]].index;
     return eligible;
   }
   function step(body,dt,players,uid){
@@ -55,7 +68,9 @@
     for(let i=0;i<body.turrets.length;i++){
       const turret=body.turrets[i],p=pivot(body,i),target=eligible.find(p=>p.index===turret.target);
       const distance=target?Math.hypot(target.x-p.x,target.y-p.y):0,lead=Math.min(1.25,distance/SHOT_SPEED);
-      const desired=target?Math.atan2(target.y+(Number(target.vy)||0)*lead-p.y,target.x+(Number(target.vx)||0)*lead-p.x):body.angle-Math.PI/2+(i-2)*.7+Math.sin(body.age*.32+i)*.16;
+      let aim=target;
+      if(target){const predicted={x:target.x+(Number(target.vx)||0)*lead,y:target.y+(Number(target.vy)||0)*lead};if(canTarget(body,i,predicted))aim=predicted;}
+      const desired=aim?Math.atan2(aim.y-p.y,aim.x-p.x):Math.atan2(p.y-body.y,p.x-body.x)+Math.sin(body.age*.32+i)*.12;
       const turn=angleDelta(turret.angle,desired),limit=1.65*dt;
       turret.angle+=Math.max(-limit,Math.min(limit,turn));
       turret.aligned=!!target&&Math.abs(angleDelta(turret.angle,desired))<=.10;
@@ -172,5 +187,5 @@
     if(inside)first=0;
     return Number.isFinite(first)?{t:first,x:x0+(projectile.x-x0)*first,y:y0+(projectile.y-y0)*first}:null;
   }
-  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,hullProfile,bankAt,yawAt,yawFor,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
+  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,hullProfile,bankAt,yawAt,yawFor,canTarget,assignTargets,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
 })();
