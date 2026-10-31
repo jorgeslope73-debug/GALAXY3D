@@ -3,46 +3,68 @@
 (() => {
   const data=window.GalaxyMothershipData,physics=window.GalaxyPhysicsCore;
   if(!data||!physics)throw new Error('Falta la geometria de la nodriza');
-  const W=1920,H=1080,SPEED=90,SHOT_SPEED=600,SHOT_INTERVAL=2.6;
+  const W=1920,H=1080,SPEED=90,SHOT_SPEED=400,SHOT_INTERVAL=8,VOLLEY_GAP=4;
+  const BANK_LIMIT=Math.PI/18,BANK_PERIOD=10,TARGET_PERIOD=7;
+  const firingTurrets=data.turrets.map((turret,index)=>turret.name==='AEGIS_Yaw_Centre'?-1:index).filter(index=>index>=0);
   const hullCache=new WeakMap(),rockCache=new WeakMap(),shipCache=new WeakMap();
   const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   function rotate(x,y,a){const c=Math.cos(a),s=Math.sin(a);return {x:x*c-y*s,y:x*s+y*c};}
   function create(id,direction=1){
     const dir=direction<0?-1:1;
-    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,angle:dir*Math.PI/2,age:0,
-      turrets:data.turrets.map((_,i)=>({angle:dir>0?0:Math.PI,nextShot:4.5+i*.22,target:-1}))};
+    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,targetPhase:-1,targetRoster:'',
+      turrets:data.turrets.map(()=>({angle:dir>0?0:Math.PI,nextShot:0,target:-1}))};
   }
-  function pivot(body,index){
-    const p=data.turrets[index].pivot,q=rotate((p[0]-data.center[0])*data.scale,(p[2]-data.center[2])*data.scale,body.angle);
+  function bankAt(seconds){return Math.sin(seconds*Math.PI*2/BANK_PERIOD)*BANK_LIMIT;}
+  function yawFor(body,angle){const local=angle-body.angle;return Math.atan2(Math.cos(local)/Math.cos(Number(body.bank)||0),Math.sin(local));}
+  function project(body,x,y,z){
+    const bank=Number(body.bank)||0,q=rotate(((x-data.center[0])*Math.cos(bank)+(y-data.center[1])*Math.sin(bank))*data.scale,(z-data.center[2])*data.scale,body.angle);
     return {x:body.x+q.x,y:body.y+q.y};
   }
+  function pivot(body,index){
+    return project(body,...data.turrets[index].pivot);
+  }
   function muzzle(body,index,barrel=0){
-    const turret=body.turrets[index],p=pivot(body,index),q=data.turrets[index].muzzles[barrel];
+    const turret=body.turrets[index],p=data.turrets[index].pivot,q=data.turrets[index].muzzles[barrel];
     // Model barrels point along +Z; yaw is around the supplied Y-axis null.
-    const yaw=Math.PI/2+body.angle-turret.angle,c=Math.cos(yaw),s=Math.sin(yaw);
-    const offset=rotate((q[0]*c+q[2]*s)*data.scale,(-q[0]*s+q[2]*c)*data.scale,body.angle);
-    return {x:p.x+offset.x,y:p.y+offset.y};
+    const yaw=yawFor(body,turret.angle),c=Math.cos(yaw),s=Math.sin(yaw);
+    return project(body,p[0]+q[0]*c+q[2]*s,p[1]+q[1],p[2]-q[0]*s+q[2]*c);
+  }
+  function assignTargets(body,players){
+    const eligible=players.filter(p=>!p.dead&&!(p.spawnFx>0)&&!(p.protection>0)&&!(p.camo>0)).sort((a,b)=>a.index-b.index);
+    const phase=Math.floor(body.age/TARGET_PERIOD),roster=eligible.map(p=>p.index).join(',');
+    if(body.targetPhase!==phase||body.targetRoster!==roster){
+      body.targetPhase=phase;body.targetRoster=roster;
+      for(const turret of body.turrets)turret.target=-1;
+      const remaining=eligible.slice();
+      // At most one turret per live target. Spare guns scan and take turns next phase.
+      for(let offset=0;offset<firingTurrets.length&&remaining.length;offset++){
+        const index=firingTurrets[(phase+offset)%firingTurrets.length],p=pivot(body,index);let best=0,distance=Infinity;
+        for(let j=0;j<remaining.length;j++){const d=Math.hypot(remaining[j].x-p.x,remaining[j].y-p.y);if(d<distance){best=j;distance=d;}}
+        body.turrets[index].target=remaining.splice(best,1)[0].index;
+      }
+    }
+    return eligible;
   }
   function step(body,dt,players,uid){
     body.px=body.x;body.py=body.y;body.x+=body.vx*dt;body.y+=body.vy*dt;body.age+=dt;
-    const shots=[];
+    body.bank=bankAt(body.age);
+    const shots=[],eligible=assignTargets(body,players);
     for(let i=0;i<body.turrets.length;i++){
-      const turret=body.turrets[i],p=pivot(body,i);let target=null,best=Infinity;
-      for(const player of players){
-        if(player.dead||player.spawnFx>0||player.protection>0||player.camo>0)continue;
-        const distance=Math.hypot(player.x-p.x,player.y-p.y);
-        if(distance<best){best=distance;target=player;}
-      }
-      turret.target=target?target.index:-1;
-      if(!target)continue;
-      const lead=Math.min(1.25,best/SHOT_SPEED),desired=Math.atan2(target.y+(Number(target.vy)||0)*lead-p.y,target.x+(Number(target.vx)||0)*lead-p.x);
+      const turret=body.turrets[i],p=pivot(body,i),target=eligible.find(p=>p.index===turret.target);
+      const distance=target?Math.hypot(target.x-p.x,target.y-p.y):0,lead=Math.min(1.25,distance/SHOT_SPEED);
+      const desired=target?Math.atan2(target.y+(Number(target.vy)||0)*lead-p.y,target.x+(Number(target.vx)||0)*lead-p.x):body.angle-Math.PI/2+(i-2)*.7+Math.sin(body.age*.32+i)*.16;
       const turn=angleDelta(turret.angle,desired),limit=1.65*dt;
       turret.angle+=Math.max(-limit,Math.min(limit,turn));
-      if(body.age<turret.nextShot||Math.abs(angleDelta(turret.angle,desired))>.10)continue;
+      turret.aligned=!!target&&Math.abs(angleDelta(turret.angle,desired))<=.10;
+    }
+    if(body.age>=body.nextVolley)for(let offset=0;offset<firingTurrets.length;offset++){
+      const slot=(body.fireCursor+offset)%firingTurrets.length,i=firingTurrets[slot],turret=body.turrets[i];
+      if(!turret.aligned||body.age<turret.nextShot)continue;
       const origins=[muzzle(body,i,0),muzzle(body,i,1)];
       if(origins.some(o=>o.x<4||o.x>W-4||o.y<4||o.y>H-4))continue;
       for(const origin of origins)shots.push({id:uid(),owner:-2,mothership:true,x:origin.x,y:origin.y,px:origin.x,py:origin.y,vx:Math.cos(turret.angle)*SHOT_SPEED,vy:Math.sin(turret.angle)*SHOT_SPEED,age:0,travel:0,guided:false});
-      turret.nextShot=body.age+SHOT_INTERVAL+i*.09;
+      turret.nextShot=body.age+SHOT_INTERVAL;body.nextVolley=body.age+VOLLEY_GAP;body.fireCursor=(slot+1)%firingTurrets.length;
+      break;
     }
     return {shots,active:body.vx>0?body.x<W+data.radius+40:body.x>-data.radius-40};
   }
@@ -79,7 +101,8 @@
     }
     return {depth,nx,ny};
   }
-  function hullShape(body){return shape(hullCache,body,data.profiles[0],body.x,body.y,1,body.angle);}
+  function hullProfile(body){return data.bankProfiles?data.bankProfiles[Math.max(0,Math.min(data.bankProfiles.length-1,Math.round((Number(body.bank)||0)*180/Math.PI)+10))]:data.profiles[0];}
+  function hullShape(body){return shape(hullCache,body,hullProfile(body),body.x,body.y,1,body.angle);}
   function contact(body,other,kind='rock'){
     const radius=kind==='ship'?physics.shipCollisionRadius(other):Number(other.r)||45;
     if(Math.hypot(other.x-body.x,other.y-body.y)>data.radius+radius+1)return null;
@@ -134,7 +157,7 @@
     if((bx+dx*t)**2+(by+dy*t)**2>r*r)return null;
     // Exact swept circle against each projected hull segment and endpoint.
     const a=rotate(bx,by,-body.angle),b=rotate(projectile.x-body.x,projectile.y-body.y,-body.angle),ux=b.x-a.x,uy=b.y-a.y,speed2=ux*ux+uy*uy;
-    let first=Infinity,inside=false;const outline=data.profiles[0].outline;
+    let first=Infinity,inside=false;const outline=hullProfile(body).outline;
     for(let i=0,j=outline.length-1;i<outline.length;j=i++){
       const p=outline[j],q=outline[i],vx=q[0]-p[0],vy=q[1]-p[1],length=Math.hypot(vx,vy);
       if((p[1]>a.y)!==(q[1]>a.y)&&a.x<vx*(a.y-p[1])/vy+p[0])inside=!inside;
@@ -146,5 +169,5 @@
     if(inside)first=0;
     return Number.isFinite(first)?{t:first,x:x0+(projectile.x-x0)*first,y:y0+(projectile.y-y0)*first}:null;
   }
-  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,SHOT_SPEED,SHOT_INTERVAL});
+  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,hullProfile,bankAt,yawFor,BANK_LIMIT,BANK_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
 })();

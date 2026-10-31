@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.11: la nodriza balancea suavemente +/-10 grados en ciclos de 10 segundos, con 21 perfiles de casco extraidos del GLB y bocas de canon ajustadas a la inclinacion. Las cuatro torretas laterales reparten objetivos distintos y se relevan cada 7 segundos; la central queda en espera. Dispara una sola pareja cada 4 segundos como minimo, con 8 segundos de recarga por torreta y balas a 400 unidades/s (antes 600).
+
 V24.10: pasada de prueba de nodriza al empezar el primer nivel contra la CPU. Usa el GLB original y sus cinco nulls AEGIS_Yaw; cada torreta sigue a las naves visibles y dispara dos balas desde sus canones con cadencia limitada. Mientras atraviesa el escenario se pausan la lluvia y el gigante; los asteroides medianos rebotan contra el perfil concavo extraido del casco. El GLB se carga y prepara durante PREPARADOS solo para CPU. Para esta prueba la nodriza completa su pasada sin barra de vida; absorbe los disparos del jugador. No modifica la simulacion ni los paquetes online ni el entrenamiento privado.
 
 V24.09: el icono flotante del escudo aparece dentro del mismo aro y halo que las demas mejoras.

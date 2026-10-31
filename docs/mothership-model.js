@@ -21,7 +21,8 @@ export function createMothershipFactory(template,definition,environment=null){
   };
 }
 export function setMothershipPose(visual,body){
-  visual.rotation.z=-body.angle;
+  const bank=Number(body.bank)||0;
+  visual.rotation.set(0,bank,-body.angle,'ZYX');
   const pivots=poses.get(visual);if(!pivots)return;
-  for(let i=0;i<pivots.length;i++)pivots[i].rotation.y=Math.PI/2+body.angle-body.turrets[i].angle;
+  for(let i=0;i<pivots.length;i++){const local=body.turrets[i].angle-body.angle;pivots[i].rotation.y=Math.atan2(Math.cos(local)/Math.cos(bank),Math.sin(local));}
 }

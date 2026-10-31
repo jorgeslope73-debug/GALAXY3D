@@ -20,8 +20,9 @@ const template=prepareMothershipTemplate(gltf.scene,D),environment=new T.Texture
 let triangles=0,meshes=0;a.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;assert.equal(o.material.map,original.map);assert.equal(o.material.metalnessMap,original.metalnessMap);assert.equal(o.material.emissiveMap,original.emissiveMap);assert.equal(o.material.emissiveIntensity,original.emissiveIntensity);assert.equal(o.material.envMap,environment);});
 assert.equal(meshes,6);assert.equal(triangles,14188);
 const body=M.create(99);body.x=960;body.y=540;
-for(const direction of [1,-1])for(const angle of [0,.7,2.2,4.9]){
+for(const direction of [1,-1])for(const bank of [-10,-4.5,0,4.5,10])for(const angle of [0,.7,2.2,4.9]){
   body.angle=direction*Math.PI/2;
+  body.bank=bank*Math.PI/180;
   body.turrets.forEach((t,i)=>t.angle=angle+i*.23);
   setMothershipPose(a,body);a.position.set(body.x,-body.y,0);a.updateMatrixWorld(true);
   for(let i=0;i<5;i++){
@@ -36,23 +37,63 @@ for(const direction of [1,-1])for(const angle of [0,.7,2.2,4.9]){
     assert.equal(b.getObjectByName(D.turrets[i].name).rotation.y,0,'Independent clones do not rotate each other');
   }
 }
-body.angle=Math.PI/2;body.vx=0;body.age=10;
+assert.equal(D.bankProfiles.length,21,'Every integer bank from -10 to +10 has a projected GLB hull');
+for(let degrees=-10;degrees<=10;degrees++){
+  body.angle=0;body.bank=degrees*Math.PI/180;
+  setMothershipPose(a,body);a.position.set(body.x,-body.y,0);a.updateMatrixWorld(true);
+  const bounds=new T.Box3().setFromObject(a.getObjectByName('AEGIS_Hull'),true),outline=M.hullProfile(body).outline;
+  const actual=[bounds.min.x-body.x,bounds.max.x-body.x,-bounds.max.y-body.y,-bounds.min.y-body.y];
+  const projected=[Math.min(...outline.map(p=>p[0])),Math.max(...outline.map(p=>p[0])),Math.min(...outline.map(p=>p[1])),Math.max(...outline.map(p=>p[1]))];
+  actual.forEach((value,i)=>assert.ok(Math.abs(value-projected[i])<1.4,'Banked contact bounds follow the actual mesh, not the old flat hull'));
+}
+assert.ok(Math.abs(M.bankAt(2.5)-M.BANK_LIMIT)<1e-12);assert.ok(Math.abs(M.bankAt(7.5)+M.BANK_LIMIT)<1e-12);
+for(let tick=0;tick<600;tick++){
+  const t=tick/60;assert.ok(Math.abs(M.bankAt(t))<=M.BANK_LIMIT+1e-12);
+  assert.ok(Math.abs(M.bankAt(t+1/60)-M.bankAt(t))<.0019,'The lateral bank changes smoothly');
+  assert.ok(Math.abs(M.bankAt(t+M.BANK_PERIOD)-M.bankAt(t))<1e-12,'Banking repeats without drift');
+}
+body.angle=Math.PI/2;body.vx=0;body.age=10;body.bank=0;
 const player={index:0,x:1400,y:100,vx:0,vy:0,protection:0,spawnFx:0,camo:0,dead:false};
 body.turrets.forEach((t,i)=>{const p=M.pivot(body,i);t.angle=Math.atan2(player.y-p.y,player.x-p.x);t.nextShot=0;});
 let id=1;const volley=M.step(body,1/60,[player],()=>id++).shots;
-assert.equal(volley.length,10,'Five turrets each fire exactly two bullets');
-for(let i=0;i<5;i++)assert.ok(Math.hypot(volley[i*2].x-volley[i*2+1].x,volley[i*2].y-volley[i*2+1].y)>18,'Twin barrels stay visibly separated');
+assert.equal(volley.length,2,'Only one turret fires its twin barrels per turn');
+assert.ok(Math.hypot(volley[0].x-volley[1].x,volley[0].y-volley[1].y)>18,'Twin barrels stay visibly separated');
 assert.equal(M.step(body,1/60,[player],()=>id++).shots.length,0,'Cadence is bounded, not a volley every frame');
 assert.equal(M.step(body,4,[{...player,dead:true}],()=>id++).shots.length,0);
 assert.ok(volley.every(s=>s.owner===-2&&s.guided===false));
+// Four side guns take turns; no two active guns share a player. The centre never fires.
+let totalVolleys=0;
+for(const count of [1,2,4]){
+  const mother=M.create(100);mother.x=mother.px=960;mother.vx=0;
+  const targets=Array.from({length:count},(_,i)=>({...player,index:i,x:[300,1500,400,1450][i],y:[150,900,900,120][i]}));
+  let lastVolley=-Infinity;const lastGun=new Map(),seenGuns=new Set();
+  for(let tick=0;tick<32*60;tick++){
+    const before=mother.turrets.map(t=>t.nextShot),result=M.step(mother,1/60,targets,()=>id++);
+    const assigned=mother.turrets.filter(t=>t.target>=0).map(t=>t.target);
+    assert.equal(assigned.length,count);assert.equal(new Set(assigned).size,count,'Each active turret has a distinct objective');
+    assert.equal(mother.turrets[2].target,-1,'The central turret remains on standby');
+    assert.ok(result.shots.length===0||result.shots.length===2,'No simultaneous mass volleys or catch-up bursts');
+    if(!result.shots.length)continue;
+    const guns=mother.turrets.map((t,i)=>t.nextShot!==before[i]?i:-1).filter(i=>i>=0);
+    assert.equal(guns.length,1);assert.notEqual(guns[0],2,'The central turret never fires');
+    assert.ok(mother.age-lastVolley>=M.VOLLEY_GAP-1e-8,'There is a full pause between twin shots');
+    assert.ok(mother.age-(lastGun.get(guns[0])??-Infinity)>=M.SHOT_INTERVAL-1e-8,'Each gun also respects its slow individual cooldown');
+    lastGun.set(guns[0],mother.age);lastVolley=mother.age;seenGuns.add(guns[0]);totalVolleys++;
+    result.shots.forEach((shot,barrel)=>{const muzzle=M.muzzle(mother,guns[0],barrel);assert.ok(Math.hypot(shot.x-muzzle.x,shot.y-muzzle.y)<1e-7);assert.ok(Math.abs(Math.hypot(shot.vx,shot.vy)-400)<1e-8,'Enemy bullets are slower than the previous 600 units/s');});
+  }
+  assert.equal(seenGuns.size,4,'The four side guns rotate through the waiting turns');
+  targets[0].dead=true;M.step(mother,1/60,targets,()=>id++);
+  assert.ok(mother.turrets.every(t=>t.target!==0),'Dead targets are released immediately');
+}
 // A swept projectile crosses the complete ship in one tick; near misses remain misses.
-body.px=body.x;body.py=body.y;
+body.px=body.x;body.py=body.y;body.bank=0;
 assert.ok(M.circleSweep(body,{px:300,py:540,x:1600,y:540},4));
 assert.equal(M.circleSweep(body,{px:300,py:950,x:1600,y:950},4),null);
 assert.equal(M.contact(body,{id:71,x:body.x+300,y:body.y+280,r:51.75,spin:0}),null,'Empty bounding-box corners must not produce ghost collisions');
 let contacts=0;
-for(const r of P.MEDIUM_ROCK_RADII)for(const spin of [0,.7,1.8,3.4,5.6])for(const direction of [-1,1]){
+for(const bank of [-10,0,10])for(const r of P.MEDIUM_ROCK_RADII)for(const spin of [0,.7,1.8,3.4,5.6])for(const direction of [-1,1]){
   const mother=M.create(99,direction);mother.x=960;mother.y=540;mother.vx=direction*90;
+  mother.bank=bank*Math.PI/180;
   const rock={id:17,r,spin,x:960,y:540+direction*340,vx:0,vy:-direction*100};
   let collided=false;
   for(let tick=0;tick<300;tick++){
@@ -98,4 +139,4 @@ engine.bullets=[
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.bullets[0].owner,-2,'Mounted guns can fire over their own deck; player shots stop at the real hull');
 engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating the opening level restores the test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
-console.log(`Mothership OK: exact GLB, five independent nulls, 10 calibrated muzzle shots, cadence, ${contacts} irregular medium contacts, swept hull/player hits, hazard pause/resume, exit/reset/training and unchanged online state.`);
+console.log(`Mothership OK: exact GLB, smooth +/-10 bank, 21 matching hulls, calibrated banked muzzles, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
