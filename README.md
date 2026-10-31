@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.16: sustituye nodriza.glb por el nuevo archivo del usuario sin la torreta central (13.558 triangulos). Recalibra los datos del GLB y controla solo las cuatro torretas laterales, incluidas la punteria por sectores, las bocas de disparo y la precarga. Conserva escala, balanceo, cadencia y las cinco toberas con particulas azules.
+
 V24.15: propulsion azul con particulas en las cinco toberas traseras originales de la nodriza. Los emisores siguen el giro y balanceo; la estela se desplaza de forma independiente. Efecto visual local, con una sola llamada de dibujo y buffers reutilizables limitados para escritorio y movil, preparado antes de jugar y reiniciado entre partidas.
 
 V24.14: asigna los objetivos de la nodriza segun su direccion de llegada: delanteras para el frente, traseras para atras y las del lado correspondiente para los laterales. Elige las torretas validas mas cercanas sin repetir objetivo y reevalua inmediatamente al cambiar de sector. La prediccion de punteria no puede apuntar al sector opuesto; las torretas sin objetivo exploran hacia fuera.

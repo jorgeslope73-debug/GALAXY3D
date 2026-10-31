@@ -231,7 +231,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V24.15';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.16';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -620,7 +620,7 @@
         api.rock('warm-large',960,230,378,1,0,'large');
         for(const [i,type]of ['ammo1','ammo3','cadence','speed','mira','flare','shockwave','shield','camo'].entries())api.pickup('warm-pickup-'+i,160+i*180,420,type,0);
         api.ufo('warm-ufo',960,420,pass*30);
-        if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,turrets:Array.from({length:5},(_,i)=>({angle:pass+i}))});
+        if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the

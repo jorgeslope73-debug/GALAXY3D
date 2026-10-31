@@ -1,4 +1,4 @@
-/* Authored hull/materials and five independent yaw nulls; simulation supplies the angles. */
+/* Authored hull/materials and four independent yaw nulls; simulation supplies the angles. */
 import * as T from './vendor/three.module.min.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 const poses=new WeakMap();

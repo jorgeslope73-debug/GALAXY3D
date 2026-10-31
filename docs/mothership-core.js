@@ -6,7 +6,7 @@
   const W=1920,H=1080,SPEED=90,SHOT_SPEED=400,SHOT_INTERVAL=8,VOLLEY_GAP=4;
   const BANK_LIMIT=Math.PI/12,BANK_PERIOD=10;
   const YAW_LIMIT=8*Math.PI/180,YAW_PERIOD=14;
-  const firingTurrets=data.turrets.map((turret,index)=>turret.name==='AEGIS_Yaw_Centre'?-1:index).filter(index=>index>=0);
+  const firingTurrets=data.turrets.map((_,index)=>index);
   const hullCache=new WeakMap(),rockCache=new WeakMap(),shipCache=new WeakMap();
   const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   function rotate(x,y,a){const c=Math.cos(a),s=Math.sin(a);return {x:x*c-y*s,y:x*s+y*c};}
