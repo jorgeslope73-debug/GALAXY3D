@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareMothershipTemplate,createMothershipFactory,setMothershipPose} from '../docs/mothership-model.js';
+import {prepareMothershipTemplate,createMothershipFactory,setMothershipPose,createMothershipExhaust,MOTHERSHIP_NOZZLES} from '../docs/mothership-model.js';
 const source=async name=>readFile(new URL('../docs/'+name+'.js',import.meta.url),'utf8');
 const ctx=vm.createContext({window:{},console,Date,performance,setTimeout,clearTimeout});
 for(const name of ['net-protocol','campaign-config','collision-profiles','physics-core','mothership-data','mothership-core','shot-history','host-physics','local-cpu'])vm.runInContext(await source(name),ctx,{filename:name+'.js'});
@@ -20,6 +20,50 @@ const original=gltf.scene.getObjectByName('AEGIS_Hull').material;
 const template=prepareMothershipTemplate(gltf.scene,D),environment=new T.Texture(),factory=createMothershipFactory(template,D,environment),a=factory(),b=factory();
 let triangles=0,meshes=0;a.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;assert.equal(o.material.map,original.map);assert.equal(o.material.metalnessMap,original.metalnessMap);assert.equal(o.material.emissiveMap,original.emissiveMap);assert.equal(o.material.emissiveIntensity,original.emissiveIntensity);assert.equal(o.material.envMap,environment);});
 assert.equal(meshes,6);assert.equal(triangles,14188);
+// All five jets originate in the authored rear rims, including reversed travel
+// and the full bank/yaw. Their world-space trails do not turn with the hull.
+for(const mobile of [false,true]){
+  const root=new T.Group(),visual=factory(),fx=createMothershipExhaust({mobile});root.add(visual,fx.points);
+  const attributes=fx.points.geometry.attributes,position=attributes.position,life=attributes.life;
+  const live=()=>Array.from(life.array).filter(n=>n>0).length;
+  assert.equal(position.count,mobile?144:256);assert.equal(fx.points.material.depthWrite,false);
+  assert.equal(fx.points.material.blending,T.AdditiveBlending);assert.equal(fx.points.material.uniforms.pointScale.value,1);
+  let cases=0;
+  for(const direction of [-1,1])for(const yaw of [-8,0,8])for(const bank of [-15,0,15]){
+    const body=M.create(30,direction);body.x=960;body.y=540;body.angle+=yaw*Math.PI/180;body.bank=bank*Math.PI/180;
+    root.position.set(body.x,-body.y,0);setMothershipPose(visual,body);fx.update(visual,body,1000,'pose-'+cases++,2/3);
+    assert.equal(live(),5,'Each real nozzle emits, without a stale previous trail');
+    const hull=visual.getObjectByName('AEGIS_Hull');
+    const frame=new T.Matrix4().copy(root.matrixWorld).invert().multiply(hull.matrixWorld);
+    const outward=new T.Vector3(0,0,1).transformDirection(frame);
+    for(let i=0;i<5;i++){
+      const n=MOTHERSHIP_NOZZLES[i],origin=new T.Vector3(n[0],n[1],n[2]).applyMatrix4(frame);
+      const offset=new T.Vector3().fromBufferAttribute(position,i).sub(origin);
+      assert.ok(Math.abs(offset.dot(outward))<.001,'Birth lies on the rotated nozzle plane');
+      assert.ok(offset.length()<=n[3]*D.scale+.001,'Birth stays inside the nozzle mouth');
+    }
+    const old=new T.Vector3().fromBufferAttribute(position,0).add(root.position);
+    body.x+=.09;body.angle+=.001;root.position.x=body.x;setMothershipPose(visual,body);
+    fx.update(visual,body,1001,'pose-'+(cases-1),2/3);
+    const delta=new T.Vector3().fromBufferAttribute(position,0).add(root.position).sub(old);
+    assert.ok(delta.dot(outward)>.15&&delta.length()<.3,'Existing particles keep travelling aft rather than following hull yaw');
+  }
+  for(const fps of [30,60,144]){
+    const body=M.create(50);body.x=300;body.y=540;
+    for(let frame=0;frame<fps*4;frame++){
+      body.x+=90/fps;body.angle=body.heading+M.yawAt(frame/fps);body.bank=M.bankAt(frame/fps);
+      root.position.set(body.x,-body.y,0);setMothershipPose(visual,body);fx.update(visual,body,2000+frame*1000/fps,'fps-'+fps,.75);
+      assert.ok(Array.from(life.array).every(n=>n>=0&&n<=1),'Particle lifetimes stay bounded at every refresh rate');
+    }
+    assert.ok(live()>40&&live()<position.count,'Sustained propulsion has a bounded, non-saturated reusable pool');
+    assert.equal(fx.points.geometry.attributes.position,position,'No per-frame geometry or buffer allocation');
+    fx.update(visual,body,8000,'fps-'+fps,.75);assert.equal(live(),5,'A background gap drops the old trail');
+    fx.update(visual,body,8016,'next-match',.75);assert.equal(live(),5,'A new match clears pooled exhaust');
+    body.id++;fx.update(visual,body,8032,'next-match',.75);assert.equal(live(),5,'A different mothership clears pooled exhaust');
+  }
+  assert.equal(fx.points.material.uniforms.pointScale.value,.75,'Point size tracks the actual render resolution');
+}
+console.log('Mothership exhaust OK: five authored rear nozzles, blue particle shader, bank/yaw alignment, independent world trails, fixed mobile/desktop pools, 30/60/144Hz and match/background cleanup.');
 const body=M.create(99);body.x=960;body.y=540;
 for(const direction of [1,-1])for(const yaw of [-8,0,8])for(const bank of [-15,-7.5,0,7.5,15])for(const angle of [0,.7,2.2,4.9]){
   body.angle=direction*Math.PI/2+yaw*Math.PI/180;

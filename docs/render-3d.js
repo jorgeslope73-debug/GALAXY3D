@@ -89,7 +89,7 @@
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,winnerStage=null;
-    let createImportedMothership=null,setImportedMothershipPose=null,mothershipLoad=null;
+    let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -231,7 +231,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V24.14';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.15';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -250,6 +250,7 @@
         const template=await assets.loadMothershipTemplate(definition);
         createImportedMothership=assets.createMothershipFactory(template,definition,reflections.texture);
         setImportedMothershipPose=assets.setMothershipPose;
+        createImportedMothershipExhaust=assets.createMothershipExhaust;
         document.documentElement.dataset.galaxyMothership='nodriza-glb';
         return true;
       }).catch(error=>{mothershipLoad=null;throw error;});
@@ -314,7 +315,8 @@
         return {root};
       }
       if(kind==='mothership'){
-        const visual=createImportedMothership();root.add(visual);return {root,visual};
+        const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile});
+        root.add(visual,exhaust.points);return {root,visual,exhaust};
       }
       if(kind==='menu-ufo'){
         const side=new T.Group(),spin=new T.Group();root.add(side);side.add(spin);spin.add(createImportedUfo());
@@ -509,6 +511,7 @@
         if(!body||!createImportedMothership)return;
         const record=take('mothership',body.id);place(record.root,body.x,body.y,0);
         setImportedMothershipPose(record.visual,body);
+        record.exhaust.update(record.visual,body,now,poseContext,surface.height/H);
       },
       flush(ctx){
         boltMesh.count=bolts;boltMesh.instanceMatrix.needsUpdate=true;
