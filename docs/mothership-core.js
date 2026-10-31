@@ -4,7 +4,7 @@
   const data=window.GalaxyMothershipData,physics=window.GalaxyPhysicsCore;
   if(!data||!physics)throw new Error('Falta la geometria de la nodriza');
   const W=1920,H=1080,SPEED=90,SHOT_SPEED=400,SHOT_INTERVAL=8,VOLLEY_GAP=4;
-  const BANK_LIMIT=Math.PI/18,BANK_PERIOD=10,TARGET_PERIOD=7;
+  const BANK_LIMIT=Math.PI/12,BANK_PERIOD=10,TARGET_PERIOD=7;
   const firingTurrets=data.turrets.map((turret,index)=>turret.name==='AEGIS_Yaw_Centre'?-1:index).filter(index=>index>=0);
   const hullCache=new WeakMap(),rockCache=new WeakMap(),shipCache=new WeakMap();
   const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
@@ -101,7 +101,7 @@
     }
     return {depth,nx,ny};
   }
-  function hullProfile(body){return data.bankProfiles?data.bankProfiles[Math.max(0,Math.min(data.bankProfiles.length-1,Math.round((Number(body.bank)||0)*180/Math.PI)+10))]:data.profiles[0];}
+  function hullProfile(body){return data.bankProfiles?data.bankProfiles[Math.max(0,Math.min(data.bankProfiles.length-1,Math.round((Number(body.bank)||0)*180/Math.PI)+Math.floor(data.bankProfiles.length/2)))]:data.profiles[0];}
   function hullShape(body){return shape(hullCache,body,hullProfile(body),body.x,body.y,1,body.angle);}
   function contact(body,other,kind='rock'){
     const radius=kind==='ship'?physics.shipCollisionRadius(other):Number(other.r)||45;

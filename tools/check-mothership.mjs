@@ -20,7 +20,7 @@ const template=prepareMothershipTemplate(gltf.scene,D),environment=new T.Texture
 let triangles=0,meshes=0;a.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;assert.equal(o.material.map,original.map);assert.equal(o.material.metalnessMap,original.metalnessMap);assert.equal(o.material.emissiveMap,original.emissiveMap);assert.equal(o.material.emissiveIntensity,original.emissiveIntensity);assert.equal(o.material.envMap,environment);});
 assert.equal(meshes,6);assert.equal(triangles,14188);
 const body=M.create(99);body.x=960;body.y=540;
-for(const direction of [1,-1])for(const bank of [-10,-4.5,0,4.5,10])for(const angle of [0,.7,2.2,4.9]){
+for(const direction of [1,-1])for(const bank of [-15,-7.5,0,7.5,15])for(const angle of [0,.7,2.2,4.9]){
   body.angle=direction*Math.PI/2;
   body.bank=bank*Math.PI/180;
   body.turrets.forEach((t,i)=>t.angle=angle+i*.23);
@@ -37,8 +37,8 @@ for(const direction of [1,-1])for(const bank of [-10,-4.5,0,4.5,10])for(const an
     assert.equal(b.getObjectByName(D.turrets[i].name).rotation.y,0,'Independent clones do not rotate each other');
   }
 }
-assert.equal(D.bankProfiles.length,21,'Every integer bank from -10 to +10 has a projected GLB hull');
-for(let degrees=-10;degrees<=10;degrees++){
+assert.equal(D.bankProfiles.length,31,'Every integer bank from -15 to +15 has a projected GLB hull');
+for(let degrees=-15;degrees<=15;degrees++){
   body.angle=0;body.bank=degrees*Math.PI/180;
   setMothershipPose(a,body);a.position.set(body.x,-body.y,0);a.updateMatrixWorld(true);
   const bounds=new T.Box3().setFromObject(a.getObjectByName('AEGIS_Hull'),true),outline=M.hullProfile(body).outline;
@@ -49,7 +49,7 @@ for(let degrees=-10;degrees<=10;degrees++){
 assert.ok(Math.abs(M.bankAt(2.5)-M.BANK_LIMIT)<1e-12);assert.ok(Math.abs(M.bankAt(7.5)+M.BANK_LIMIT)<1e-12);
 for(let tick=0;tick<600;tick++){
   const t=tick/60;assert.ok(Math.abs(M.bankAt(t))<=M.BANK_LIMIT+1e-12);
-  assert.ok(Math.abs(M.bankAt(t+1/60)-M.bankAt(t))<.0019,'The lateral bank changes smoothly');
+  assert.ok(Math.abs(M.bankAt(t+1/60)-M.bankAt(t))<.0028,'The lateral bank changes smoothly');
   assert.ok(Math.abs(M.bankAt(t+M.BANK_PERIOD)-M.bankAt(t))<1e-12,'Banking repeats without drift');
 }
 body.angle=Math.PI/2;body.vx=0;body.age=10;body.bank=0;
@@ -91,7 +91,7 @@ assert.ok(M.circleSweep(body,{px:300,py:540,x:1600,y:540},4));
 assert.equal(M.circleSweep(body,{px:300,py:950,x:1600,y:950},4),null);
 assert.equal(M.contact(body,{id:71,x:body.x+300,y:body.y+280,r:51.75,spin:0}),null,'Empty bounding-box corners must not produce ghost collisions');
 let contacts=0;
-for(const bank of [-10,0,10])for(const r of P.MEDIUM_ROCK_RADII)for(const spin of [0,.7,1.8,3.4,5.6])for(const direction of [-1,1]){
+for(const bank of [-15,0,15])for(const r of P.MEDIUM_ROCK_RADII)for(const spin of [0,.7,1.8,3.4,5.6])for(const direction of [-1,1]){
   const mother=M.create(99,direction);mother.x=960;mother.y=540;mother.vx=direction*90;
   mother.bank=bank*Math.PI/180;
   const rock={id:17,r,spin,x:960,y:540+direction*340,vx:0,vy:-direction*100};
@@ -139,4 +139,4 @@ engine.bullets=[
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.bullets[0].owner,-2,'Mounted guns can fire over their own deck; player shots stop at the real hull');
 engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating the opening level restores the test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
-console.log(`Mothership OK: exact GLB, smooth +/-10 bank, 21 matching hulls, calibrated banked muzzles, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
+console.log(`Mothership OK: exact GLB, smooth +/-15 bank, 31 matching hulls, calibrated banked muzzles, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
