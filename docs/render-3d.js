@@ -34,6 +34,11 @@
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
       try{return await world.prepareMatch(width,height);}catch(error){fallback(error);throw error;}
     },
+    async prepareMothership(){
+      const loaded=await assetsReady;
+      if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
+      try{return await world.prepareMothership();}catch(error){fallback(error);throw error;}
+    },
     begin(ctx,now,snapshot,localIndex){
       if(!this.active||world.preparing)return null;
       try{world.begin(ctx,now,snapshot,localIndex);return world;}catch(error){fallback(error);return null;}
@@ -84,6 +89,7 @@
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,winnerStage=null;
+    let createImportedMothership=null,setImportedMothershipPose=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -225,7 +231,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V24.09';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.10';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -237,6 +243,18 @@
     const ufoAssets=import('./ufo-model.js?v='+encodeURIComponent(assetVersion));
     // One baked reflection texture is shared by UFOs and rockets.
     const reflectionsReady=ufoAssets.then(assets=>assets.createUfoEnvironment(renderer));
+    // The CPU encounter is loaded during PREPARADOS. Online/menu never download it.
+    function prepareMothership(){
+      if(!mothershipLoad)mothershipLoad=Promise.all([import('./mothership-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
+        const definition=window.GalaxyMothershipData;
+        const template=await assets.loadMothershipTemplate(definition);
+        createImportedMothership=assets.createMothershipFactory(template,definition,reflections.texture);
+        setImportedMothershipPose=assets.setMothershipPose;
+        document.documentElement.dataset.galaxyMothership='nodriza-glb';
+        return true;
+      }).catch(error=>{mothershipLoad=null;throw error;});
+      return mothershipLoad;
+    }
     modelLoads.push(Promise.all([ufoAssets,reflectionsReady]).then(async ([assets,reflections])=>{
       const template=await assets.loadUfoTemplate();
       createImportedUfo=assets.createUfoFactory(template,reflections.texture);setImportedUfoPose=assets.setUfoPose;
@@ -294,6 +312,9 @@
       if(kind==='ufo'){
         root.add(createImportedUfo());
         return {root};
+      }
+      if(kind==='mothership'){
+        const visual=createImportedMothership();root.add(visual);return {root,visual};
       }
       if(kind==='menu-ufo'){
         const side=new T.Group(),spin=new T.Group();root.add(side);side.add(spin);spin.add(createImportedUfo());
@@ -484,6 +505,11 @@
         record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
         record.torus.rotation.set(.2,0,now*.0005);
       },
+      mothership(body){
+        if(!body||!createImportedMothership)return;
+        const record=take('mothership',body.id);place(record.root,body.x,body.y,0);
+        setImportedMothershipPose(record.visual,body);
+      },
       flush(ctx){
         boltMesh.count=bolts;boltMesh.instanceMatrix.needsUpdate=true;
         updateEffects();
@@ -591,6 +617,7 @@
         api.rock('warm-large',960,230,378,1,0,'large');
         for(const [i,type]of ['ammo1','ammo3','cadence','speed','mira','flare','shockwave','shield','camo'].entries())api.pickup('warm-pickup-'+i,160+i*180,420,type,0);
         api.ufo('warm-ufo',960,420,pass*30);
+        if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,turrets:Array.from({length:5},(_,i)=>({angle:pass+i}))});
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the
@@ -606,7 +633,7 @@
     api.preparing=false;
     api.prepareMatch=(width,height)=>{
       width=Math.max(256,Math.min(mobile?1280:1920,Math.round(Number(width)||W)));
-      height=Math.round(width*H/W);const key=width+'x'+height;
+      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'');
       preparationQueue=preparationQueue.then(async()=>{
         if(preparedViewport===key&&surface.width===width)return {width,height,programs:renderer.info.programs?.length||0};
         api.preparing=true;
@@ -615,6 +642,7 @@
       });
       return preparationQueue;
     };
+    api.prepareMothership=prepareMothership;
     api.ready=Promise.all(modelLoads).then(async()=>{
       api.preparing=true;
       try{await warmScene(256,144);}finally{api.preparing=false;}

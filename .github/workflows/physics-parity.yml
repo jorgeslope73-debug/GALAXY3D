@@ -26,6 +26,11 @@ on:
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
       - 'docs/ufo-model.js'
+      - 'docs/mothership-model.js'
+      - 'docs/mothership-core.js'
+      - 'docs/mothership-data.js'
+      - 'tools/check-mothership.mjs'
+      - 'tools/build-mothership-profile.mjs'
       - 'docs/menu-ufo.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
@@ -119,6 +124,11 @@ on:
       - 'docs/rocket-model.js'
       - 'docs/meteor-model.js'
       - 'docs/ufo-model.js'
+      - 'docs/mothership-model.js'
+      - 'docs/mothership-core.js'
+      - 'docs/mothership-data.js'
+      - 'tools/check-mothership.mjs'
+      - 'tools/build-mothership-profile.mjs'
       - 'docs/menu-ufo.js'
       - 'docs/assets/models/**'
       - 'docs/vendor/GLTFLoader.js'
@@ -276,6 +286,8 @@ jobs:
         run: node tools/check-rotating-profiles.mjs
       - name: Check UFO GLB resources, orientation, size and animation
         run: node tools/check-ufo-model.mjs
+      - name: Check CPU mothership, turret muzzle calibration and irregular contacts
+        run: node tools/check-mothership.mjs
       - name: Check decorative menu UFO timing and clearance
         run: node tools/check-menu-ufo.mjs
       - name: Check network resilience

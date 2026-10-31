@@ -1,6 +1,7 @@
 'use strict';
 (() => {
   const PHYSICS_CORE=window.GalaxyPhysicsCore;
+  const MOTHERSHIP=window.GalaxyMothership;
   if(!PHYSICS_CORE)throw new Error('GalaxyPhysicsCore no cargado');
   const W=1920,H=1080,TICK_HZ=60,DT=1/TICK_HZ,STEP_MS=1000/TICK_HZ;
   const DRAG_PER_TICK=Math.pow(0.35,DT);
@@ -159,6 +160,7 @@
       this.activeShockwaves=[];
       this.meteors=[];
       this.giant=null;
+      this.mothership=null;
       this.ufo=null;
       // V21.61: la campaña CPU puede tener hasta tres OVNIs simultáneos.
       // this.ufo conserva el principal para no tocar la física compartida;
@@ -1089,6 +1091,7 @@
       this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
       const human=this.makePlayer(0,name,false);
+      this.startMothershipPass();
       this.applyTrainingHardLoadout(human,false);
       this.placeAtSpawn(human);
       this.players.push(human);
@@ -1116,6 +1119,7 @@
     }
     startTraining(brain=null){
       this.trainingMode=true;
+      this.mothership=null;
       this.learningEnabled=true;
       this.campaignLevel=1;
       this.difficulty='dificil';
@@ -1157,7 +1161,7 @@
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
       return true;
     }
-    stop(){this.started=false;this.lastNow=0;this.accumulator=0;}
+    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;}
     setControl(turn,thrust,fire,actions={}){
       const p=this.players[0];
       if(!p)return false;
@@ -1250,6 +1254,7 @@
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
+      this.startMothershipPass();
       for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;
@@ -2461,7 +2466,43 @@
         // Al caducar el input tambien se descartan sus pulsos pendientes.
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
-      this.updateAsteroids(dt);this.updateFlares(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateMothership(dt);
+      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+    }
+    startMothershipPass(){
+      this.mothership=!this.trainingMode&&this.campaignLevel===1&&MOTHERSHIP?MOTHERSHIP.create(uid(),1):null;
+      if(this.mothership){this.giant=null;this.meteors=[];this.showerLeft=0;}
+    }
+    updateMothership(dt){
+      if(!this.mothership)return;
+      const next=MOTHERSHIP.step(this.mothership,dt,this.players,uid);
+      const active=this.bullets.reduce((count,b)=>count+(b.mothership?1:0),0);
+      if(next.shots.length&&active<64){this.bullets.push(...next.shots.slice(0,64-active));this.emit({t:'sound',kind:'laser'});}
+      if(!next.active)this.mothership=null;
+    }
+    resolveMothershipContacts(){
+      const mother=this.mothership;if(!mother)return;
+      for(const asteroid of this.asteroids)MOTHERSHIP.separate(mother,asteroid);
+      for(let i=this.pickups.length-1;i>=0;i--){
+        const pickup=this.pickups[i];
+        if(MOTHERSHIP.circleSweep({...mother,px:mother.x,py:mother.y},pickup,PICKUP_RADIUS))this.pickups.splice(i,1);
+      }
+      for(const player of this.players){
+        if(player.dead||!MOTHERSHIP.contact(mother,player,'ship'))continue;
+        if(player.shield>0||player.protection>0){const edge=MOTHERSHIP.surface(mother,player.x,player.y);this.emitShipImpact(player,edge,false);MOTHERSHIP.separate(mother,player,'ship');}
+        else this.destroyShip(player,null);
+      }
+    }
+    absorbMothershipShots(dt){
+      const mother=this.mothership;if(!mother)return;
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const bullet=this.bullets[i];if(bullet.mothership)continue;
+        const next={px:bullet.x,py:bullet.y,x:bullet.x+bullet.vx*dt,y:bullet.y+bullet.vy*dt};
+        const hit=MOTHERSHIP.circleSweep(mother,next,bullet.guided?MISSILE_HIT_RADIUS:BULLET_RADIUS);
+        if(!hit)continue;
+        if(bullet.guided){this.emitRocketDisintegrateAt(hit.x,hit.y,bullet.owner);this.emit({t:'sound',kind:'sparkle'});}
+        this.bullets.splice(i,1);
+      }
     }
     reloadTime(p){return PHYSICS_CORE.reloadTimeFor(p);}
     bulletSpeed(p){return PHYSICS_CORE.bulletSpeedFor(p);}
@@ -2812,6 +2853,7 @@
       }
     }
     updateShower(dt){
+      if(this.mothership)return;
       const profile=this.hazardProfile();
       if(this.showerLeft<=0){
         this.firstShower-=dt;
@@ -2868,6 +2910,7 @@
       }
     }
     updateGiant(dt){
+      if(this.mothership)return;
       const margin=GIANT_RADIUS+45,inset=GIANT_RADIUS+25,exitMargin=Math.max(350,margin);
       if(!this.giant){
         this.nextGiant-=dt;
@@ -3378,6 +3421,7 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
+        mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,
         shower:round2(this.showerLeft),

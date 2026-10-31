@@ -232,7 +232,7 @@ function playableClientFixture(){
   const Gate=require('../docs/startup-preparation.js');
   engines.window.GalaxyStartPreparation=class extends Gate{constructor(options){super({...options,now:()=>prepNow,schedule:(fn,ms)=>{prepTimers.set(++prepId,{fn,at:prepNow+ms});return prepId;},cancel:id=>prepTimers.delete(id)});}};
   engines.window.GalaxyStartPreparation.warmSimulation=async()=>true;
-  engines.window.Galaxy3D={ready:Promise.resolve({ok:true}),prepareMatch:async()=>({})};
+  engines.window.Galaxy3D={ready:Promise.resolve({ok:true}),prepareMatch:async()=>({}),prepareMothership:async()=>({})};
   const ui=()=>{const classes=new Set();return {textContent:'',classList:{add:k=>classes.add(k),remove:k=>classes.delete(k),contains:k=>classes.has(k)}};};
   const elements=new Map();
   const element=key=>{if(!elements.has(key))elements.set(key,{...ui(),value:key==='difficulty'?'medio':'1'});return elements.get(key);};
@@ -260,6 +260,8 @@ function playableClientFixture(){
 }
 async function checkLocalCpuStartup(){
   const f=playableClientFixture(),{ctx,engines}=f;
+  let releaseMothership;
+  ctx.window.Galaxy3D.prepareMothership=()=>new Promise(resolve=>{releaseMothership=resolve;});
   const connection=f.attach(),previousOnlineMotor=ctx.hostPhysics;
   await ctx.startLocalCpu();
   for(let i=0;i<20;i++)await Promise.resolve();
@@ -273,7 +275,11 @@ async function checkLocalCpuStartup(){
   assert.equal(ctx.inGame,true,'the real start event reaches countdown and beginGame');
   assert.equal(ctx.onlineStartPending,true,'PREPARADOS holds until preparation and the minimum ready period finish');
   assert.equal(cpu.fxClock,0,'preparation does not advance the real CPU simulation');
-  f.advanceStart(ctx.ONLINE_READY_MS);assert.equal(ctx.matchStartGate.phase,'countdown');
+  f.advanceStart(ctx.ONLINE_READY_MS);
+  assert.equal(ctx.matchStartGate.phase,'preparing','CPU waits for the mothership even after the minimum ready period');
+  assert.equal(cpu.fxClock,0,'loading the mothership cannot advance the real encounter');
+  releaseMothership();for(let i=0;i<30;i++)await Promise.resolve();
+  assert.equal(ctx.matchStartGate.phase,'countdown');
   f.advanceStart(ctx.ONLINE_ENTRY_MS);assert.equal(ctx.matchStartGate.phase,'go');
   assert.equal(ctx.onlineStartPending,false);assert.ok(ctx.onlineStartAt>0);
   assert.equal(ctx.menu.classList.contains('hidden'),true);assert.equal(ctx.lobby.classList.contains('hidden'),true);

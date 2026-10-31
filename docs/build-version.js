@@ -2,7 +2,7 @@
 (() => {
   // ÚNICA fuente runtime de versión de GALAXY COMBAT.
   // En futuras versiones solo debe cambiar esta línea.
-  const VERSION='V24.09';
+  const VERSION='V24.10';
   const root=typeof self!=='undefined'?self:globalThis;
   const versioned=src=>src+(src.includes('?')?'&':'?')+'v='+encodeURIComponent(VERSION);
 
@@ -32,6 +32,8 @@
     'collision-profiles.js',
     'physics-core.js',
     'shot-history.js',
+    'mothership-data.js',
+    'mothership-core.js',
     'local-cpu.js',
     'host-physics.js',
     'net-state-codec.js',

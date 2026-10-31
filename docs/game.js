@@ -6292,6 +6292,8 @@
       await Promise.all([prepareGameAssets(),prepareMatchBackground(rankRound),gameAudioEnabled?loadWebAudio():Promise.resolve()]);
       if(webMusicLoadPromise)await webMusicLoadPromise;
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
+      if(roomCode==='LOCAL')await window.Galaxy3D.prepareMothership();
+      if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
       await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
       await window.GalaxyStartPreparation.warmSimulation(roomCode==='LOCAL'?window.GalaxyLocalCpu:window.GalaxyHostPhysics,{
@@ -7026,6 +7028,7 @@
     drawOnlineStartAnnouncement(now);
     drawAsteroidDust(Math.min(.033,Math.max(.008,smoothedStateInterval/1000)));
 
+    if(localCpuActive&&renderState.mothership)scene3D.mothership(renderState.mothership);
     for(const a of renderState.asteroids){
       const old=previousLookup.asteroids.get(a.id);
       const x=old?lerp(old.x,a.x,blend):a.x;

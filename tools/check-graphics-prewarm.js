@@ -22,6 +22,11 @@ async function gpuCase({legacy=false,lost=false,failed=false}={}){
   assert.ok(calls.some(c=>c[0]==='ship'&&c[6]===.4),'transparent material variants are prepared');
   assert.ok(calls.filter(c=>c[0]==='bolt').length>=4);assert.ok(calls.filter(c=>c[0]==='pickup').length>=9);
   assert.ok(calls.some(c=>c[0]==='begin'&&c[1].fx.some(e=>e.kind==='explosion')));
+  assert.equal(calls.filter(c=>c[0]==='mothership').length,0,'online/default startup does not create the CPU-only model');
+  ctx.createImportedMothership=()=>{};api.mothership=body=>calls.push(['mothership',body]);
+  const cpuWarm=ctx.warmScene(1280,720);
+  for(let i=0;i<30;i++)await Promise.resolve();finish();await cpuWarm;
+  assert.equal(calls.filter(c=>c[0]==='mothership').length,4,'the CPU model and all five turret poses are GPU-warmed before readiness');
   const game=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n'),a=game.indexOf('  function prepareGameAssets('),b=game.indexOf('\n  function warmGameAssetsWhenIdle(',a);assert.ok(a>=0&&b>a);
   let modelsReady,gpuReady;const models=new Promise(r=>modelsReady=r),gpu=new Promise(r=>gpuReady=r);
   const assets=vm.createContext({gameAssetsReady:false,gameAssetsPromise:null,Promise,imageDecodePromises:{},document:{fonts:{load:()=>Promise.resolve()}},updateCanvasResolution(){},warmRendererCaches(){},warmOnlineStartCaches(){},canvas:{width:1280,height:720},window:{Galaxy3D:{ready:models,prepareMatch:()=>gpu}}});

@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.10: pasada de prueba de nodriza al empezar el primer nivel contra la CPU. Usa el GLB original y sus cinco nulls AEGIS_Yaw; cada torreta sigue a las naves visibles y dispara dos balas desde sus canones con cadencia limitada. Mientras atraviesa el escenario se pausan la lluvia y el gigante; los asteroides medianos rebotan contra el perfil concavo extraido del casco. El GLB se carga y prepara durante PREPARADOS solo para CPU. Para esta prueba la nodriza completa su pasada sin barra de vida; absorbe los disparos del jugador. No modifica la simulacion ni los paquetes online ni el entrenamiento privado.
+
 V24.09: el icono flotante del escudo aparece dentro del mismo aro y halo que las demas mejoras.
 
 V24.08: la mejora flotante del escudo usa el icono escudo.png aportado por el usuario en lugar del circulo. Se precarga con las mejoras y conserva la materializacion y el parpadeo al caducar; el escudo protector de la nave mantiene su comportamiento.
