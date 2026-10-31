@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.13: reduce un 10% la nodriza (540 unidades) y anade un giro suave de rumbo de +/-8 grados en ciclos de 14 segundos durante su cruce. El modelo, los perfiles de colision y las bocas de los canones comparten la nueva escala y la orientacion; conserva el balanceo de +/-15 grados.
+
 V24.12: aumenta el balanceo lateral de la nodriza a +/-15 grados, con el mismo ciclo suave de 10 segundos. Amplia a 31 los perfiles de casco para mantener los rebotes y la salida de las balas alineados durante la inclinacion.
 
 V24.11: la nodriza balancea suavemente +/-10 grados en ciclos de 10 segundos, con 21 perfiles de casco extraidos del GLB y bocas de canon ajustadas a la inclinacion. Las cuatro torretas laterales reparten objetivos distintos y se relevan cada 7 segundos; la central queda en espera. Dispara una sola pareja cada 4 segundos como minimo, con 8 segundos de recarga por torreta y balas a 400 unidades/s (antes 600).

@@ -5,16 +5,18 @@
   if(!data||!physics)throw new Error('Falta la geometria de la nodriza');
   const W=1920,H=1080,SPEED=90,SHOT_SPEED=400,SHOT_INTERVAL=8,VOLLEY_GAP=4;
   const BANK_LIMIT=Math.PI/12,BANK_PERIOD=10,TARGET_PERIOD=7;
+  const YAW_LIMIT=8*Math.PI/180,YAW_PERIOD=14;
   const firingTurrets=data.turrets.map((turret,index)=>turret.name==='AEGIS_Yaw_Centre'?-1:index).filter(index=>index>=0);
   const hullCache=new WeakMap(),rockCache=new WeakMap(),shipCache=new WeakMap();
   const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   function rotate(x,y,a){const c=Math.cos(a),s=Math.sin(a);return {x:x*c-y*s,y:x*s+y*c};}
   function create(id,direction=1){
     const dir=direction<0?-1:1;
-    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,targetPhase:-1,targetRoster:'',
+    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,targetPhase:-1,targetRoster:'',
       turrets:data.turrets.map(()=>({angle:dir>0?0:Math.PI,nextShot:0,target:-1}))};
   }
   function bankAt(seconds){return Math.sin(seconds*Math.PI*2/BANK_PERIOD)*BANK_LIMIT;}
+  function yawAt(seconds){return Math.sin(seconds*Math.PI*2/YAW_PERIOD)*YAW_LIMIT;}
   function yawFor(body,angle){const local=angle-body.angle;return Math.atan2(Math.cos(local)/Math.cos(Number(body.bank)||0),Math.sin(local));}
   function project(body,x,y,z){
     const bank=Number(body.bank)||0,q=rotate(((x-data.center[0])*Math.cos(bank)+(y-data.center[1])*Math.sin(bank))*data.scale,(z-data.center[2])*data.scale,body.angle);
@@ -48,6 +50,7 @@
   function step(body,dt,players,uid){
     body.px=body.x;body.py=body.y;body.x+=body.vx*dt;body.y+=body.vy*dt;body.age+=dt;
     body.bank=bankAt(body.age);
+    body.angle=body.heading+yawAt(body.age);
     const shots=[],eligible=assignTargets(body,players);
     for(let i=0;i<body.turrets.length;i++){
       const turret=body.turrets[i],p=pivot(body,i),target=eligible.find(p=>p.index===turret.target);
@@ -169,5 +172,5 @@
     if(inside)first=0;
     return Number.isFinite(first)?{t:first,x:x0+(projectile.x-x0)*first,y:y0+(projectile.y-y0)*first}:null;
   }
-  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,hullProfile,bankAt,yawFor,BANK_LIMIT,BANK_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
+  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,hullProfile,bankAt,yawAt,yawFor,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
 })();

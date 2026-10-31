@@ -11,6 +11,7 @@ for(const name of ['net-protocol','campaign-config','collision-profiles','physic
 const M=ctx.window.GalaxyMothership,P=ctx.window.GalaxyPhysicsCore,D=M.data;
 const bytes=await readFile(new URL('../docs/assets/models/nodriza.glb',import.meta.url));
 assert.equal(createHash('sha256').update(bytes).digest('hex'),D.sha256,'Physics calibration must match the exact supplied GLB');
+assert.equal(D.length,540,'The calibrated ship is ten percent smaller than its previous 600-unit length');
 assert.ok(bytes.length<1.5*1024*1024);assert.equal(D.turrets.length,5);
 assert.ok(D.profiles[0].outline.length>20,'Use the real concave hull, not a circle or bounding box');
 const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
@@ -20,8 +21,8 @@ const template=prepareMothershipTemplate(gltf.scene,D),environment=new T.Texture
 let triangles=0,meshes=0;a.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;assert.equal(o.material.map,original.map);assert.equal(o.material.metalnessMap,original.metalnessMap);assert.equal(o.material.emissiveMap,original.emissiveMap);assert.equal(o.material.emissiveIntensity,original.emissiveIntensity);assert.equal(o.material.envMap,environment);});
 assert.equal(meshes,6);assert.equal(triangles,14188);
 const body=M.create(99);body.x=960;body.y=540;
-for(const direction of [1,-1])for(const bank of [-15,-7.5,0,7.5,15])for(const angle of [0,.7,2.2,4.9]){
-  body.angle=direction*Math.PI/2;
+for(const direction of [1,-1])for(const yaw of [-8,0,8])for(const bank of [-15,-7.5,0,7.5,15])for(const angle of [0,.7,2.2,4.9]){
+  body.angle=direction*Math.PI/2+yaw*Math.PI/180;
   body.bank=bank*Math.PI/180;
   body.turrets.forEach((t,i)=>t.angle=angle+i*.23);
   setMothershipPose(a,body);a.position.set(body.x,-body.y,0);a.updateMatrixWorld(true);
@@ -45,19 +46,24 @@ for(let degrees=-15;degrees<=15;degrees++){
   const actual=[bounds.min.x-body.x,bounds.max.x-body.x,-bounds.max.y-body.y,-bounds.min.y-body.y];
   const projected=[Math.min(...outline.map(p=>p[0])),Math.max(...outline.map(p=>p[0])),Math.min(...outline.map(p=>p[1])),Math.max(...outline.map(p=>p[1]))];
   actual.forEach((value,i)=>assert.ok(Math.abs(value-projected[i])<1.4,'Banked contact bounds follow the actual mesh, not the old flat hull'));
+  if(degrees===0)assert.ok(Math.abs(bounds.max.y-bounds.min.y-540)<1e-4,'The rendered hull uses the same reduced length as its collision data');
 }
 assert.ok(Math.abs(M.bankAt(2.5)-M.BANK_LIMIT)<1e-12);assert.ok(Math.abs(M.bankAt(7.5)+M.BANK_LIMIT)<1e-12);
+assert.ok(Math.abs(M.yawAt(3.5)-8*Math.PI/180)<1e-12);assert.ok(Math.abs(M.yawAt(10.5)+8*Math.PI/180)<1e-12);
 for(let tick=0;tick<600;tick++){
   const t=tick/60;assert.ok(Math.abs(M.bankAt(t))<=M.BANK_LIMIT+1e-12);
   assert.ok(Math.abs(M.bankAt(t+1/60)-M.bankAt(t))<.0028,'The lateral bank changes smoothly');
   assert.ok(Math.abs(M.bankAt(t+M.BANK_PERIOD)-M.bankAt(t))<1e-12,'Banking repeats without drift');
+  assert.ok(Math.abs(M.yawAt(t))<=M.YAW_LIMIT+1e-12);
+  assert.ok(Math.abs(M.yawAt(t+1/60)-M.yawAt(t))<.0011,'The eight-degree heading change remains smooth');
+  assert.ok(Math.abs(M.yawAt(t+M.YAW_PERIOD)-M.yawAt(t))<1e-12,'Heading does not accumulate a full turn');
 }
 body.angle=Math.PI/2;body.vx=0;body.age=10;body.bank=0;
 const player={index:0,x:1400,y:100,vx:0,vy:0,protection:0,spawnFx:0,camo:0,dead:false};
 body.turrets.forEach((t,i)=>{const p=M.pivot(body,i);t.angle=Math.atan2(player.y-p.y,player.x-p.x);t.nextShot=0;});
 let id=1;const volley=M.step(body,1/60,[player],()=>id++).shots;
 assert.equal(volley.length,2,'Only one turret fires its twin barrels per turn');
-assert.ok(Math.hypot(volley[0].x-volley[1].x,volley[0].y-volley[1].y)>18,'Twin barrels stay visibly separated');
+assert.ok(Math.hypot(volley[0].x-volley[1].x,volley[0].y-volley[1].y)>16,'Twin barrels stay visibly separated at the reduced scale');
 assert.equal(M.step(body,1/60,[player],()=>id++).shots.length,0,'Cadence is bounded, not a volley every frame');
 assert.equal(M.step(body,4,[{...player,dead:true}],()=>id++).shots.length,0);
 assert.ok(volley.every(s=>s.owner===-2&&s.guided===false));
@@ -69,6 +75,7 @@ for(const count of [1,2,4]){
   let lastVolley=-Infinity;const lastGun=new Map(),seenGuns=new Set();
   for(let tick=0;tick<32*60;tick++){
     const before=mother.turrets.map(t=>t.nextShot),result=M.step(mother,1/60,targets,()=>id++);
+    assert.ok(Math.abs(mother.angle-mother.heading-M.yawAt(mother.age))<1e-12,'Simulation and drawing receive the same gently changing heading');
     const assigned=mother.turrets.filter(t=>t.target>=0).map(t=>t.target);
     assert.equal(assigned.length,count);assert.equal(new Set(assigned).size,count,'Each active turret has a distinct objective');
     assert.equal(mother.turrets[2].target,-1,'The central turret remains on standby');
@@ -91,8 +98,9 @@ assert.ok(M.circleSweep(body,{px:300,py:540,x:1600,y:540},4));
 assert.equal(M.circleSweep(body,{px:300,py:950,x:1600,y:950},4),null);
 assert.equal(M.contact(body,{id:71,x:body.x+300,y:body.y+280,r:51.75,spin:0}),null,'Empty bounding-box corners must not produce ghost collisions');
 let contacts=0;
-for(const bank of [-15,0,15])for(const r of P.MEDIUM_ROCK_RADII)for(const spin of [0,.7,1.8,3.4,5.6])for(const direction of [-1,1]){
+for(const yaw of [-8,0,8])for(const bank of [-15,0,15])for(const r of P.MEDIUM_ROCK_RADII)for(const spin of [0,.7,1.8,3.4,5.6])for(const direction of [-1,1]){
   const mother=M.create(99,direction);mother.x=960;mother.y=540;mother.vx=direction*90;
+  mother.angle+=yaw*Math.PI/180;
   mother.bank=bank*Math.PI/180;
   const rock={id:17,r,spin,x:960,y:540+direction*340,vx:0,vy:-direction*100};
   let collided=false;
@@ -139,4 +147,4 @@ engine.bullets=[
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.bullets[0].owner,-2,'Mounted guns can fire over their own deck; player shots stop at the real hull');
 engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating the opening level restores the test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
-console.log(`Mothership OK: exact GLB, smooth +/-15 bank, 31 matching hulls, calibrated banked muzzles, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
+console.log(`Mothership OK: original GLB at 540 units, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, unique targets, idle centre, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
