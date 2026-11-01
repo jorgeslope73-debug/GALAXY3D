@@ -25,8 +25,9 @@
     },
     {
       id:2,nameKey:'campaignWorld2',
+      boss:{type:'ufo-wave',total:10,interval:4},
       background:{file:'assets/sprites/fondo02.jpg',mobileKey:'bg02',stars:false},
-      ufos:1,
+      ufos:0,
       hazards:{
         asteroidMin:2,
         asteroidInitialMin:16,asteroidInitialMax:21,

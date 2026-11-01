@@ -1193,7 +1193,7 @@
       if(msg.t==='input-action'||msg.t==='fallback-input-action'){this.applyInputAction(msg.kind,msg.actionId);return true;}
       if(msg.t==='restart'){
         const level=Number.isFinite(Number(msg.level))?clamp(Math.round(Number(msg.level)||1),1,CAMPAIGN_LEVELS):this.campaignLevel;
-        const completed=this.finished&&this.winner===0&&(!this.needsMothershipBoss()||this.bossEncounter?.phase==='won');
+        const completed=this.finished&&this.winner===0&&(!(this.needsMothershipBoss()||this.needsUfoBoss())||this.bossEncounter?.phase==='won');
         if(!this.finished||level>this.campaignLevel+1||(level>this.campaignLevel&&!completed)||(this.bossEncounter?.phase==='failed'&&level!==1))return true;
         this.campaignLevel=level;
         if(this.restart()){
@@ -1506,7 +1506,7 @@
       this.noDeathTime=0;this.emitShipImpact(victim,null,true);this.emit({t:'sound',kind:'impact'});
       if(attacker&&attacker!==victim){
         attacker.kills++;
-        if(attacker.kills>=SCORE_TO_WIN&&!this.beginMothershipBoss(attacker)){
+        if(attacker.kills>=SCORE_TO_WIN&&!this.beginCampaignBoss(attacker)){
           this.finished=true;this.winner=attacker.index;
           this.flushLearning();
           this.emit({t:'victory',winner:this.winner});
@@ -2313,7 +2313,7 @@
     update(dt){
       if(!this.started||this.finished)return;
       this.noDeathTime+=dt;this.fxClock+=dt;
-      this.updateMothershipEncounter();
+      this.updateCampaignBoss();
       if(Array.isArray(this.activeShockwaves)&&this.activeShockwaves.length){
         // V21.16: dos jugadores con ONDA activa se neutralizan entre si.
         // Sus frentes siguen existiendo y pueden afectar a terceros sin onda.
@@ -2481,7 +2481,7 @@
         p.thrust=!!c.thrust;
         PHYSICS_CORE.stepShipMovement(p,c,dt,W,H);
         const d=dirFromRot(p.rot);
-        const combatTargets=this.mothershipCombatTargets(p);
+        const combatTargets=this.bossCombatTargets(p);
         PHYSICS_CORE.refreshGuidedState(p,combatTargets,dirFromRot);
 
         // Comprobacion final de disparo DESPUES de aplicar el giro de este frame.
@@ -2521,22 +2521,37 @@
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
       this.updateMothership(dt);
-      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.guideMothershipMissiles(dt);this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
     needsMothershipBoss(){return !!(!this.trainingMode&&MOTHERSHIP&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='mothership');}
+    needsUfoBoss(){return !!(!this.trainingMode&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='ufo-wave');}
+    retireBossRivals(){
+      for(const p of this.players)if(p.cpu){p.dead=true;p.pendingSpawn=null;p.thrust=false;p.vx=p.vy=0;this.controls.delete(p.index);}
+      this.huntThresholdActive=false;this.huntUntil=0;this.huntStartsAt=0;
+    }
+    beginCampaignBoss(winner){
+      if(winner.cpu||this.bossEncounter||this.trainingMode)return false;
+      if(!this.needsUfoBoss())return this.beginMothershipBoss(winner);
+      const cfg=CAMPAIGN.getLevel(this.campaignLevel).boss;
+      this.bossEncounter={type:'ufo-wave',phase:'entering',total:cfg.total,interval:cfg.interval,spawned:0,defeated:0,nextAt:this.fxClock+1.5,cleared:false};
+      this.retireBossRivals();return true;
+    }
     beginMothershipBoss(winner){
       if(!this.needsMothershipBoss()||winner.cpu||this.bossEncounter)return false;
       this.bossEncounter={type:'mothership',phase:'entering',pass:0,maxPasses:CAMPAIGN.getLevel(this.campaignLevel).boss.passes,hp:MOTHERSHIP.MAX_HP,maxHp:MOTHERSHIP.MAX_HP,entry:'left',nextAt:this.fxClock+1.5,cleared:false};
-      for(const p of this.players)if(p.cpu){p.dead=true;p.pendingSpawn=null;p.thrust=false;p.vx=p.vy=0;this.controls.delete(p.index);}
-      this.huntThresholdActive=false;this.huntUntil=0;this.huntStartsAt=0;
+      this.retireBossRivals();
       return true;
     }
-    updateMothershipEncounter(){
+    updateCampaignBoss(){
       const boss=this.bossEncounter;if(!boss||this.finished)return;
       if(!boss.cleared){
-        this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;this.giant=null;this.meteors.length=0;this.showerLeft=0;this.ufo=null;this.ufoExtras.length=0;boss.cleared=true;
+        this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;this.giant=null;this.meteors.length=0;this.showerLeft=0;this.ufo=null;this.ufoExtras.length=0;this.ufoWaveRemaining=0;this.ufoWaveNext=0;this.nextUfo=999999;boss.cleared=true;
       }
       const human=this.players.find(p=>!p.cpu);
+      if(boss.type==='ufo-wave'){
+        if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){boss.phase='fighting';boss.nextAt=this.fxClock;}
+        return;
+      }
       if((boss.phase==='entering'||boss.phase==='between')&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
         const entries=['left','right','top','bottom'].filter(edge=>edge!==boss.entry);
         const entry=boss.pass===0?'left':entries[randint(0,entries.length-1)];
@@ -2544,22 +2559,34 @@
         boss.entry=entry;boss.pass++;boss.phase='fighting';
       }
     }
-    finishMothershipBoss(won){
+    finishCampaignBoss(won){
       const boss=this.bossEncounter;if(!boss||this.finished)return;
       boss.phase=won?'won':'failed';this.mothership=null;this.finished=true;this.winner=won?0:-1;
       this.flushLearning();this.emit({t:'victory',winner:this.winner});
     }
-    mothershipCombatTargets(player){
+    bossCombatTargets(player){
+      if(!player.cpu&&this.bossEncounter?.type==='ufo-wave'&&this.bossEncounter.phase==='fighting'){
+        const pool=this.ufoBossTargets||(this.ufoBossTargets=Array.from({length:this.bossEncounter.total},(_,i)=>({index:i+4,dead:false,camo:0}))),roster=this.ufoBossTargetRoster||(this.ufoBossTargetRoster=[]);roster.length=0;
+        const add=u=>{if(!u?.bossMember)return;const target=pool[u.bossOrdinal-1];target.x=u.x;target.y=u.y;target.vx=u.vx;target.vy=u.vy;roster.push(target);};
+        if(this.ufo)add(this.ufo);for(const u of this.ufoExtras)add(u);return roster;
+      }
       if(player.cpu||!this.mothership||this.bossEncounter?.phase!=='fighting')return this.players;
       const target=this.mothershipTarget||(this.mothershipTarget={index:4,dead:false,camo:0}),mother=this.mothership;
       target.x=mother.x;target.y=mother.y;target.vx=mother.vx;target.vy=mother.vy;
       const roster=this.mothershipTargetRoster||(this.mothershipTargetRoster=[target]);return roster;
     }
-    guideMothershipMissiles(dt){
-      const mother=this.mothership;if(!mother||this.bossEncounter?.phase!=='fighting')return;
+    guideBossMissiles(dt){
+      const boss=this.bossEncounter;if(boss?.phase!=='fighting')return;
       for(const b of this.bullets){
-        if(!b.guided||b.target!==4||b.decoyed||b.flareTarget>=0)continue;
-        const dx=mother.x-b.x,dy=mother.y-b.y,distance=Math.hypot(dx,dy),speed=Math.hypot(b.vx,b.vy)||1;if(distance<=1)continue;
+        if(!b.guided||b.decoyed||b.flareTarget>=0)continue;
+        let target=null;
+        if(boss.type==='mothership'&&b.target===4)target=this.mothership;
+        else if(boss.type==='ufo-wave'){
+          if(this.ufo?.bossOrdinal===b.target-3)target=this.ufo;
+          else target=this.ufoExtras.find(u=>u.bossOrdinal===b.target-3);
+        }
+        if(!target)continue;
+        const dx=target.x-b.x,dy=target.y-b.y,distance=Math.hypot(dx,dy),speed=Math.hypot(b.vx,b.vy)||1;if(distance<=1)continue;
         const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
       }
     }
@@ -2575,7 +2602,7 @@
       if(!next.active){
         const boss=this.bossEncounter;if(boss&&boss.phase==='fighting'){
           boss.hp=this.mothership.hp;this.mothership=null;
-          if(boss.pass>=boss.maxPasses)this.finishMothershipBoss(false);
+          if(boss.pass>=boss.maxPasses)this.finishCampaignBoss(false);
           else {boss.phase='between';boss.nextAt=this.fxClock+2.5;}
         }else this.mothership=null;
       }
@@ -2628,7 +2655,7 @@
       this.mothership=null;
       for(const offset of [-170,-85,0,85,170])this.emitExplosionAt(mother.x-Math.sin(mother.angle)*offset,mother.y+Math.cos(mother.angle)*offset,ownerIndex);
       this.emit({t:'sound',kind:'impact'});
-      if(this.bossEncounter?.phase==='fighting')this.finishMothershipBoss(true);
+      if(this.bossEncounter?.phase==='fighting')this.finishCampaignBoss(true);
       return true;
     }
     reloadTime(p){return PHYSICS_CORE.reloadTimeFor(p);}
@@ -3081,6 +3108,7 @@
     }
     ufoLimit(){
       if(this.trainingMode)return 0;
+      if(this.bossEncounter?.type==='ufo-wave')return this.bossEncounter.total;
       const level=clamp(Math.round(Number(this.campaignLevel)||1),1,CAMPAIGN_LEVELS);
       const cfg=CAMPAIGN&&typeof CAMPAIGN.getLevel==='function'?CAMPAIGN.getLevel(level):null;
       return cfg&&Number.isFinite(Number(cfg.ufos))?Math.max(0,Math.round(Number(cfg.ufos))):clamp(level-1,0,3);
@@ -3143,6 +3171,7 @@
       const n=normalize(tx-x,ty-y);
       const u={
         id:uid(),x,y,px:x,py:y,vx:n.x*145,vy:n.y*145,r:UFO_RADIUS,hp:UFO_HP,
+        ...(options.bossMember?{bossMember:true,bossOrdinal:options.ordinal}:{}),
         born:this.fxClock,entered:false,exiting:false,nextSteer:this.fxClock,
         chargeAt:this.fxClock+rand(4.5,8),chargeUntil:0,bounceUntil:0
       };
@@ -3187,12 +3216,17 @@
       });
       if(this.pickups.length>5)this.pickups.shift();
       this.removeUfo(u);
+      const boss=this.bossEncounter;
+      if(u.bossMember&&boss?.type==='ufo-wave'&&boss.phase==='fighting'){
+        boss.defeated++;
+        if(boss.defeated===boss.total&&boss.spawned===boss.total&&this.ufoActiveCount()===0)this.finishCampaignBoss(true);
+      }
       return true;
     }
     updateExtraUfoProjectileHits(){
       if(!this.ufoExtras.length||!this.bullets.length)return;
       // El OVNI principal sigue usando updateBullets(), idéntico al host online.
-      // Aquí solo añadimos las colisiones de los dos OVNIs extra de campaña.
+      // Los extras de campaña, incluida la oleada final, usan el mismo barrido.
       for(let bi=this.bullets.length-1;bi>=0;bi--){
         const b=this.bullets[bi];
         if(!b)continue;
@@ -3225,7 +3259,12 @@
 
       // Planificador de oleadas. La física de cada OVNI sigue siendo la misma;
       // solo cambia cuántos entran en función del nivel de campaña.
-      if(this.ufoWaveRemaining>0){
+      const boss=this.bossEncounter;
+      if(boss?.type==='ufo-wave'){
+        if(boss.phase==='fighting'&&boss.spawned<boss.total&&this.fxClock>=boss.nextAt){
+          if(this.spawnUfo({bossMember:true,ordinal:boss.spawned+1,side:boss.spawned%4})){boss.spawned++;boss.nextAt=this.fxClock+boss.interval;}
+        }
+      }else if(this.ufoWaveRemaining>0){
         this.ufoWaveNext-=dt;
         if(this.ufoWaveNext<=0)this.spawnNextUfoWaveMember();
       }else{
@@ -3245,7 +3284,7 @@
 
       // V21.68: red de seguridad geométrica. Si dos OVNIs llegan a tocarse
       // pese a la anticipación, se separan suavemente sin explosión ni daño.
-      // Máximo 3 parejas, por lo que el coste es despreciable.
+      // El límite de diez unidades mantiene acotadas las parejas (máximo 45).
       for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
         const a=active[i],b=active[j];
         if(!this.isUfoActive(a)||!this.isUfoActive(b))continue;
@@ -3278,7 +3317,8 @@
       if(!u)return false;
       u.px=u.x;u.py=u.y;
       const age=this.fxClock-Number(u.born||0);
-      if(age>24)u.exiting=true;
+      const persistent=u.bossMember&&this.bossEncounter?.type==='ufo-wave';
+      if(persistent)u.exiting=false;else if(age>24)u.exiting=true;
 
       if(this.fxClock>=Number(u.nextSteer||0)){
         u.nextSteer=this.fxClock+.12;
@@ -3337,7 +3377,7 @@
         if(this.giant)avoid(this.giant,GIANT_RADIUS,170,4.5);
         // V21.68: separación predictiva entre OVNIs. Además de la distancia
         // actual, mira dónde estarán más cerca durante el próximo segundo.
-        // Con un máximo de 3 OVNIs son como mucho 3 comparaciones por maniobra.
+        // También se mantiene acotada en las diez unidades de la oleada final.
         const avoidUfo=(other)=>{
           if(!other||other===u||!this.isUfoActive(other))return;
           const rx=(Number(other.x)||0)-(Number(u.x)||0);
@@ -3548,7 +3588,7 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,

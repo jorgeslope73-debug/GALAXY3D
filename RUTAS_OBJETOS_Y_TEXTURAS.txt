@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V24.25
+V24.26
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -8,7 +8,7 @@ no actualiza la copia utilizada por el juego.
 
 MODELOS 3D ACTIVOS
 - Nodriza decorativa de portada y jefe final del nivel 1 CPU: docs/assets/models/nodriza.glb (13.437 triangulos; mapas internos originales de desgaste, metal/rugosidad, relieve y luces).
-- OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb
+- OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb. La fase 2 reutiliza este modelo y sus animaciones en una oleada final de 10 unidades unicas.
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
 - Asteroide mediano: docs/assets/models/asteroidemediano.glb
 - Meteorito grande/gigante: docs/assets/models/Rocky_Asteroid_5.glb
@@ -30,6 +30,11 @@ NODRIZA CPU
 - docs/menu-mothership.js: pasada lejana lateral en portada, con el mismo GLB, materiales independientes atenuados, carga diferida y pausas largas; decoracion sin fisica ni estado online.
 - tools/build-mothership-profile.mjs: regenera los datos del perfil si cambia nodriza.glb.
 - Jefe de fase: docs/campaign-config.js asigna la nodriza al nivel 1. Al alcanzar cinco bajas se inicia beginMothershipBoss() en docs/local-cpu.js; dos pasadas desde bordes diferentes, con 6 puntos de vida compartidos. Sobrevivir dos pasadas causa mision fallida y reinicio; destruirla permite el viaje automatico al nivel 2. PREPARADOS prepara el modelo antes del combate CPU. Portada, entrenamiento y red conservan su flujo.
+
+OLEADA FINAL DE LA FASE 2
+- docs/campaign-config.js: boss ufo-wave, total 10 e intervalo 4 s; no hay OVNIs ambientales durante el combate previo con los rivales.
+- docs/local-cpu.js: tras ganar a los rivales, entradas individuales hasta diez. Las bajas no se reponen y los supervivientes siguen patrullando sin retirada por tiempo. Termina solo con diez bajas; despues permite el viaje al nivel 3.
+- docs/game.js: contador local de OVNIs eliminados sobre diez y viaje interestelar automatico al completar la oleada. Los diez modelos comparten geometria y texturas; no se anaden paquetes de red.
 
 ICONO DE MEJORA FLOTANTE DEL ESCUDO
 - docs/assets/sprites/escudo.png: PNG original del usuario, precargado por docs/game.js.

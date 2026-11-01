@@ -4049,7 +4049,7 @@
         const oldBoss=state?.boss,boss=m.boss;
         if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
           playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
-          playNoticeText=boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming');
+          playNoticeText=boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
           huntFxUntil=0;leaderAnnouncement=null;
         }
       }
@@ -6870,6 +6870,15 @@
     ctx.restore();
   }
 
+  function drawUfoBossProgress(boss){
+    if(boss?.type!=='ufo-wave')return;
+    ctx.save();
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=isMobile?'34px Flashback,Arial':'28px Flashback,Arial';
+    ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.fillStyle='#a5f7ff';
+    const label=tr('ufoBossProgress',{count:boss.defeated,total:boss.total});
+    ctx.strokeText(label,W/2,130);ctx.fillText(label,W/2,130);
+    ctx.restore();
+  }
   function render(rafNow){
     requestAnimationFrame(render);
     if(!gameAssetsReady&&!onlineStartPending)return;
@@ -7157,6 +7166,7 @@
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
+    if(localCpuActive)drawUfoBossProgress(renderState.boss);
     drawLocalRespawnCountdown(now);
     drawLocalEntryCountdown(now);
     if(perfStats){

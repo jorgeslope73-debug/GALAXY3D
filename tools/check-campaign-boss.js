@@ -37,7 +37,7 @@ for(const dt of [1/30,1/60,1/120])for(const roll of [0,.5,.999]){
   assert.notEqual(e.mothership.entry,first.entry);entries.add(e.mothership.entry);
   assert.deepEqual(e.players.slice(1).map(p=>[p.x,p.y,p.deaths]),before,'Rivals cannot respawn, move or fire during the boss');
   escapePass(f,dt);assert.equal(e.finished,true);assert.equal(e.winner,-1);assert.equal(e.bossEncounter.phase,'failed');assert.equal(e.mothership,null);
-  assert.equal(f.events.filter(m=>m.t==='victory').length,1);e.finishMothershipBoss(false);assert.equal(f.events.filter(m=>m.t==='victory').length,1);
+  assert.equal(f.events.filter(m=>m.t==='victory').length,1);e.finishCampaignBoss(false);assert.equal(f.events.filter(m=>m.t==='victory').length,1);
   e.handleMessage({t:'restart',level:2});assert.equal(e.campaignLevel,1);assert.equal(e.finished,true,'An escaped boss cannot unlock level two');
   e.handleMessage({t:'restart',level:1});assert.equal(e.finished,false);assert.equal(e.bossEncounter,null);assert.equal(e.mothership,null);assert.equal(e.publicState().players.length,4);assert.ok(e.players.every(p=>!p.dead&&p.kills===0),'Start over restores all rivals and scores');
 }
@@ -55,15 +55,15 @@ for(const pass of [1,2]){
 {
   const f=world(),e=f.engine;winRivals(f);const p=e.players[0],m=e.mothership;
   m.x=m.px=960;m.y=m.py=540;p.x=500;p.y=540;p.rot=90;p.guidedAmmo=2;p.reload=0;
-  const targets=e.mothershipCombatTargets(p),d={x:1,y:0};
+  const targets=e.bossCombatTargets(p),d={x:1,y:0};
   f.ctx.window.GalaxyPhysicsCore.refreshGuidedState(p,targets,()=>d);assert.equal(p.guidedTarget,4,'The mothership can be locked without any rival alive');
   const b=f.ctx.window.GalaxyPhysicsCore.tryFireProjectile(p,d,true,true,false,false,targets,()=>d,()=>99);assert.ok(b.guided);assert.equal(b.target,4);assert.equal(p.guidedAmmo,1);
-  b.y=300;b.vx=400;b.vy=0;e.bullets=[b];e.guideMothershipMissiles(1/60);assert.ok(b.vy>0,'Boss missiles home using the existing steering strength');assert.ok(Math.abs(Math.hypot(b.vx,b.vy)-400)<1e-7);
+  b.y=300;b.vx=400;b.vy=0;e.bullets=[b];e.guideBossMissiles(1/60);assert.ok(b.vy>0,'Boss missiles home using the existing steering strength');assert.ok(Math.abs(Math.hypot(b.vx,b.vy)-400)<1e-7);
   p.protection=0;p.shield=0;e.destroyShip(p,null);assert.equal(p.kills,5,'Boss deaths do not erase the already completed rival score');
   for(const edge of ['left','right','top','bottom']){const body=f.M.create(100,edge);let active=true,ticks=0;while(active&&ticks++<4000)active=f.M.step(body,1/60,[],()=>1).active;assert.ok(!active);assert.ok(edge==='top'?body.y>1080+f.M.data.radius:edge==='bottom'?body.y< -f.M.data.radius:edge==='left'?body.x>1920+f.M.data.radius:body.x< -f.M.data.radius);}
 }
-for(const level of [1,2]){
-  const f=world(),e=f.engine;e.start('P','facil',1,null,false,level);e.players[0].kills=4;e.players[1].protection=0;e.players[1].shield=0;e.destroyShip(e.players[1],e.players[0]);assert.equal(e.finished,level!==1);
+for(const level of [1,2,3]){
+  const f=world(),e=f.engine;e.start('P','facil',1,null,false,level);e.players[0].kills=4;e.players[1].protection=0;e.players[1].shield=0;e.destroyShip(e.players[1],e.players[0]);assert.equal(e.finished,level>2);
   e.startTraining();assert.equal(e.needsMothershipBoss(),false);assert.equal(e.bossEncounter,null);
 }
 // Exercise the actual client failure screen and automatic trip callback without timers or WebGL.
@@ -82,7 +82,7 @@ function client(f){
   return {c,button,get,timers,travel,wire,show:index=>c.showVictory(index)};
 }
 (async()=>{
-  const failed=world();winRivals(failed);failed.engine.bossEncounter.pass=2;failed.engine.finishMothershipBoss(false);const fail=client(failed);fail.show(-1);assert.equal(fail.get('victoryText').textContent,'MISIÓN FALLIDA · LA NAVE CONSIGUIÓ SOBREVIVIR');assert.equal(fail.button.textContent,'VOLVER A EMPEZAR');assert.equal(fail.c.localCampaignGameOver,true);assert.equal(fail.timers.size,0,'Failure never schedules interstellar travel');await fail.c.continueRound();assert.equal(failed.engine.campaignLevel,1);assert.equal(failed.engine.bossEncounter,null);assert.equal(fail.travel.length,0);
+  const failed=world();winRivals(failed);failed.engine.bossEncounter.pass=2;failed.engine.finishCampaignBoss(false);const fail=client(failed);fail.show(-1);assert.equal(fail.get('victoryText').textContent,'MISIÓN FALLIDA · LA NAVE CONSIGUIÓ SOBREVIVIR');assert.equal(fail.button.textContent,'VOLVER A EMPEZAR');assert.equal(fail.c.localCampaignGameOver,true);assert.equal(fail.timers.size,0,'Failure never schedules interstellar travel');await fail.c.continueRound();assert.equal(failed.engine.campaignLevel,1);assert.equal(failed.engine.bossEncounter,null);assert.equal(fail.travel.length,0);
   const won=world();winRivals(won);shoot(won,true);shoot(won,true);const win=client(won);win.show(0);assert.equal(win.c.localCampaignAwaitingContinue,true);assert.equal(win.travel.length,0);assert.equal(win.timers.size,1);[...win.timers.values()][0]();await win.c.trip;assert.deepEqual(win.travel,[2]);assert.equal(won.engine.campaignLevel,2);assert.equal(won.engine.bossEncounter,null);
   const stale=world();winRivals(stale);shoot(stale,true);shoot(stale,true);const old=client(stale);old.show(0);old.c.roomCode='';[...old.timers.values()][0]();assert.equal(old.travel.length,0,'Leaving the result screen invalidates the automatic trip');
   console.log('Campaign boss OK: fifth-kill gate, hidden/inactive rivals, retained HP, all four entry edges, exactly two passes at 30/60/120Hz, boss missile lock, success/failure, guarded restart, translated failure UI and automatic existing interstellar travel.');
