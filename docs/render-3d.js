@@ -89,7 +89,7 @@
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,menuMothershipFlight=null,menuMothershipAssets=null,menuMothershipFailed=false,winnerStage=null;
-    let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,mothershipLoad=null;
+    let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,createImportedMothershipHealth=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
     document.documentElement.dataset.galaxyRocket='loading';
@@ -254,6 +254,7 @@
         createImportedMothership=assets.createMothershipFactory(template,definition,reflections.texture);
         setImportedMothershipPose=assets.setMothershipPose;
         createImportedMothershipExhaust=assets.createMothershipExhaust;
+        createImportedMothershipHealth=assets.createMothershipHealth;
         document.documentElement.dataset.galaxyMothership='nodriza-glb';
         return true;
       }).catch(error=>{mothershipLoad=null;throw error;});
@@ -318,8 +319,8 @@
         return {root};
       }
       if(kind==='mothership'){
-        const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile});
-        root.add(visual,exhaust.points);return {root,visual,exhaust};
+        const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile}),health=createImportedMothershipHealth(visual);
+        root.add(visual,exhaust.points);return {root,visual,exhaust,health};
       }
       if(kind==='menu-mothership'){
         const visual=menuMothershipAssets.prepareMenuMothership(createImportedMothership(),mobile);
@@ -523,6 +524,7 @@
         if(!body||!createImportedMothership)return;
         const record=take('mothership',body.id);place(record.root,body.x,body.y,0);
         setImportedMothershipPose(record.visual,body);
+        record.health.update(body);
         record.exhaust.update(record.visual,body,now,poseContext,surface.height/H);
       },
       flush(ctx){
@@ -639,7 +641,7 @@
         api.rock('warm-large',960,230,378,1,0,'large');
         for(const [i,type]of ['ammo1','ammo3','cadence','speed','mira','flare','shockwave','shield','camo'].entries())api.pickup('warm-pickup-'+i,160+i*180,420,type,0);
         api.ufo('warm-ufo',960,420,pass*30);
-        if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
+        if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the

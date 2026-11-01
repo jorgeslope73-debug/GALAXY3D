@@ -28,6 +28,7 @@ async function gpuCase({legacy=false,lost=false,failed=false}={}){
   for(let i=0;i<30;i++)await Promise.resolve();finish();await cpuWarm;
   assert.equal(calls.filter(c=>c[0]==='mothership').length,4,'the CPU model and all four turret poses are GPU-warmed before readiness');
   assert.ok(calls.filter(c=>c[0]==='mothership').every(c=>c[1].turrets.length===4),'warmup uses the new four-turret model');
+  assert.ok(calls.filter(c=>c[0]==='mothership').every(c=>c[1].hp===6&&c[1].maxHp===6),'the attached health panel is visible and GPU-warmed before readiness');
   const game=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n'),a=game.indexOf('  function prepareGameAssets('),b=game.indexOf('\n  function warmGameAssetsWhenIdle(',a);assert.ok(a>=0&&b>a);
   let modelsReady,gpuReady;const models=new Promise(r=>modelsReady=r),gpu=new Promise(r=>gpuReady=r);
   const assets=vm.createContext({gameAssetsReady:false,gameAssetsPromise:null,Promise,imageDecodePromises:{},document:{fonts:{load:()=>Promise.resolve()}},updateCanvasResolution(){},warmRendererCaches(){},warmOnlineStartCaches(){},canvas:{width:1280,height:720},window:{Galaxy3D:{ready:models,prepareMatch:()=>gpu}}});

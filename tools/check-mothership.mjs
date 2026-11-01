@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
-import {prepareMothershipTemplate,createMothershipFactory,setMothershipPose,createMothershipExhaust,MOTHERSHIP_NOZZLES} from '../docs/mothership-model.js';
+import {prepareMothershipTemplate,createMothershipFactory,setMothershipPose,createMothershipExhaust,createMothershipHealth,MOTHERSHIP_NOZZLES} from '../docs/mothership-model.js';
 const source=async name=>readFile(new URL('../docs/'+name+'.js',import.meta.url),'utf8');
 const ctx=vm.createContext({window:{},console,Date,performance,setTimeout,clearTimeout});
 for(const name of ['net-protocol','campaign-config','collision-profiles','physics-core','mothership-data','mothership-core','shot-history','host-physics','local-cpu'])vm.runInContext(await source(name),ctx,{filename:name+'.js'});
@@ -329,11 +329,31 @@ engine.absorbMothershipShots(1/60);assert.equal(mother.hp,0);assert.equal(engine
 assert.ok(engine.fxEvents.length<=32,'The destruction uses the existing bounded local effect queue');
 engine.firstShower=.01;engine.nextGiant=.01;engine.giant=null;engine.meteors=[];engine.showerLeft=0;
 engine.updateShower(1);engine.updateGiant(1);assert.ok(engine.giant);assert.ok(engine.showerLeft>0,'Paused hazards resume when the boss is destroyed too');
-// The HUD is horizontal and centered on the ship, and never appears in the menu/offscreen.
-const healthDrawSource=gameSource.slice(gameSource.indexOf('  function drawMothershipHealth('),gameSource.indexOf('  function render(rafNow)'));
-const fills=[],texts=[],healthCanvas={save(){},restore(){},fillRect(...args){fills.push(args);},strokeRect(){},strokeText(){},fillText(...args){texts.push(args);}};
-const healthScope=vm.createContext({ctx:healthCanvas,W:1920,H:1080});vm.runInContext(healthDrawSource,healthScope);
-for(let hp=1;hp<=6;hp++){fills.length=0;texts.length=0;healthScope.drawMothershipHealth({x:960,y:540,hp,maxHp:6});assert.equal(fills[1][0],870);assert.equal(fills[1][1],532);assert.equal(fills[1][2],180*hp/6);assert.equal(texts[0][0],hp+' / 6');assert.equal(texts[0][1],960);}
-fills.length=0;for(const body of [null,{x:960,y:540,hp:0,maxHp:6},{x:-5,y:540,hp:6,maxHp:6},{x:960,y:540}])healthScope.drawMothershipHealth(body);assert.equal(fills.length,0,'No orphan bar exists after death or before entry');
-console.log(`Mothership health OK: ${healthCombinations} lethal weapon combinations, 6 HP, bullet/missile/flare 1/3/2 damage, continuous impacts, one-time destruction, centered local HUD and no network authority changes.`);
+// The panel is inside the actual recessed floor and inherits the complete 3D pose.
+const fills=[],texts=[],healthContext={fillRect(...args){fills.push(args);},strokeRect(){},strokeText(){},fillText(...args){texts.push(args);}};
+const canvas={getContext:()=>healthContext},healthVisual=factory(),health=createMothershipHealth(healthVisual,canvas),healthRoot=new T.Group();healthRoot.add(healthVisual);
+assert.equal(canvas.width,384);assert.equal(canvas.height,48);assert.equal(health.mesh.parent.name,'AEGIS_Hull');assert.equal(health.mesh.material.depthTest,true);assert.equal(health.mesh.material.toneMapped,false);
+const texture=health.mesh.material.map;
+for(let hp=1;hp<=6;hp++){fills.length=0;texts.length=0;health.update({hp,maxHp:6});assert.equal(health.mesh.visible,true);assert.ok(Math.abs(fills[1][2]-374*hp/6)<1e-9);assert.equal(texts[0][0],hp+' / 6');const version=texture.version;health.update({hp,maxHp:6});assert.equal(texture.version,version,'Unchanged life does not repaint/upload the texture every frame');}
+for(const body of [null,{hp:0,maxHp:6},{hp:6,maxHp:0},{}]){health.update(body);assert.equal(health.mesh.visible,false,'The panel hides when its health is absent/dead');}
+health.update({hp:6,maxHp:6});assert.equal(health.mesh.visible,true,'Reusing a pooled model restores its panel');
+for(const direction of [-1,1])for(const yaw of [-8,0,8])for(const bank of [-15,0,15]){
+  const body=M.create(950,direction);body.x=1234;body.y=456;body.angle+=yaw*Math.PI/180;body.bank=bank*Math.PI/180;
+  healthRoot.position.set(body.x-960,540-body.y,0);setMothershipPose(healthVisual,body);healthRoot.updateMatrixWorld(true);
+  const at=health.mesh.getWorldPosition(new T.Vector3()),u=new T.Vector3(1,0,0).transformDirection(health.mesh.matrixWorld),normal=new T.Vector3(0,0,1).transformDirection(health.mesh.matrixWorld);
+  const localX=((0-D.center[0])*Math.cos(body.bank)+(1.06-D.center[1])*Math.sin(body.bank))*D.scale,localY=(1-D.center[2])*D.scale;
+  const expected=new T.Vector3(body.x-960+localX*Math.cos(body.angle)-localY*Math.sin(body.angle),540-body.y-localX*Math.sin(body.angle)-localY*Math.cos(body.angle),at.z);
+  assert.ok(at.distanceTo(expected)<1e-7,'The inset anchor follows the same projection as the calibrated hull');
+  assert.ok(u.dot(new T.Vector3(Math.sin(body.angle),Math.cos(body.angle),0))>1-1e-10,'The bar rotates along the ship length, not screen horizontal');
+  assert.ok(normal.dot(new T.Vector3(Math.sin(body.bank)*Math.cos(body.angle),-Math.sin(body.bank)*Math.sin(body.angle),Math.cos(body.bank)))>1-1e-10,'The panel follows bank/perspective instead of facing the camera');
+}
+const healthHull=health.mesh.parent,ray=new T.Raycaster();
+for(const x of [-.25,0,.25])for(const z of [-1.3,1,3.3]){
+  const origin=healthHull.localToWorld(new T.Vector3(x,10,z)),direction=new T.Vector3(0,-1,0).transformDirection(healthHull.matrixWorld);ray.set(origin,direction);
+  const hit=ray.intersectObject(healthHull,false)[0];assert.ok(hit);const floor=healthHull.worldToLocal(hit.point);
+  assert.ok(floor.y>.9&&floor.y<1.01,'The full panel footprint fits the recessed floor, away from the surrounding deck');assert.ok(1.06-floor.y>.04,'A small physical gap prevents z-fighting');
+}
+assert.equal(factory().getObjectByName('nodriza-vida'),undefined,'Decorative menu factories do not inherit gameplay panels');
+assert.ok(!gameSource.includes('drawMothershipHealth'),'The old fixed screen HUD is removed');
+console.log(`Mothership health OK: ${healthCombinations} lethal weapon combinations, 6 HP, bullet/missile/flare 1/3/2 damage, continuous impacts, one-time destruction, inset 3D panel with full pose, conditional texture uploads and no network authority changes.`);
 console.log(`Mothership OK: replacement GLB at 540 units, four turrets and no central gun, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, ${sectorCases} nearest-sector cases, unique targets, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);

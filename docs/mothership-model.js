@@ -27,6 +27,36 @@ export function setMothershipPose(visual,body){
   for(let i=0;i<pivots.length;i++){const local=body.turrets[i].angle-body.angle;pivots[i].rotation.y=Math.atan2(Math.cos(local)/Math.cos(bank),Math.sin(local));}
 }
 
+// Authored hull coordinates: recessed floor Y=.94..99, between Z=-1.5 and 3.5.
+// Attaching to the hull makes the panel share its translation, yaw and bank.
+export function createMothershipHealth(visual,canvas=document.createElement('canvas')){
+  canvas.width=384;canvas.height=48;
+  const ctx=canvas.getContext('2d');
+  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+  texture.generateMipmaps=false;texture.minFilter=T.LinearFilter;
+  const material=new T.MeshBasicMaterial({map:texture,toneMapped:false});
+  const mesh=new T.Mesh(new T.PlaneGeometry(4.6,.5),material);
+  mesh.name='nodriza-vida';mesh.position.set(0,1.06,1);
+  mesh.rotation.set(-Math.PI/2,0,Math.PI/2);mesh.visible=false;
+  visual.getObjectByName('AEGIS_Hull').add(mesh);
+  let lastHp=null,lastMax=null;
+  function update(body){
+    const max=Number(body?.maxHp),hp=Number(body?.hp);
+    mesh.visible=Number.isFinite(hp)&&Number.isFinite(max)&&hp>0&&max>0;
+    if(!mesh.visible)return;
+    const value=Math.min(hp,max);if(value===lastHp&&max===lastMax)return;
+    lastHp=value;lastMax=max;const ratio=value/max;
+    ctx.fillStyle='#07101d';ctx.fillRect(0,0,384,48);
+    ctx.fillStyle=ratio>.5?'#65ef95':ratio>1/3?'#ffd264':'#ff6666';ctx.fillRect(5,5,374*ratio,38);
+    ctx.strokeStyle='#dcefff';ctx.lineWidth=3;ctx.strokeRect(2,2,380,44);
+    ctx.font='bold 30px Arial, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.lineWidth=5;ctx.strokeStyle='#07101d';ctx.strokeText(value+' / '+max,192,25);
+    ctx.fillStyle='#ffffff';ctx.fillText(value+' / '+max,192,25);
+    texture.needsUpdate=true;
+  }
+  return {mesh,update};
+}
+
 // Centres of the five circular rear nozzle rims in the original hull coordinates.
 // The particles are presentation only: no emitters or particle data enter physics.
 export const MOTHERSHIP_NOZZLES=Object.freeze([
