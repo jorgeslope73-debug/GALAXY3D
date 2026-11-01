@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.22: la nodriza CPU tiene 6 puntos de vida y una barra horizontal centrada sobre el casco: bala 1, misil 3 y bengala 2. Admite combinaciones equivalentes a seis balas, dos misiles o tres bengalas. Cada impacto consume su proyectil una vez; al destruirse deja de colisionar/disparar y reutiliza las explosiones locales existentes. Se mantienen las pasadas decorativas de portada y el disparador de partida pendiente de asignar a una futura fase.
+
 V24.21: retira la aparicion de prueba de la nodriza al iniciar o repetir partidas CPU y su descarga obligatoria durante PREPARADOS. Conserva las pasadas decorativas ocasionales en portada, con margen completo fuera de pantalla en ambos extremos; el encuentro tambien nace fuera del encuadre segun el radio real del casco.
 
 V24.20: pasada ocasional de la nodriza al fondo de la portada, en vista lateral y con una atmosfera tenue. Comparte el GLB y sus texturas con la partida; solicita el modelo tras seis segundos visibles de menu, sin bloquear la carga inicial. Primera pasada a los 24-36 s, recorrido de 28-36 s y pausas de 100-160 s. Se detiene al jugar u ocultar la pestana y respeta movimiento reducido.

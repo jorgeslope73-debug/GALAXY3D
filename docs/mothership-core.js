@@ -4,6 +4,7 @@
   const data=window.GalaxyMothershipData,physics=window.GalaxyPhysicsCore;
   if(!data||!physics)throw new Error('Falta la geometria de la nodriza');
   const W=1920,H=1080,SPEED=90,SHOT_SPEED=400,SHOT_INTERVAL=8,VOLLEY_GAP=4;
+  const MAX_HP=6,DAMAGE=Object.freeze({bullet:1,missile:3,flare:2});
   const BANK_LIMIT=Math.PI/12,BANK_PERIOD=10;
   const YAW_LIMIT=8*Math.PI/180,YAW_PERIOD=14;
   const firingTurrets=data.turrets.map((_,index)=>index);
@@ -13,7 +14,7 @@
   function create(id,direction=1){
     const dir=direction<0?-1:1;
     const x=dir>0?-data.radius-40:W+data.radius+40;
-    return {id,x,y:H*.5,px:x,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,
+    return {id,x,y:H*.5,px:x,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,hp:MAX_HP,maxHp:MAX_HP,nextVolley:5.5,fireCursor:0,
       turrets:data.turrets.map(()=>({angle:dir>0?0:Math.PI,nextShot:0,target:-1}))};
   }
   function bankAt(seconds){return Math.sin(seconds*Math.PI*2/BANK_PERIOD)*BANK_LIMIT;}
@@ -201,5 +202,5 @@
     if(inside)first=0;
     return Number.isFinite(first)?{t:first,x:x0+(projectile.x-x0)*first,y:y0+(projectile.y-y0)*first}:null;
   }
-  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,clearance,circleSweep,hullProfile,bankAt,yawAt,yawFor,canTarget,assignTargets,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
+  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,clearance,circleSweep,hullProfile,bankAt,yawAt,yawFor,canTarget,assignTargets,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP,MAX_HP,DAMAGE});
 })();

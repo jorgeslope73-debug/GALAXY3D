@@ -281,10 +281,61 @@ engine.fxEvents=[];engine.bullets=[{id:7100,owner:0,x:300,y:950,vx:60000,vy:0,gu
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.fxEvents.length,0,'A near miss has no phantom explosion');
 engine.bullets=[{id:7101,owner:1,x:300,y:540,vx:60000,vy:0,guided:true}];
 engine.absorbMothershipShots(1/60);assert.equal(engine.fxEvents.length,1);assert.equal(engine.fxEvents[0].kind,'disintegrate','Missiles retain their original particle effect');
+engine.mothership.hp=engine.mothership.maxHp=100; // Synthetic endurance target for the existing bounded-FX stress case.
 engine.fxEvents=[];engine.bullets=Array.from({length:80},(_,i)=>({id:7200+i,owner:i%2,x:300,y:540,vx:60000,vy:0,guided:false}));
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,0);assert.equal(engine.fxEvents.length,32,'High cadence reuses the existing bounded local FX queue');
 assert.ok(engine.publicState().fx.every(e=>e.kind==='explosion'),'The normal CPU renderer receives the existing explosion effect without a new event type');
 engine.finished=true;assert.equal(engine.restart(),true);assert.equal(engine.mothership,null,'Repeating also removes the temporary test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
 const gameSource=await source('game');assert.ok(!gameSource.includes("if(roomCode==='LOCAL')await window.Galaxy3D.prepareMothership();"),'CPU startup no longer waits for the unused test encounter asset');
+// Six bullet-equivalent HP, exercised through real projectile/flare collision paths.
+assert.equal(M.MAX_HP,6);assert.equal(M.DAMAGE.bullet,1);assert.equal(M.DAMAGE.missile,3);assert.equal(M.DAMAGE.flare,2);
+const resetHealthTarget=(direction=1)=>{
+  engine.mothership=M.create(820,direction);engine.mothership.x=engine.mothership.px=960;
+  engine.fxEvents=[];engine.bullets=[];engine.flares=[];engine.asteroids=[];return engine.mothership;
+};
+const healthHit=(weapon,direction=1)=>{
+  if(weapon==='flare'){
+    engine.flares=[{id:830,owner:0,x:960,y:540,vx:0,vy:0,angle:0,life:3,ownerSafe:1}];engine.updateFlares(1/60);engine.absorbMothershipFlares();
+    assert.equal(engine.flares.length,0,'Each colliding flare is consumed once');
+  }else{
+    engine.bullets=[{id:831,owner:0,x:direction>0?300:1600,y:540,vx:direction*60000,vy:0,guided:weapon==='missile'}];
+    engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,0,'Each colliding player shot is consumed once');
+  }
+};
+let healthCombinations=0;
+for(const direction of [-1,1])for(let bullets=0;bullets<=6;bullets++)for(let missiles=0;missiles<=2;missiles++)for(let flares=0;flares<=3;flares++){
+  if(bullets+missiles*3+flares*2!==6)continue;
+  const mother=resetHealthTarget(direction),kills=engine.players.map(p=>p.kills),weapons=[...Array(bullets).fill('bullet'),...Array(missiles).fill('missile'),...Array(flares).fill('flare')];
+  assert.equal(mother.hp,6);assert.equal(mother.maxHp,6);let expected=6;
+  for(const weapon of weapons){
+    healthHit(weapon,direction);expected-=M.DAMAGE[weapon];assert.equal(mother.hp,expected);
+    if(expected>0){assert.equal(engine.mothership,mother);assert.equal(engine.publicState().mothership.hp,expected);assert.equal(engine.publicState().mothership.maxHp,6);}
+    else {assert.equal(engine.mothership,null);assert.equal(engine.publicState().mothership,null);}
+  }
+  assert.deepEqual(engine.players.map(p=>p.kills),kills,'A boss destruction does not invent player kills or finish the PvP score');
+  const effects=engine.fxEvents.length;assert.equal(engine.damageMothership(mother,'missile',0),false);assert.equal(engine.fxEvents.length,effects,'A dead hull cannot explode twice');
+  engine.updateMothership(10);assert.equal(engine.bullets.length,0,'Destroyed turrets cannot fire another volley');healthCombinations++;
+}
+let mother=resetHealthTarget();
+engine.bullets=[{id:840,owner:-2,mothership:true,x:960,y:540,vx:600,vy:0,guided:false}];engine.absorbMothershipShots(1/60);assert.equal(mother.hp,6,'Mounted guns do not damage their own hull');
+engine.bullets=[{id:841,owner:0,x:300,y:950,vx:60000,vy:0,guided:true}];engine.absorbMothershipShots(1/60);assert.equal(mother.hp,6,'A missile near miss cannot damage the hull');
+engine.flares=[{id:842,owner:0,x:960,y:950,vx:0,vy:0,angle:0,life:3}];engine.updateFlares(1/60);engine.absorbMothershipFlares();assert.equal(mother.hp,6,'A flare near miss remains a miss');
+engine.flares=[{id:843,owner:0,x:960,y:540,vx:0,vy:0,angle:0,life:.001}];engine.updateFlares(1/60);engine.absorbMothershipFlares();assert.equal(mother.hp,6,'An expired flare cannot damage the boss');
+for(const direction of [-1,1]){
+  mother=resetHealthTarget(direction);mother.px=direction>0?450:1470;mother.x=direction>0?1470:450;
+  healthHit('flare',direction);assert.equal(mother.hp,4,'The moving hull sweeps stationary flares between snapshots');
+}
+mother=resetHealthTarget();engine.bullets=Array.from({length:80},(_,i)=>({id:850+i,owner:0,x:300,y:540,vx:60000,vy:0,guided:false}));
+engine.absorbMothershipShots(1/60);assert.equal(mother.hp,0);assert.equal(engine.mothership,null);assert.equal(engine.bullets.length,74,'Only the first six hits are absorbed; the destroyed hull cannot eat the rest');
+assert.ok(engine.fxEvents.length<=32,'The destruction uses the existing bounded local effect queue');
+engine.firstShower=.01;engine.nextGiant=.01;engine.giant=null;engine.meteors=[];engine.showerLeft=0;
+engine.updateShower(1);engine.updateGiant(1);assert.ok(engine.giant);assert.ok(engine.showerLeft>0,'Paused hazards resume when the boss is destroyed too');
+// The HUD is horizontal and centered on the ship, and never appears in the menu/offscreen.
+const healthDrawSource=gameSource.slice(gameSource.indexOf('  function drawMothershipHealth('),gameSource.indexOf('  function render(rafNow)'));
+const fills=[],texts=[],healthCanvas={save(){},restore(){},fillRect(...args){fills.push(args);},strokeRect(){},strokeText(){},fillText(...args){texts.push(args);}};
+const healthScope=vm.createContext({ctx:healthCanvas,W:1920,H:1080});vm.runInContext(healthDrawSource,healthScope);
+for(let hp=1;hp<=6;hp++){fills.length=0;texts.length=0;healthScope.drawMothershipHealth({x:960,y:540,hp,maxHp:6});assert.equal(fills[1][0],870);assert.equal(fills[1][1],532);assert.equal(fills[1][2],180*hp/6);assert.equal(texts[0][0],hp+' / 6');assert.equal(texts[0][1],960);}
+fills.length=0;for(const body of [null,{x:960,y:540,hp:0,maxHp:6},{x:-5,y:540,hp:6,maxHp:6},{x:960,y:540}])healthScope.drawMothershipHealth(body);assert.equal(fills.length,0,'No orphan bar exists after death or before entry');
+console.log(`Mothership health OK: ${healthCombinations} lethal weapon combinations, 6 HP, bullet/missile/flare 1/3/2 damage, continuous impacts, one-time destruction, centered local HUD and no network authority changes.`);
 console.log(`Mothership OK: replacement GLB at 540 units, four turrets and no central gun, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, ${sectorCases} nearest-sector cases, unique targets, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);

@@ -1,5 +1,5 @@
 GALAXY COMBAT — RUTAS DE OBJETOS Y TEXTURAS
-V24.21
+V24.22
 Repositorio: https://github.com/jorgeslope73-debug/GALAXY3D
 
 Las rutas siguientes parten de la raíz del repositorio.
@@ -25,7 +25,7 @@ NODRIZA CPU
 - docs/mothership-model.js: visual original; gira los cuatro nulls AEGIS_Yaw_* laterales y conserva sus materiales. Incluye particulas azules locales en las cinco toberas traseras; no necesita texturas adicionales.
 - docs/mothership-data.js: 540 unidades de largo; 31 perfiles del casco para balanceo -15..+15 grados, escala y bocas de los dos canones por torreta, extraidos del GLB.
 - docs/mothership-core.js: recorrido, balanceo y giro suave de +/-8 grados, objetivos por sector frontal, trasero y lateral, asignados a las torretas adecuadas mas cercanas, sin torreta central y parejas separadas al menos 4 s; balas de 400 unidades/s.
-- docs/local-cpu.js: los impactos de balas en la nodriza reutilizan emitExplosionAt y los pools de particulas locales existentes, sin nuevos datos de red.
+- docs/local-cpu.js: nodriza con 6 puntos de vida; balas 1, misiles 3 y bengalas 2, consumidos al chocar con su contorno. Al llegar a cero elimina casco y torretas y reutiliza emitExplosionAt y los pools locales existentes. docs/game.js dibuja la barra horizontal centrada; hp/maxHp solo viajan en el estado CPU local, sin datos nuevos de red.
 - IA local contra la nodriza: cpuMothershipSafetyControl compara maniobras con 1,6 s de anticipacion, contorno real y el integrador compartido; activa en FACIL, MEDIO y DIFICIL, con sondas reutilizables y sin trafico de red.
 - docs/menu-mothership.js: pasada lejana lateral en portada, con el mismo GLB, materiales independientes atenuados, carga diferida y pausas largas; decoracion sin fisica ni estado online.
 - tools/build-mothership-profile.mjs: regenera los datos del perfil si cambia nodriza.glb.

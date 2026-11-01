@@ -2514,7 +2514,7 @@
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
       this.updateMothership(dt);
-      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
     startMothershipPass(){
       this.mothership=!this.trainingMode&&this.campaignLevel===1&&MOTHERSHIP?MOTHERSHIP.create(uid(),1):null;
@@ -2540,6 +2540,18 @@
         else this.destroyShip(player,null);
       }
     }
+    absorbMothershipFlares(){
+      const mother=this.mothership;if(!mother)return;
+      for(let i=this.flares.length-1;i>=0;i--){
+        const flare=this.flares[i];
+        const hit=MOTHERSHIP.circleSweep(mother,flare,FLARE_RADIUS);
+        if(!hit)continue;
+        this.flares.splice(i,1);
+        this.emitExplosionAt(hit.x,hit.y,flare.owner);
+        this.emit({t:'sound',kind:'impact'});
+        if(this.damageMothership(mother,'flare',flare.owner))break;
+      }
+    }
     absorbMothershipShots(dt){
       const mother=this.mothership;if(!mother)return;
       for(let i=this.bullets.length-1;i>=0;i--){
@@ -2550,7 +2562,19 @@
         if(bullet.guided){this.emitRocketDisintegrateAt(hit.x,hit.y,bullet.owner);this.emit({t:'sound',kind:'sparkle'});}
         else this.emitExplosionAt(hit.x,hit.y,bullet.owner);
         this.bullets.splice(i,1);
+        if(this.damageMothership(mother,bullet.guided?'missile':'bullet',bullet.owner))break;
       }
+    }
+    damageMothership(mother,weapon,ownerIndex){
+      if(!mother||this.mothership!==mother||!(mother.hp>0))return false;
+      const damage=MOTHERSHIP.DAMAGE[weapon];if(!damage)return false;
+      mother.hp=Math.max(0,mother.hp-damage);
+      if(mother.hp>0)return false;
+      // Existing bounded local FX; destroying the hull removes its collisions and guns.
+      this.mothership=null;
+      for(const offset of [-170,-85,0,85,170])this.emitExplosionAt(mother.x-Math.sin(mother.angle)*offset,mother.y+Math.cos(mother.angle)*offset,ownerIndex);
+      this.emit({t:'sound',kind:'impact'});
+      return true;
     }
     reloadTime(p){return PHYSICS_CORE.reloadTimeFor(p);}
     bulletSpeed(p){return PHYSICS_CORE.bulletSpeedFor(p);}
@@ -3469,7 +3493,7 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
+        mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,
         shower:round2(this.showerLeft),
