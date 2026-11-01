@@ -211,7 +211,7 @@ async function idleWarmMessages(){
   const cached=createHarness();cached.seed(SHARED,'assets/models/nave.glb','validated');cached.network=async()=>{throw Error('must not replace a validated asset');};
   await cached.message({type:'cache-loaded',urls:['assets/models/nave.glb?v=TEST']});await cached.message({type:'resource-idle',idle:true});assert.equal(cached.calls.length,0);
   const offline=createHarness(),resources=[
-    'net-protocol.js','collision-profiles.js','menu-ufo.js','projectile-lighting.js','startup-preparation.js',
+    'net-protocol.js','collision-profiles.js','menu-ufo.js','menu-mothership.js','projectile-lighting.js','startup-preparation.js',
     'assets/models/asteroidemediano.glb','assets/models/Rocky_Asteroid_5.glb','assets/models/meteorito3.glb'
   ];
   const fixtures=new Map(resources.map((path,index)=>[SCOPE+path+'?v=TEST','offline fixture '+index+': '+path]));

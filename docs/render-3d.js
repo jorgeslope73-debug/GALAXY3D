@@ -88,7 +88,7 @@
     const colors=[0x5ae1ff,0xff50a5,0x5aff78,0xffe14a];
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
-    let menuActors=null,menuFlight=null,winnerStage=null;
+    let menuActors=null,menuFlight=null,menuMothershipFlight=null,menuMothershipAssets=null,menuMothershipFailed=false,winnerStage=null;
     let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
@@ -231,7 +231,7 @@
       record.importedRocket=record.rocketVariants.get(team);record.importedRocket.visible=true;
       record.procedural.visible=false;
     }
-    const assetVersion=window.GALAXY_BUILD?.version||'V24.19';
+    const assetVersion=window.GALAXY_BUILD?.version||'V24.20';
     let projectileLighting=null;
     const modelLoads=[];
     modelLoads.push(import('./projectile-lighting.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
@@ -240,10 +240,13 @@
     modelLoads.push(import('./menu-ufo.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
       menuActors=assets.menuFloaters;menuFlight=assets.createMenuUfoFlight({reducedMotion});
     }));
+    import('./menu-mothership.js?v='+encodeURIComponent(assetVersion)).then(assets=>{
+      menuMothershipAssets=assets;menuMothershipFlight=assets.createMenuMothershipFlight({reducedMotion});
+    }).catch(error=>{menuMothershipFailed=true;console.warn('[GALAXY3D] Decoracion de nodriza no disponible:',error?.message||error);});
     const ufoAssets=import('./ufo-model.js?v='+encodeURIComponent(assetVersion));
     // One baked reflection texture is shared by UFOs and rockets.
     const reflectionsReady=ufoAssets.then(assets=>assets.createUfoEnvironment(renderer));
-    // The CPU encounter is loaded during PREPARADOS. Online/menu never download it.
+    // One shared asset: CPU waits during PREPARADOS; menu scenery requests it after idle dwell.
     function prepareMothership(){
       if(!mothershipLoad)mothershipLoad=Promise.all([import('./mothership-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
         const definition=window.GalaxyMothershipData;
@@ -317,6 +320,10 @@
       if(kind==='mothership'){
         const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile});
         root.add(visual,exhaust.points);return {root,visual,exhaust};
+      }
+      if(kind==='menu-mothership'){
+        const visual=menuMothershipAssets.prepareMenuMothership(createImportedMothership(),mobile);
+        root.add(visual);return {root,visual};
       }
       if(kind==='menu-ufo'){
         const side=new T.Group(),spin=new T.Group();root.add(side);side.add(spin);spin.add(createImportedUfo());
@@ -485,6 +492,11 @@
         record.root.rotation.set(0,0,pose.bank);record.side.rotation.x=pose.pitch;
         setImportedUfoPose(record.spin,pose.angle,now,.8,0,0);
       },
+      menuMothership(pose){
+        const record=take('menu-mothership','distant-visitor');
+        place(record.root,pose.x,pose.y,menuMothershipAssets.MENU_MOTHERSHIP_DEPTH);
+        menuMothershipAssets.setMenuMothershipPose(record.visual,pose);
+      },
       rocket(id,x,y,rotation,owner){
         const record=take('rocket',id);place(record.root,x,y,18);
         attachFlyingRocket(record,owner);
@@ -548,6 +560,13 @@
         }
         const visitor=menuFlight.update(time,objects);
         if(visitor)this.menuUfo(visitor);
+        const cruiser=menuMothershipFlight?.update(time,!!createImportedMothership);
+        if(menuMothershipFlight?.needsAssets&&!menuMothershipFailed&&!mothershipLoad){
+          // Optional scenery must never block startup or fail the main renderer.
+          prepareMothership().catch(error=>{menuMothershipFailed=true;console.warn('[GALAXY3D] Nodriza decorativa no disponible:',error?.message||error);});
+        }
+        if(cruiser)this.menuMothership(cruiser);
+        ctx.canvas.dataset.menuMothership=cruiser?'flying':'idle';
         ctx.canvas.dataset.menuUfo=visitor?visitor.phase:'idle';
         ctx.canvas.dataset.menuUfoTarget=visitor?.target||'';
         this.flush(ctx);
