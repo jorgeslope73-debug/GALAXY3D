@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.19: actualiza nodriza.glb con el ultimo archivo del usuario: 13.437 triangulos y los mapas originales de desgaste, metal/rugosidad, relieve y luces. Recalibra el casco y las cuatro torretas; conserva las particulas de propulsion, los impactos locales y la esquiva de las CPU. El modelo y sus shaders se preparan durante PREPARADOS solo para la partida CPU.
+
 V24.18: las CPU anticipan hasta 1,6 segundos de movimiento ante la nodriza, incluyendo velocidad, inercia, giro y balanceo del casco. Comparan frenada, aceleracion y salidas laterales con el mismo integrador y el contorno real; la seguridad prevalece sobre persecucion y decisiones almacenadas en las tres dificultades. Mantienen brevemente la maniobra para evitar cambios nerviosos. Son calculos locales, con sondas reutilizadas y sin nuevos campos de red.
 
 V24.17: las balas normales que chocan con la nodriza reutilizan la explosion de particulas de los meteoritos en el punto de contacto continuo. El efecto recorre la cola y los pools locales existentes, limitados y sin mensajes ni cambios de protocolo online. Los misiles conservan su desintegracion.

@@ -51,15 +51,17 @@ console.log(`Mothership avoidance OK: ${avoidanceCases} closed-loop pursuit case
 const bytes=await readFile(new URL('../docs/assets/models/nodriza.glb',import.meta.url));
 assert.equal(createHash('sha256').update(bytes).digest('hex'),D.sha256,'Physics calibration must match the exact supplied GLB');
 assert.equal(D.length,540,'The calibrated ship is ten percent smaller than its previous 600-unit length');
-assert.ok(bytes.length<1.5*1024*1024);assert.equal(D.turrets.length,4);
+assert.ok(bytes.length<3*1024*1024,'The authored hull and baked finish stay below 3 MiB');assert.equal(D.turrets.length,4);
 assert.deepEqual(Array.from(D.turrets,t=>t.name),['AEGIS_Yaw_Aft_L','AEGIS_Yaw_Aft_R','AEGIS_Yaw_Forward_L','AEGIS_Yaw_Forward_R']);
 assert.ok(D.profiles[0].outline.length>20,'Use the real concave hull, not a circle or bounding box');
 const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
 const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 const original=gltf.scene.getObjectByName('AEGIS_Hull').material;
 const template=prepareMothershipTemplate(gltf.scene,D),environment=new T.Texture(),factory=createMothershipFactory(template,D,environment),a=factory(),b=factory();
-let triangles=0,meshes=0;a.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;assert.equal(o.material.map,original.map);assert.equal(o.material.metalnessMap,original.metalnessMap);assert.equal(o.material.emissiveMap,original.emissiveMap);assert.equal(o.material.emissiveIntensity,original.emissiveIntensity);assert.equal(o.material.envMap,environment);});
-assert.equal(meshes,5);assert.equal(triangles,13558);
+let triangles=0,meshes=0;a.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;assert.equal(o.material.map,original.map);assert.equal(o.material.metalnessMap,original.metalnessMap);assert.equal(o.material.emissiveMap,original.emissiveMap);assert.equal(o.material.normalMap,original.normalMap);assert.deepEqual(o.material.normalScale,original.normalScale);assert.equal(o.material.emissiveIntensity,original.emissiveIntensity);assert.equal(o.material.envMap,environment);});
+assert.equal(meshes,5);assert.equal(triangles,13437);
+assert.ok(original.normalMap,'The updated ship keeps its baked surface detail');
+assert.equal(original.map.channel,0);assert.equal(original.normalMap.channel,0);assert.equal(original.emissiveMap.channel,1,'Lights retain their separate original UV palette');
 assert.equal(a.getObjectByName('AEGIS_Turret_Centre'),undefined,'The replacement GLB has no central gun geometry');
 // All five jets originate in the authored rear rims, including reversed travel
 // and the full bank/yaw. Their world-space trails do not turn with the hull.
