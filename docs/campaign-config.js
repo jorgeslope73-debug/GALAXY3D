@@ -25,7 +25,7 @@
     },
     {
       id:2,nameKey:'campaignWorld2',
-      boss:{type:'ufo-wave',total:10,interval:4},
+      boss:{type:'ufo-wave',total:6,interval:4,duration:30},
       background:{file:'assets/sprites/fondo02.jpg',mobileKey:'bg02',stars:false},
       ufos:0,
       hazards:{

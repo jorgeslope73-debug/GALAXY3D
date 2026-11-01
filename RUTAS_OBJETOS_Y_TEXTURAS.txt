@@ -8,7 +8,7 @@ no actualiza la copia utilizada por el juego.
 
 MODELOS 3D ACTIVOS
 - Nodriza decorativa de portada y jefe final del nivel 1 CPU: docs/assets/models/nodriza.glb (13.437 triangulos; mapas internos originales de desgaste, metal/rugosidad, relieve y luces).
-- OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb. La fase 2 reutiliza este modelo y sus animaciones en una oleada final de 10 unidades unicas.
+- OVNI con giro continuo e inclinación según su desplazamiento: docs/assets/models/ovni.glb. La fase 2 reutiliza este modelo y sus animaciones en una oleada final de 6 unidades unicas.
 - Nave de los cuatro jugadores: docs/assets/models/nave.glb
 - Asteroide mediano: docs/assets/models/asteroidemediano.glb
 - Meteorito grande/gigante: docs/assets/models/Rocky_Asteroid_5.glb
@@ -32,9 +32,9 @@ NODRIZA CPU
 - Jefe de fase: docs/campaign-config.js asigna la nodriza al nivel 1. Al alcanzar cinco bajas se inicia beginMothershipBoss() en docs/local-cpu.js; dos pasadas desde bordes diferentes, con 6 puntos de vida compartidos. Sobrevivir dos pasadas causa mision fallida y reinicio; destruirla permite el viaje automatico al nivel 2. PREPARADOS prepara el modelo antes del combate CPU. Portada, entrenamiento y red conservan su flujo.
 
 OLEADA FINAL DE LA FASE 2
-- docs/campaign-config.js: boss ufo-wave, total 10 e intervalo 4 s; no hay OVNIs ambientales durante el combate previo con los rivales.
-- docs/local-cpu.js: tras ganar a los rivales, entradas individuales hasta diez. Las bajas no se reponen y los supervivientes siguen patrullando sin retirada por tiempo. Termina solo con diez bajas; despues permite el viaje al nivel 3.
-- docs/game.js: contador local de OVNIs eliminados sobre diez y viaje interestelar automatico al completar la oleada. Los diez modelos comparten geometria y texturas; no se anaden paquetes de red.
+- docs/campaign-config.js: boss ufo-wave, total 6, intervalo 4 s y duracion 30 s; no hay OVNIs ambientales durante el combate previo con los rivales.
+- docs/local-cpu.js: tras ganar a los rivales, entradas individuales hasta seis. Las bajas no se reponen. Hay 30 segundos desde la primera entrada: seis bajas permiten el viaje al nivel 3; cualquier superviviente al vencer el plazo escapa y causa derrota.
+- docs/game.js: contador local de OVNIs eliminados sobre seis, cuenta atras superior de 30 segundos y mensaje DEJASTE ESCAPAR AL ENEMIGO si se agota el tiempo. Viaje interestelar automatico al completar la oleada. Los seis modelos comparten geometria y texturas; no se anaden paquetes de red.
 
 ICONO DE MEJORA FLOTANTE DEL ESCUDO
 - docs/assets/sprites/escudo.png: PNG original del usuario, precargado por docs/game.js.

@@ -2314,6 +2314,7 @@
       if(!this.started||this.finished)return;
       this.noDeathTime+=dt;this.fxClock+=dt;
       this.updateCampaignBoss();
+      if(this.finished)return;
       if(Array.isArray(this.activeShockwaves)&&this.activeShockwaves.length){
         // V21.16: dos jugadores con ONDA activa se neutralizan entre si.
         // Sus frentes siguen existiendo y pueden afectar a terceros sin onda.
@@ -2533,7 +2534,7 @@
       if(winner.cpu||this.bossEncounter||this.trainingMode)return false;
       if(!this.needsUfoBoss())return this.beginMothershipBoss(winner);
       const cfg=CAMPAIGN.getLevel(this.campaignLevel).boss;
-      this.bossEncounter={type:'ufo-wave',phase:'entering',total:cfg.total,interval:cfg.interval,spawned:0,defeated:0,nextAt:this.fxClock+1.5,cleared:false};
+      this.bossEncounter={type:'ufo-wave',phase:'entering',total:cfg.total,interval:cfg.interval,duration:cfg.duration,deadline:null,spawned:0,defeated:0,nextAt:this.fxClock+1.5,cleared:false};
       this.retireBossRivals();return true;
     }
     beginMothershipBoss(winner){
@@ -2549,7 +2550,11 @@
       }
       const human=this.players.find(p=>!p.cpu);
       if(boss.type==='ufo-wave'){
-        if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){boss.phase='fighting';boss.nextAt=this.fxClock;}
+        if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){boss.phase='fighting';boss.nextAt=this.fxClock;boss.deadline=this.fxClock+boss.duration;}
+        if(boss.phase==='fighting'&&this.fxClock>=boss.deadline){
+          boss.escaped=this.ufoActiveCount();this.ufo=null;this.ufoExtras.length=0;this.ufoWaveRemaining=0;this.nextUfo=999999;
+          this.finishCampaignBoss(false);
+        }
         return;
       }
       if((boss.phase==='entering'||boss.phase==='between')&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
@@ -3284,7 +3289,7 @@
 
       // V21.68: red de seguridad geométrica. Si dos OVNIs llegan a tocarse
       // pese a la anticipación, se separan suavemente sin explosión ni daño.
-      // El límite de diez unidades mantiene acotadas las parejas (máximo 45).
+      // El limite de seis unidades mantiene acotadas las parejas (maximo 15).
       for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
         const a=active[i],b=active[j];
         if(!this.isUfoActive(a)||!this.isUfoActive(b))continue;
@@ -3588,7 +3593,7 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,

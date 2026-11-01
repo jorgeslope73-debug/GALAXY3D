@@ -4765,7 +4765,7 @@
     localCampaignGameOver=false;
 
     if(localCampaign&&state?.boss?.phase==='failed'){
-      victoryText.textContent=tr('bossMissionFailed');localCampaignGameOver=true;
+      victoryText.textContent=tr(state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
       if(restartBtn){restartBtn.classList.remove('hidden');restartBtn.disabled=false;restartBtn.textContent=tr('restartCampaign');}
     }else if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
       victoryText.textContent=tr('campaignChampion');
@@ -6877,6 +6877,10 @@
     ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.fillStyle='#a5f7ff';
     const label=tr('ufoBossProgress',{count:boss.defeated,total:boss.total});
     ctx.strokeText(label,W/2,130);ctx.fillText(label,W/2,130);
+    const seconds=Math.max(0,Math.ceil(Number(boss.remaining)||0));
+    ctx.font=isMobile?'46px Flashback,Arial':'40px Flashback,Arial';ctx.fillStyle=seconds<=10?'#ff756b':'#a5f7ff';
+    const timer=tr('ufoBossTime',{seconds});
+    ctx.strokeText(timer,W/2,182);ctx.fillText(timer,W/2,182);
     ctx.restore();
   }
   function render(rafNow){
