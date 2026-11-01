@@ -115,7 +115,8 @@ const checks=[
   })],
   ['OVNI rebota al tocar el escudo',()=>both('ovni',({engine,players:[p]})=>{
     engine.hazardStage=()=>({ufo:true});
-    engine.campaignLevel=2;
+    // Ambient UFOs start at level three; level two reserves them for its final boss.
+    engine.campaignLevel=3;
     const u=rock(500+R+30-.5,500,30,-120);
     Object.assign(u,{born:10,nextSteer:20,bounceUntil:0});engine.ufo=u;
     engine.updateUfo(DT);assert.equal(p.dead,false);assert.ok(u.vx>0);assert.ok(distance(p,u)>=R+30);
