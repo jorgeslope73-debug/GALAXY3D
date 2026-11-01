@@ -12,10 +12,11 @@
   const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   function rotate(x,y,a){const c=Math.cos(a),s=Math.sin(a);return {x:x*c-y*s,y:x*s+y*c};}
   function create(id,direction=1){
-    const dir=direction<0?-1:1;
-    const x=dir>0?-data.radius-40:W+data.radius+40;
-    return {id,x,y:H*.5,px:x,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,hp:MAX_HP,maxHp:MAX_HP,nextVolley:5.5,fireCursor:0,
-      turrets:data.turrets.map(()=>({angle:dir>0?0:Math.PI,nextShot:0,target:-1}))};
+    const entry=['left','right','top','bottom'].includes(direction)?direction:(direction<0?'right':'left'),margin=data.radius+40;
+    const x=entry==='left'?-margin:entry==='right'?W+margin:W*.5,y=entry==='top'?-margin:entry==='bottom'?H+margin:H*.5;
+    const vx=entry==='left'?SPEED:entry==='right'?-SPEED:0,vy=entry==='top'?SPEED:entry==='bottom'?-SPEED:0,heading=entry==='left'?Math.PI/2:entry==='right'?-Math.PI/2:entry==='top'?Math.PI:0;
+    return {id,entry,x,y,px:x,py:y,vx,vy,heading,angle:heading,age:0,bank:0,hp:MAX_HP,maxHp:MAX_HP,nextVolley:5.5,fireCursor:0,
+      turrets:data.turrets.map(()=>({angle:Math.atan2(vy,vx),nextShot:0,target:-1}))};
   }
   function bankAt(seconds){return Math.sin(seconds*Math.PI*2/BANK_PERIOD)*BANK_LIMIT;}
   function yawAt(seconds){return Math.sin(seconds*Math.PI*2/YAW_PERIOD)*YAW_LIMIT;}
@@ -86,7 +87,9 @@
       turret.nextShot=body.age+SHOT_INTERVAL;body.nextVolley=body.age+VOLLEY_GAP;body.fireCursor=(slot+1)%firingTurrets.length;
       break;
     }
-    return {shots,active:body.vx>0?body.x<W+data.radius+40:body.x>-data.radius-40};
+    const margin=data.radius+40;
+    const active=Math.abs(body.vy)>Math.abs(body.vx)?(body.vy>0?body.y<H+margin:body.y>-margin):(body.vx>=0?body.x<W+margin:body.x>-margin);
+    return {shots,active};
   }
   function shape(cache,key,profile,x,y,scale,angle){
     let value=cache.get(key);

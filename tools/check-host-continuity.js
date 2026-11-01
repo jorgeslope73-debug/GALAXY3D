@@ -277,12 +277,12 @@ async function checkLocalCpuStartup(){
   assert.equal(ctx.inGame,true,'the real start event reaches countdown and beginGame');
   assert.equal(ctx.onlineStartPending,true,'PREPARADOS holds until preparation and the minimum ready period finish');
   assert.equal(cpu.fxClock,0,'preparation does not advance the real CPU simulation');
-  assert.equal(cpu.mothership.hp,6,'JUGAR creates the six-HP opening test encounter');
-  assert.equal(mothershipRequests,1,'CPU startup requests the active encounter model once');
+  assert.equal(cpu.mothership,null,'JUGAR starts rival combat before the level boss');
+  assert.equal(cpu.needsMothershipBoss(),true);assert.equal(mothershipRequests,1,'CPU startup prepares the future level boss model once');
   f.advanceStart(ctx.ONLINE_READY_MS);
   assert.equal(ctx.matchStartGate.phase,'preparing','CPU waits for the required mothership model even after the minimum ready period');
   assert.equal(cpu.fxClock,0,'loading the graphics cannot advance the real encounter');
-  assert.equal(cpu.mothership.age,0,'The real ship cannot cross the screen during preparation');
+  assert.equal(cpu.bossEncounter,null,'The level boss cannot start during preparation');
   releaseMothership();for(let i=0;i<30;i++)await Promise.resolve();
   assert.equal(ctx.matchStartGate.phase,'preparing','GPU preparation is still required after the GLB is loaded');
   releaseGraphics();for(let i=0;i<30;i++)await Promise.resolve();

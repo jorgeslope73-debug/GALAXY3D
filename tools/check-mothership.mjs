@@ -239,8 +239,9 @@ for(const yaw of [-8,0,8])for(const bank of [-15,0,15])for(const r of P.MEDIUM_R
   assert.ok(collided,'Every medium size and sampled 3D pose can hit the mothership');
 }
 const engine=new ctx.window.GalaxyLocalCpu({});engine.start('TEST','facil',1,null,false,1);
-assert.ok(engine.mothership,'A new CPU match starts the requested test encounter');
-assert.equal(engine.mothership.hp,6);assert.equal(engine.publicState().mothership.hp,6);assert.equal(engine.publicState().mode,'cpu');
+assert.equal(engine.mothership,null,'A new CPU match begins with rival combat, not the boss');
+assert.equal(engine.needsMothershipBoss(),true,'The level-one boss assets are prepared ahead of the duel');
+engine.startMothershipPass();assert.equal(engine.mothership.hp,6);assert.equal(engine.publicState().mothership.hp,6);assert.equal(engine.publicState().mode,'cpu');
 assert.ok(engine.mothership.x+M.data.radius<0,'The test ship still enters completely from outside the screen');
 const showerAt=engine.firstShower,giantAt=engine.nextGiant;
 engine.firstShower=.01;engine.nextGiant=.01;
@@ -283,9 +284,9 @@ engine.mothership.hp=engine.mothership.maxHp=100; // Synthetic endurance target 
 engine.fxEvents=[];engine.bullets=Array.from({length:80},(_,i)=>({id:7200+i,owner:i%2,x:300,y:540,vx:60000,vy:0,guided:false}));
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,0);assert.equal(engine.fxEvents.length,32,'High cadence reuses the existing bounded local FX queue');
 assert.ok(engine.publicState().fx.every(e=>e.kind==='explosion'),'The normal CPU renderer receives the existing explosion effect without a new event type');
-engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating restores the requested test encounter');assert.equal(engine.mothership.hp,6,'Repeating restores all six HP');
+engine.finished=true;assert.equal(engine.restart(),true);assert.equal(engine.mothership,null,'Repeating starts rival combat again');assert.equal(engine.bossEncounter,null);
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
-const gameSource=await source('game');assert.ok(gameSource.includes("if(roomCode==='LOCAL'&&localCpu?.mothership)await window.Galaxy3D.prepareMothership();"),'Startup waits for the GLB only when the CPU encounter exists');
+const gameSource=await source('game');assert.ok(gameSource.includes("if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();"),'Startup prepares the level boss before rival combat');
 // Six bullet-equivalent HP, exercised through real projectile/flare collision paths.
 assert.equal(M.MAX_HP,6);assert.equal(M.DAMAGE.bullet,1);assert.equal(M.DAMAGE.missile,3);assert.equal(M.DAMAGE.flare,2);
 const resetHealthTarget=(direction=1)=>{

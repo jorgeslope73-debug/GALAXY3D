@@ -5,6 +5,8 @@ on:
     paths:
       - 'docs/host-physics.js'
       - 'docs/local-cpu.js'
+      - 'docs/campaign-config.js'
+      - 'tools/check-campaign-boss.js'
       - 'docs/physics-core.js'
       - 'docs/collision-profiles.js'
       - 'docs/net-protocol.js'
@@ -105,6 +107,8 @@ on:
     paths:
       - 'docs/host-physics.js'
       - 'docs/local-cpu.js'
+      - 'docs/campaign-config.js'
+      - 'tools/check-campaign-boss.js'
       - 'docs/physics-core.js'
       - 'docs/collision-profiles.js'
       - 'docs/net-protocol.js'
@@ -292,6 +296,8 @@ jobs:
         run: node tools/check-ufo-model.mjs
       - name: Check CPU mothership, turret muzzle calibration and irregular contacts
         run: node tools/check-mothership.mjs
+      - name: Check campaign boss gate, two passes and mission outcome
+        run: node tools/check-campaign-boss.js
       - name: Check decorative menu UFO timing and clearance
         run: node tools/check-menu-ufo.mjs
       - name: Check distant menu mothership timing and asset isolation

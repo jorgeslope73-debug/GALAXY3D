@@ -1091,7 +1091,7 @@
       this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
       const human=this.makePlayer(0,name,false);
-      this.startMothershipPass();
+      this.mothership=null;this.bossEncounter=null;
       this.applyTrainingHardLoadout(human,false);
       this.placeAtSpawn(human);
       this.players.push(human);
@@ -1119,6 +1119,7 @@
     }
     startTraining(brain=null){
       this.trainingMode=true;
+      this.bossEncounter=null;
       this.mothership=null;
       this.learningEnabled=true;
       this.campaignLevel=1;
@@ -1161,7 +1162,7 @@
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
       return true;
     }
-    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;}
+    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.bossEncounter=null;}
     setControl(turn,thrust,fire,actions={}){
       const p=this.players[0];
       if(!p)return false;
@@ -1191,7 +1192,10 @@
       if(msg.t==='ctrl'){this.setControl(msg.turn,msg.thrust,msg.fire,msg);return true;}
       if(msg.t==='input-action'||msg.t==='fallback-input-action'){this.applyInputAction(msg.kind,msg.actionId);return true;}
       if(msg.t==='restart'){
-        if(Number.isFinite(Number(msg.level)))this.campaignLevel=clamp(Math.round(Number(msg.level)||1),1,CAMPAIGN_LEVELS);
+        const level=Number.isFinite(Number(msg.level))?clamp(Math.round(Number(msg.level)||1),1,CAMPAIGN_LEVELS):this.campaignLevel;
+        const completed=this.finished&&this.winner===0&&(!this.needsMothershipBoss()||this.bossEncounter?.phase==='won');
+        if(!this.finished||level>this.campaignLevel+1||(level>this.campaignLevel&&!completed)||(this.bossEncounter?.phase==='failed'&&level!==1))return true;
+        this.campaignLevel=level;
         if(this.restart()){
           this.emit({t:'restarted'});
           this.onState(this.publicState());
@@ -1254,7 +1258,7 @@
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
-      this.startMothershipPass();
+      this.mothership=null;this.bossEncounter=null;
       for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;
@@ -1490,7 +1494,7 @@
       if(victim.cpu)victim.flarePending=null;
       if(!victim.cpu)this.humanMeteorDecision=null;
       // V22.46: toda muerte resta una baja, sin bajar de cero.
-      victim.kills=Math.max(0,victim.kills-1);
+      if(!this.bossEncounter)victim.kills=Math.max(0,victim.kills-1);
 
       // V21.33: la embestida con escudo conserva su efecto de colision/baja,
       // pero ya no roba ni transfiere armamento o mejoras del rival.
@@ -1502,13 +1506,13 @@
       this.noDeathTime=0;this.emitShipImpact(victim,null,true);this.emit({t:'sound',kind:'impact'});
       if(attacker&&attacker!==victim){
         attacker.kills++;
-        if(attacker.kills>=SCORE_TO_WIN){
+        if(attacker.kills>=SCORE_TO_WIN&&!this.beginMothershipBoss(attacker)){
           this.finished=true;this.winner=attacker.index;
           this.flushLearning();
           this.emit({t:'victory',winner:this.winner});
         }
       }
-      if(!this.finished)this.placeAtSpawn(victim,true);
+      if(!this.finished&&!(this.bossEncounter&&victim.cpu))this.placeAtSpawn(victim,true);
     }
     placeAtSpawn(p,reserve=false){
       let spawn=!reserve&&p.pendingSpawn;
@@ -2309,6 +2313,7 @@
     update(dt){
       if(!this.started||this.finished)return;
       this.noDeathTime+=dt;this.fxClock+=dt;
+      this.updateMothershipEncounter();
       if(Array.isArray(this.activeShockwaves)&&this.activeShockwaves.length){
         // V21.16: dos jugadores con ONDA activa se neutralizan entre si.
         // Sus frentes siguen existiendo y pueden afectar a terceros sin onda.
@@ -2426,7 +2431,7 @@
       }
       let human=null;
       const cpuPlayers=this.cpuScratch;cpuPlayers.length=0;
-      if(!this.trainingMode){
+      if(!this.trainingMode&&!this.bossEncounter){
         for(const p of this.players){
           if(p.cpu)cpuPlayers.push(p);
           else if(!human)human=p;
@@ -2451,6 +2456,7 @@
       this.fxEvents.length=fxWrite;
       const controlNow=Date.now();
       for(const p of this.players){
+        if(this.bossEncounter&&p.cpu)continue;
         p.previousPoseTime=Number.isFinite(p.poseTime)?p.poseTime:this.fxClock-dt;p.poseTime=this.fxClock;
         if((Number(p.spawnFx)||0)>0){p.spawnFx=Math.max(0,p.spawnFx-dt);p.protection=SPAWN_PROTECTION_SECONDS;}else p.protection=p.protection-dt>1e-9?p.protection-dt:0;
         p.shield=Math.max(0,p.shield-dt);p.camo=Math.max(0,p.camo-dt);p.reload=Math.max(0,p.reload-dt);
@@ -2475,7 +2481,8 @@
         p.thrust=!!c.thrust;
         PHYSICS_CORE.stepShipMovement(p,c,dt,W,H);
         const d=dirFromRot(p.rot);
-        PHYSICS_CORE.refreshGuidedState(p,this.players,dirFromRot);
+        const combatTargets=this.mothershipCombatTargets(p);
+        PHYSICS_CORE.refreshGuidedState(p,combatTargets,dirFromRot);
 
         // Comprobacion final de disparo DESPUES de aplicar el giro de este frame.
         // Antes la IA decidia "disparo" con la rotacion anterior y la bala se
@@ -2503,7 +2510,7 @@
         const projectile=PHYSICS_CORE.tryFireProjectile(
           p,d,fireNow,rocketNow,!!(c&&c.directFire),
           !!(p.cpu&&(Number(p.cpuFireDelay)||0)>0),
-          this.players,dirFromRot,uid,CPU_ARMED_WARNING_SECONDS
+          combatTargets,dirFromRot,uid,CPU_ARMED_WARNING_SECONDS
         );
         if(projectile){
           this.bullets.push(projectile);
@@ -2514,10 +2521,50 @@
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
       this.updateMothership(dt);
-      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateAsteroids(dt);this.resolveMothershipContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.guideMothershipMissiles(dt);this.absorbMothershipShots(dt);this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
-    startMothershipPass(){
-      this.mothership=!this.trainingMode&&this.campaignLevel===1&&MOTHERSHIP?MOTHERSHIP.create(uid(),1):null;
+    needsMothershipBoss(){return !!(!this.trainingMode&&MOTHERSHIP&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='mothership');}
+    beginMothershipBoss(winner){
+      if(!this.needsMothershipBoss()||winner.cpu||this.bossEncounter)return false;
+      this.bossEncounter={type:'mothership',phase:'entering',pass:0,maxPasses:CAMPAIGN.getLevel(this.campaignLevel).boss.passes,hp:MOTHERSHIP.MAX_HP,maxHp:MOTHERSHIP.MAX_HP,entry:'left',nextAt:this.fxClock+1.5,cleared:false};
+      for(const p of this.players)if(p.cpu){p.dead=true;p.pendingSpawn=null;p.thrust=false;p.vx=p.vy=0;this.controls.delete(p.index);}
+      this.huntThresholdActive=false;this.huntUntil=0;this.huntStartsAt=0;
+      return true;
+    }
+    updateMothershipEncounter(){
+      const boss=this.bossEncounter;if(!boss||this.finished)return;
+      if(!boss.cleared){
+        this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;this.giant=null;this.meteors.length=0;this.showerLeft=0;this.ufo=null;this.ufoExtras.length=0;boss.cleared=true;
+      }
+      const human=this.players.find(p=>!p.cpu);
+      if((boss.phase==='entering'||boss.phase==='between')&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
+        const entries=['left','right','top','bottom'].filter(edge=>edge!==boss.entry);
+        const entry=boss.pass===0?'left':entries[randint(0,entries.length-1)];
+        this.startMothershipPass(entry);this.mothership.hp=boss.hp;
+        boss.entry=entry;boss.pass++;boss.phase='fighting';
+      }
+    }
+    finishMothershipBoss(won){
+      const boss=this.bossEncounter;if(!boss||this.finished)return;
+      boss.phase=won?'won':'failed';this.mothership=null;this.finished=true;this.winner=won?0:-1;
+      this.flushLearning();this.emit({t:'victory',winner:this.winner});
+    }
+    mothershipCombatTargets(player){
+      if(player.cpu||!this.mothership||this.bossEncounter?.phase!=='fighting')return this.players;
+      const target=this.mothershipTarget||(this.mothershipTarget={index:4,dead:false,camo:0}),mother=this.mothership;
+      target.x=mother.x;target.y=mother.y;target.vx=mother.vx;target.vy=mother.vy;
+      const roster=this.mothershipTargetRoster||(this.mothershipTargetRoster=[target]);return roster;
+    }
+    guideMothershipMissiles(dt){
+      const mother=this.mothership;if(!mother||this.bossEncounter?.phase!=='fighting')return;
+      for(const b of this.bullets){
+        if(!b.guided||b.target!==4||b.decoyed||b.flareTarget>=0)continue;
+        const dx=mother.x-b.x,dy=mother.y-b.y,distance=Math.hypot(dx,dy),speed=Math.hypot(b.vx,b.vy)||1;if(distance<=1)continue;
+        const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
+      }
+    }
+    startMothershipPass(entry='left'){
+      this.mothership=this.needsMothershipBoss()?MOTHERSHIP.create(uid(),entry):null;
       if(this.mothership){this.giant=null;this.meteors=[];this.showerLeft=0;}
     }
     updateMothership(dt){
@@ -2525,7 +2572,13 @@
       const next=MOTHERSHIP.step(this.mothership,dt,this.players,uid);
       const active=this.bullets.reduce((count,b)=>count+(b.mothership?1:0),0);
       if(next.shots.length&&active<64){this.bullets.push(...next.shots.slice(0,64-active));this.emit({t:'sound',kind:'laser'});}
-      if(!next.active)this.mothership=null;
+      if(!next.active){
+        const boss=this.bossEncounter;if(boss&&boss.phase==='fighting'){
+          boss.hp=this.mothership.hp;this.mothership=null;
+          if(boss.pass>=boss.maxPasses)this.finishMothershipBoss(false);
+          else {boss.phase='between';boss.nextAt=this.fxClock+2.5;}
+        }else this.mothership=null;
+      }
     }
     resolveMothershipContacts(){
       const mother=this.mothership;if(!mother)return;
@@ -2569,11 +2622,13 @@
       if(!mother||this.mothership!==mother||!(mother.hp>0))return false;
       const damage=MOTHERSHIP.DAMAGE[weapon];if(!damage)return false;
       mother.hp=Math.max(0,mother.hp-damage);
+      if(this.bossEncounter)this.bossEncounter.hp=mother.hp;
       if(mother.hp>0)return false;
       // Existing bounded local FX; destroying the hull removes its collisions and guns.
       this.mothership=null;
       for(const offset of [-170,-85,0,85,170])this.emitExplosionAt(mother.x-Math.sin(mother.angle)*offset,mother.y+Math.cos(mother.angle)*offset,ownerIndex);
       this.emit({t:'sound',kind:'impact'});
+      if(this.bossEncounter?.phase==='fighting')this.finishMothershipBoss(true);
       return true;
     }
     reloadTime(p){return PHYSICS_CORE.reloadTimeFor(p);}
@@ -2925,7 +2980,7 @@
       }
     }
     updateShower(dt){
-      if(this.mothership)return;
+      if(this.mothership||this.bossEncounter)return;
       const profile=this.hazardProfile();
       if(this.showerLeft<=0){
         this.firstShower-=dt;
@@ -2982,7 +3037,7 @@
       }
     }
     updateGiant(dt){
-      if(this.mothership)return;
+      if(this.mothership||this.bossEncounter)return;
       const margin=GIANT_RADIUS+45,inset=GIANT_RADIUS+25,exitMargin=Math.max(350,margin);
       if(!this.giant){
         this.nextGiant-=dt;
@@ -3486,13 +3541,14 @@
         t:'state',seq:++this.seq,code:'LOCAL',mode:'cpu',started:this.started,finished:this.finished,winner:this.winner,
         w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,simTime:round3(this.fxClock),
         fx:this.fxEvents.map(e=>({id:e.id,i:e.i,x:e.x,y:e.y,kind:e.kind,hidden:e.hidden,age:Math.max(0,Math.round((this.fxClock-e.at)*1000))})),
-        players:this.players.map(p=>({i:p.index,n:p.name,cpu:p.cpu,x:round1(p.x),y:round1(p.y),r:round1(p.rot),b:round3(Number(p.bank)||0),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn),...(p.dead&&p.pendingSpawn?{spawnX:round1(p.pendingSpawn.x),spawnY:round1(p.pendingSpawn.y)}:{})})),
+        players:(this.bossEncounter?this.players.filter(p=>!p.cpu):this.players).map(p=>({i:p.index,n:p.name,cpu:p.cpu,x:round1(p.x),y:round1(p.y),r:round1(p.rot),b:round3(Number(p.bank)||0),vx:round1(p.vx),vy:round1(p.vy),thrust:!!p.thrust,ammo:p.bullets,armed:!p.dead&&(Number(p.spawnFx)||0)<=0&&p.bullets>0&&p.reload<=0,cad:p.cadence,spd:p.speed,k:p.kills,d:p.deaths,shield:round2(p.shield),camo:round2(p.camo),prot:round2(p.protection),spawnFx:round2(Math.max(0,Number(p.spawnFx)||0)),mira:!!p.guided,ma:Math.max(0,Math.round(Number(p.guidedAmmo)||0)),mt:Number.isInteger(p.guidedTarget)?p.guidedTarget:-1,flare:Math.max(0,Math.round(Number(p.flare)||0)),shock:!!p.shockwave,dead:p.dead,respawn:round3(p.respawn),...(p.dead&&p.pendingSpawn?{spawnX:round1(p.pendingSpawn.x),spawnY:round1(p.pendingSpawn.y)}:{})})),
         asteroids:this.asteroids.map(a=>({id:a.id,x:round1(a.x),y:round1(a.y),type:a.type,s:round3(Number(a.spin)||0),r:round3(Number(a.r)||ASTEROID_RADIUS),fragment:!!a.fragment})),
         bullets:this.bullets.map(b=>({id:b.id,o:b.owner,owner:b.owner,x:round1(b.x),y:round1(b.y),vx:round1(b.vx),vy:round1(b.vy),g:!!b.guided,guided:!!b.guided,gt:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,target:(!b.decoyed&&Number.isInteger(b.target))?b.target:-1,wt:(!b.decoyed&&b.guided&&Number.isInteger(b.target))?b.target:-1})),
         flares:this.flares.map(f=>({id:f.id,o:f.owner,x:round1(f.x),y:round1(f.y),a:round1(f.angle),life:round2(Math.max(0,f.life))})),
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp}:null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,

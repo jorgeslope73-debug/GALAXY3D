@@ -4045,6 +4045,14 @@
       }
       const now=performance.now();
       const delayedVisuals=typeof networkPlayback!=='undefined'&&networkPlayback&&(!isHost||activeHostClient())&&!localCpuActive;
+      if(localCpuActive&&m.boss){
+        const oldBoss=state?.boss,boss=m.boss;
+        if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
+          playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
+          playNoticeText=boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming');
+          huntFxUntil=0;leaderAnnouncement=null;
+        }
+      }
       if(!delayedVisuals){
         if(impactFX)impactFX.consume(m,myIndex,now);
         consumeGameFeelFx(m,now);
@@ -4354,7 +4362,16 @@
   // V20.96: transicion puramente visual entre mundos de la campana CPU.
   // Se ejecuta con la partida terminada, en un canvas UI independiente, por lo
   // que no modifica fisica, red, temporizadores de simulacion ni colisiones.
-  let interstellarTravelCanvas=null,interstellarTravelRaf=0,interstellarTravelResolve=null,interstellarTravelGeneration=0;
+  let interstellarTravelCanvas=null,interstellarTravelRaf=0,interstellarTravelResolve=null,interstellarTravelGeneration=0,bossTravelTimer=null;
+  function scheduleBossTravel(button){
+    if(bossTravelTimer!==null){clearTimeout(bossTravelTimer);bossTravelTimer=null;}
+    if(!button||!localCpuActive||state?.boss?.phase!=='won'||!localCampaignAwaitingContinue)return;
+    const engine=localCpu,level=localCampaignLevel;
+    bossTravelTimer=setTimeout(()=>{
+      bossTravelTimer=null;
+      if(roomCode==='LOCAL'&&localCpuActive&&localCpu===engine&&localCampaignLevel===level&&localCampaignAwaitingContinue&&!inGame&&!victory.classList.contains('hidden')&&!button.disabled)button.click();
+    },1400);
+  }
   function ensureInterstellarTravelCanvas(){
     if(interstellarTravelCanvas)return interstellarTravelCanvas;
     const c=document.createElement('canvas');
@@ -4369,6 +4386,7 @@
     return c;
   }
   function cancelInterstellarTravel(){
+    if(bossTravelTimer!==null){clearTimeout(bossTravelTimer);bossTravelTimer=null;}
     interstellarTravelGeneration++;
     if(interstellarTravelRaf)cancelAnimationFrame(interstellarTravelRaf);
     interstellarTravelRaf=0;
@@ -4498,7 +4516,8 @@
     stopMusic();updateMobileControlUi();resetLocalVisual();resetRemoteVisuals();lastControlThrust=false;lastControlSentAt=0;lastSentControlTurn=NaN;lastSentControlThrust=false;lastSentControlFire=false;inGame=true;menu.classList.add('hidden');lobby.classList.add('hidden');victory.classList.remove('winner-celebration');victory.classList.add('hidden');if(preparingOnline){topbar.classList.remove('hidden');mobileControls.classList.add('hidden');if(mobileExit)mobileExit.classList.remove('hidden');}else activateGameUi();scheduleCanvasResolution();}
   function queueVictory(i){
     const winnerIndex=Number(i);
-    if(!inGame||!Number.isInteger(winnerIndex)||winnerIndex<0||winnerIndex>3)return;
+    const failedBoss=roomCode==='LOCAL'&&localCpuActive&&state?.boss?.phase==='failed'&&winnerIndex===-1;
+    if(!inGame||!Number.isInteger(winnerIndex)||(!failedBoss&&winnerIndex<0)||winnerIndex>3)return;
     // El mismo VICTORY puede llegar por P2P y por el respaldo fiable WebSocket.
     // Si ya esta programado, no reiniciamos el temporizador.
     if(pendingVictoryIndex===winnerIndex)return;
@@ -4745,7 +4764,10 @@
     localCampaignComplete=false;
     localCampaignGameOver=false;
 
-    if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
+    if(localCampaign&&state?.boss?.phase==='failed'){
+      victoryText.textContent=tr('bossMissionFailed');localCampaignGameOver=true;
+      if(restartBtn){restartBtn.classList.remove('hidden');restartBtn.disabled=false;restartBtn.textContent=tr('restartCampaign');}
+    }else if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
       victoryText.textContent=tr('campaignChampion');
       localCampaignComplete=true;
       if(restartBtn){restartBtn.disabled=false;restartBtn.classList.add('hidden');}
@@ -4794,6 +4816,7 @@
     void victory.offsetWidth;
     if(!localCampaign||humanWon)victory.classList.add('winner-celebration');
     if(!localCampaign&&onlineSeriesComplete&&onlineSeriesChampion>=0)showOnlineSeriesChampion(onlineSeriesChampion);
+    if(localCampaign)scheduleBossTravel(restartBtn);
   }
 
   postAnalyticsEvent('visit');
@@ -6292,7 +6315,7 @@
       await Promise.all([prepareGameAssets(),prepareMatchBackground(rankRound),gameAudioEnabled?loadWebAudio():Promise.resolve()]);
       if(webMusicLoadPromise)await webMusicLoadPromise;
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
-      if(roomCode==='LOCAL'&&localCpu?.mothership)await window.Galaxy3D.prepareMothership();
+      if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
       await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
@@ -6568,7 +6591,7 @@
 
   function drawPlayNotice(now){
     if(!playNoticeUntil||now>=playNoticeUntil||!playNoticeText)return;
-    const total=playNoticeKind==='double'?1350:1050;
+    const total=playNoticeKind==='boss'?2400:playNoticeKind==='double'?1350:1050;
     const age=Math.max(0,now-playNoticeStart);
     const remaining=Math.max(0,total-age);
     const fadeIn=clamp(age/110,0,1);

@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.25: la nodriza es el jefe de la primera fase, despues de alcanzar cinco bajas contra los rivales CPU. Los rivales desaparecen y dejan de simularse; no se avanza hasta destruirla. Tiene dos pasadas con vida compartida: la primera desde la izquierda y la segunda desde otro borde, incluida la entrada vertical. Dos escapes muestran MISION FALLIDA y obligan a volver a empezar. Destruirla completa la fase y activa automaticamente el viaje interestelar existente al nivel 2; conserva la barra integrada y el dano 1/3/2. Los misiles pueden fijarla como objetivo aunque ya no haya rivales. El modelo se prepara antes del combate CPU; las partidas online y el entrenamiento conservan su flujo.
+
 V24.24: integra la barra de vida en el fondo del hueco central de la nodriza como un panel 3D unido al casco. Acompana su desplazamiento, rumbo y balanceo con profundidad real; la textura pequena solo se actualiza al cambiar la vida y se precalienta durante PREPARADOS. Retira la barra fija sobre la pantalla; portada, dano y fisica permanecen con su comportamiento actual.
 
 V24.23: reactiva temporalmente la nodriza al comenzar y repetir el nivel 1 contra la maquina para probar su barra y el dano 1/3/2 de balas, misiles y bengalas. Recupera 6 puntos de vida en cada intento y entra desde fuera del encuadre. PREPARADOS espera al GLB y a la precarga GPU cuando el encuentro esta activo; entrenamiento y partidas online conservan sus cargas habituales.

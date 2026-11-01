@@ -7,6 +7,7 @@
   const levels=[
     {
       id:1,nameKey:'campaignWorld1',
+      boss:{type:'mothership',passes:2},
       background:{file:'assets/sprites/fondo.jpg',mobileKey:'bg',stars:true},
       ufos:0,
       hazards:{
@@ -100,6 +101,7 @@
   window.GalaxyCampaign=Object.freeze({
     levels:Object.freeze(levels.map(level=>Object.freeze({
       ...level,
+      ...(level.boss?{boss:Object.freeze({...level.boss})}:{}),
       background:Object.freeze({...level.background}),
       hazards:Object.freeze({...level.hazards})
     }))),
