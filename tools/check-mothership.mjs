@@ -36,6 +36,7 @@ for(const direction of [-1,1])for(const angle of [0,.65,1.25,2.05,2.65,Math.PI])
 assert.ok(unguardedContacts>=30);assert.ok(guardedContacts<=unguardedContacts*.25,'Anticipation avoids at least three quarters of otherwise certain collisions, including speed upgrades and both crossing directions');
 for(const difficulty of ['facil','medio','dificil']){
   const engine=new ctx.window.GalaxyLocalCpu({});engine.start('AVOID',difficulty,1,null,false,1);
+  engine.startMothershipPass();
   const p=engine.players[1];Object.assign(p,{x:1450,y:540,vx:-140,vy:0,rot:90,speed:1,spawnFx:0,protection:2,shield:0});engine.mothership.x=engine.mothership.px=960;
   const intent={turn:0,thrust:true,fire:true};engine.chooseCpuIntent=()=>intent;
   const before=JSON.stringify(p),bodyBefore=JSON.stringify(engine.mothership),control=engine.chooseCpuControls(p);
@@ -63,6 +64,13 @@ assert.equal(meshes,5);assert.equal(triangles,13437);
 assert.ok(original.normalMap,'The updated ship keeps its baked surface detail');
 assert.equal(original.map.channel,0);assert.equal(original.normalMap.channel,0);assert.equal(original.emissiveMap.channel,1,'Lights retain their separate original UV palette');
 assert.equal(a.getObjectByName('AEGIS_Turret_Centre'),undefined,'The replacement GLB has no central gun geometry');
+for(const direction of [-1,1])for(const yaw of [-8,0,8])for(const bank of [-15,0,15]){
+  const body=M.create(87,direction),visual=factory();body.angle+=yaw*Math.PI/180;body.bank=bank*Math.PI/180;
+  setMothershipPose(visual,body);visual.position.x=body.x;
+  const bounds=new T.Box3().setFromObject(visual);
+  assert.ok(direction>0?bounds.max.x<0:bounds.min.x>1920,'The complete encounter hull starts outside the screen in every orientation');
+  assert.equal(body.px,body.x,'The first collision sweep starts at the same offscreen point');
+}
 // All five jets originate in the authored rear rims, including reversed travel
 // and the full bank/yaw. Their world-space trails do not turn with the hull.
 for(const mobile of [false,true]){
@@ -231,8 +239,11 @@ for(const yaw of [-8,0,8])for(const bank of [-15,0,15])for(const r of P.MEDIUM_R
   assert.ok(collided,'Every medium size and sampled 3D pose can hit the mothership');
 }
 const engine=new ctx.window.GalaxyLocalCpu({});engine.start('TEST','facil',1,null,false,1);
-assert.ok(engine.mothership,'A new CPU match starts with the test encounter');
-assert.ok(engine.publicState().mothership);assert.equal(engine.publicState().mode,'cpu');
+assert.equal(engine.mothership,null,'A new CPU match no longer starts the temporary test encounter');
+assert.equal(engine.publicState().mothership,null);assert.equal(engine.publicState().mode,'cpu');
+for(let tick=0;tick<600;tick++)engine.updateMothership(1/60);
+assert.equal(engine.mothership,null,'The opening countdown/first seconds cannot bring the disabled test encounter back');
+engine.startMothershipPass();assert.ok(engine.mothership,'The encounter remains available for an explicit future level trigger');
 const showerAt=engine.firstShower,giantAt=engine.nextGiant;
 engine.firstShower=.01;engine.nextGiant=.01;
 engine.updateShower(1);engine.updateGiant(1);assert.equal(engine.meteors.length,0);assert.equal(engine.giant,null);assert.equal(engine.firstShower,.01);assert.equal(engine.nextGiant,.01);
@@ -240,7 +251,7 @@ for(let tick=0;tick<1900&&engine.mothership;tick++)engine.updateMothership(1/60)
 assert.equal(engine.mothership,null,'The whole ship leaves the far edge');
 engine.updateShower(1);engine.updateGiant(1);assert.ok(engine.showerLeft>0);assert.ok(engine.giant,'Paused hazards resume after the pass');
 engine.stop();assert.equal(engine.mothership,null);
-engine.start('TEST','facil',1,null,false,2);assert.equal(engine.mothership,null,'The temporary test trigger is confined to the opening level');
+engine.start('TEST','facil',1,null,false,2);assert.equal(engine.mothership,null,'Later levels do not acquire an automatic test encounter');
 engine.startTraining();assert.equal(engine.mothership,null,'Private CPU training excludes the encounter');
 const host=new ctx.window.GalaxyHostPhysics({});host.start([{i:0,n:'A'},{i:1,n:'B'}]);assert.ok(!('mothership'in host.publicState()),'Online simulation and wire format stay unchanged');
 // Enemy hits use the same continuous triangular player/shield profile as normal bullets.
@@ -273,6 +284,7 @@ engine.absorbMothershipShots(1/60);assert.equal(engine.fxEvents.length,1);assert
 engine.fxEvents=[];engine.bullets=Array.from({length:80},(_,i)=>({id:7200+i,owner:i%2,x:300,y:540,vx:60000,vy:0,guided:false}));
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,0);assert.equal(engine.fxEvents.length,32,'High cadence reuses the existing bounded local FX queue');
 assert.ok(engine.publicState().fx.every(e=>e.kind==='explosion'),'The normal CPU renderer receives the existing explosion effect without a new event type');
-engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating the opening level restores the test encounter');
+engine.finished=true;assert.equal(engine.restart(),true);assert.equal(engine.mothership,null,'Repeating also removes the temporary test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
+const gameSource=await source('game');assert.ok(!gameSource.includes("if(roomCode==='LOCAL')await window.Galaxy3D.prepareMothership();"),'CPU startup no longer waits for the unused test encounter asset');
 console.log(`Mothership OK: replacement GLB at 540 units, four turrets and no central gun, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, ${sectorCases} nearest-sector cases, unique targets, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);

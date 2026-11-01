@@ -1091,7 +1091,7 @@
       this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
       const human=this.makePlayer(0,name,false);
-      this.startMothershipPass();
+      this.mothership=null;
       this.applyTrainingHardLoadout(human,false);
       this.placeAtSpawn(human);
       this.players.push(human);
@@ -1254,7 +1254,7 @@
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
-      this.startMothershipPass();
+      this.mothership=null;
       for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;

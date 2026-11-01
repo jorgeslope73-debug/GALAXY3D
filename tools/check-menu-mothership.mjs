@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import * as T from '../docs/vendor/three.module.min.js';
-import {createMenuMothershipFlight,prepareMenuMothership,setMenuMothershipPose,MENU_MOTHERSHIP_DEPTH} from '../docs/menu-mothership.js';
+import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
+import {prepareMothershipTemplate,createMothershipFactory} from '../docs/mothership-model.js';
+import {createMenuMothershipFlight,prepareMenuMothership,setMenuMothershipPose,MENU_MOTHERSHIP_DEPTH,MENU_MOTHERSHIP_MARGIN} from '../docs/menu-mothership.js';
 const random=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 let visits=0;const directions=new Set();
 for(let seed=1;seed<=8;seed++){
@@ -12,11 +14,12 @@ for(let seed=1;seed<=8;seed++){
     assert.equal(flight.needsAssets,time>=6000,'large assets wait for visible menu dwell');
     if(pose){
       if(!previous){count++;if(ended===null)assert.ok(time>=24000&&time<=36040);else assert.ok(time-ended>=100000,'passes have long quiet intervals');}
-      if(previous)assert.ok(Math.hypot(pose.x-previous.x,pose.y-previous.y)<3.6,'the distant ship crosses slowly and continuously');
-      assert.ok(pose.x>=-230&&pose.x<=2150);assert.ok(pose.y>290&&pose.y<450);
+      if(previous)assert.ok(Math.hypot(pose.x-previous.x,pose.y-previous.y)<3.8,'the distant ship crosses slowly and continuously');
+      if(!previous)assert.equal(pose.x,pose.direction>0?-MENU_MOTHERSHIP_MARGIN:1920+MENU_MOTHERSHIP_MARGIN,'a passage always starts offscreen');
+      assert.ok(pose.x>=-MENU_MOTHERSHIP_MARGIN&&pose.x<=1920+MENU_MOTHERSHIP_MARGIN);assert.ok(pose.y>290&&pose.y<450);
       assert.ok(pose.bank>77*Math.PI/180-.001&&pose.bank<83*Math.PI/180+.001,'the hull stays in lateral view');
       directions.add(pose.direction);
-    }else if(previous){assert.ok(previous.x< -200||previous.x>2120,'the full ship leaves before disappearing');ended=time;}
+    }else if(previous){assert.ok(previous.x< -MENU_MOTHERSHIP_MARGIN+4||previous.x>1920+MENU_MOTHERSHIP_MARGIN-4,'the full ship leaves before disappearing');ended=time;}
     previous=pose;
   }
   assert.ok(count>=4&&count<=6,'scenery is occasional during twelve minutes');visits+=count;
@@ -40,6 +43,21 @@ for(const mobile of [false,true]){
   }
 }
 assert.ok(MENU_MOTHERSHIP_DEPTH< -500,'the ship lies behind every foreground floater');
+// Check the actual replacement GLB, including its tower and turret geometry.
+const definitionScope=vm.createContext({window:{}});vm.runInContext(await readFile(new URL('../docs/mothership-data.js',import.meta.url),'utf8'),definitionScope);
+const bytes=await readFile(new URL('../docs/assets/models/nodriza.glb',import.meta.url));
+const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
+const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+const definition=definitionScope.window.GalaxyMothershipData,factory=createMothershipFactory(prepareMothershipTemplate(gltf.scene,definition),definition);
+for(const mobile of [false,true])for(const direction of [-1,1]){
+  const visual=prepareMenuMothership(factory(),mobile),flight=createMenuMothershipFlight({random:()=>direction>0?0:.99});let first=null,last=null;
+  for(let t=0;t<80000;t+=40){const pose=flight.update(t,true);if(pose){first??=pose;last=pose;}else if(first)break;}
+  for(const [pose,entering]of [[first,true],[last,false]]){
+    setMenuMothershipPose(visual,pose);visual.position.x=pose.x;
+    const bounds=new T.Box3().setFromObject(visual),left=entering?direction>0:direction<0;
+    assert.ok(left?bounds.max.x<0:bounds.min.x>1920,'no mesh fragment is visible before entry or at retirement, in either direction/size');
+  }
+}
 // Exercise the real menu method while its optional model request is unresolved/fails.
 const render=await readFile(new URL('../docs/render-3d.js',import.meta.url),'utf8');const start=render.indexOf('      menu(ctx,time){'),end=render.indexOf('      winner(ctx,player,angle){',start);assert.ok(start>0&&end>start);
 let requests=0,frames=0,resolveLoad;const loading=new Promise(resolve=>resolveLoad=resolve);

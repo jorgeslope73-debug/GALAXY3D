@@ -1,6 +1,8 @@
 /* Distant menu scenery only. No physics, projectiles, AI or network state. */
 export const MENU_MOTHERSHIP_DEPTH=-900;
-const W=1920,MARGIN=230;
+// A complete hull stays outside the camera at both ends, before it can be drawn.
+export const MENU_MOTHERSHIP_MARGIN=320;
+const W=1920,MARGIN=MENU_MOTHERSHIP_MARGIN;
 export function prepareMenuMothership(visual,mobile=false){
   visual.scale.multiplyScalar(mobile?.30:.40);
   const materials=new Map();

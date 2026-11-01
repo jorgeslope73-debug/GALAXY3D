@@ -12,7 +12,8 @@
   function rotate(x,y,a){const c=Math.cos(a),s=Math.sin(a);return {x:x*c-y*s,y:x*s+y*c};}
   function create(id,direction=1){
     const dir=direction<0?-1:1;
-    return {id,x:dir>0?-240:W+240,y:H*.5,px:dir>0?-240:W+240,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,
+    const x=dir>0?-data.radius-40:W+data.radius+40;
+    return {id,x,y:H*.5,px:x,py:H*.5,vx:dir*SPEED,vy:0,heading:dir*Math.PI/2,angle:dir*Math.PI/2,age:0,bank:0,nextVolley:5.5,fireCursor:0,
       turrets:data.turrets.map(()=>({angle:dir>0?0:Math.PI,nextShot:0,target:-1}))};
   }
   function bankAt(seconds){return Math.sin(seconds*Math.PI*2/BANK_PERIOD)*BANK_LIMIT;}
