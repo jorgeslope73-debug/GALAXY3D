@@ -228,6 +228,7 @@ function resumeTrackingFixture(){
 }
 function playableClientFixture(){
   const f=resumeTrackingFixture(),{ctx}=f,engines=engineContext(),noop=()=>{};
+  for(const name of ['mothership-data','mothership-core','local-cpu'])vm.runInContext(fs.readFileSync('docs/'+name+'.js','utf8'),engines,{filename:name+'.js'});
   let prepNow=1000,prepId=0;const prepTimers=new Map();
   const Gate=require('../docs/startup-preparation.js');
   engines.window.GalaxyStartPreparation=class extends Gate{constructor(options){super({...options,now:()=>prepNow,schedule:(fn,ms)=>{prepTimers.set(++prepId,{fn,at:prepNow+ms});return prepId;},cancel:id=>prepTimers.delete(id)});}};
@@ -260,9 +261,9 @@ function playableClientFixture(){
 }
 async function checkLocalCpuStartup(){
   const f=playableClientFixture(),{ctx,engines}=f;
-  let releaseGraphics,mothershipRequests=0;
+  let releaseGraphics,releaseMothership,mothershipRequests=0;
   ctx.window.Galaxy3D.prepareMatch=()=>new Promise(resolve=>{releaseGraphics=resolve;});
-  ctx.window.Galaxy3D.prepareMothership=()=>{mothershipRequests++;return new Promise(()=>{});};
+  ctx.window.Galaxy3D.prepareMothership=()=>{mothershipRequests++;return new Promise(resolve=>{releaseMothership=resolve;});};
   const connection=f.attach(),previousOnlineMotor=ctx.hostPhysics;
   await ctx.startLocalCpu();
   for(let i=0;i<20;i++)await Promise.resolve();
@@ -276,14 +277,17 @@ async function checkLocalCpuStartup(){
   assert.equal(ctx.inGame,true,'the real start event reaches countdown and beginGame');
   assert.equal(ctx.onlineStartPending,true,'PREPARADOS holds until preparation and the minimum ready period finish');
   assert.equal(cpu.fxClock,0,'preparation does not advance the real CPU simulation');
-  assert.equal(cpu.mothership,null,'JUGAR no longer creates the opening test encounter');
-  assert.equal(mothershipRequests,0,'CPU startup does not request the unused mothership');
+  assert.equal(cpu.mothership.hp,6,'JUGAR creates the six-HP opening test encounter');
+  assert.equal(mothershipRequests,1,'CPU startup requests the active encounter model once');
   f.advanceStart(ctx.ONLINE_READY_MS);
-  assert.equal(ctx.matchStartGate.phase,'preparing','CPU still waits for required graphics even after the minimum ready period');
+  assert.equal(ctx.matchStartGate.phase,'preparing','CPU waits for the required mothership model even after the minimum ready period');
   assert.equal(cpu.fxClock,0,'loading the graphics cannot advance the real encounter');
+  assert.equal(cpu.mothership.age,0,'The real ship cannot cross the screen during preparation');
+  releaseMothership();for(let i=0;i<30;i++)await Promise.resolve();
+  assert.equal(ctx.matchStartGate.phase,'preparing','GPU preparation is still required after the GLB is loaded');
   releaseGraphics();for(let i=0;i<30;i++)await Promise.resolve();
   assert.equal(ctx.matchStartGate.phase,'countdown');
-  assert.equal(mothershipRequests,0,'Optional scenery cannot block the actual countdown');
+  assert.equal(mothershipRequests,1,'The active model is prepared once before the countdown');
   f.advanceStart(ctx.ONLINE_ENTRY_MS);assert.equal(ctx.matchStartGate.phase,'go');
   assert.equal(ctx.onlineStartPending,false);assert.ok(ctx.onlineStartAt>0);
   assert.equal(ctx.menu.classList.contains('hidden'),true);assert.equal(ctx.lobby.classList.contains('hidden'),true);

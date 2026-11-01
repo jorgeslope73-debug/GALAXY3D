@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.23: reactiva temporalmente la nodriza al comenzar y repetir el nivel 1 contra la maquina para probar su barra y el dano 1/3/2 de balas, misiles y bengalas. Recupera 6 puntos de vida en cada intento y entra desde fuera del encuadre. PREPARADOS espera al GLB y a la precarga GPU cuando el encuentro esta activo; entrenamiento y partidas online conservan sus cargas habituales.
+
 V24.22: la nodriza CPU tiene 6 puntos de vida y una barra horizontal centrada sobre el casco: bala 1, misil 3 y bengala 2. Admite combinaciones equivalentes a seis balas, dos misiles o tres bengalas. Cada impacto consume su proyectil una vez; al destruirse deja de colisionar/disparar y reutiliza las explosiones locales existentes. Se mantienen las pasadas decorativas de portada y el disparador de partida pendiente de asignar a una futura fase.
 
 V24.21: retira la aparicion de prueba de la nodriza al iniciar o repetir partidas CPU y su descarga obligatoria durante PREPARADOS. Conserva las pasadas decorativas ocasionales en portada, con margen completo fuera de pantalla en ambos extremos; el encuentro tambien nace fuera del encuadre segun el radio real del casco.
