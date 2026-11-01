@@ -2501,6 +2501,7 @@
         const hit=MOTHERSHIP.circleSweep(mother,next,bullet.guided?MISSILE_HIT_RADIUS:BULLET_RADIUS);
         if(!hit)continue;
         if(bullet.guided){this.emitRocketDisintegrateAt(hit.x,hit.y,bullet.owner);this.emit({t:'sound',kind:'sparkle'});}
+        else this.emitExplosionAt(hit.x,hit.y,bullet.owner);
         this.bullets.splice(i,1);
       }
     }

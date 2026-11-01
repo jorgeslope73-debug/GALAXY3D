@@ -214,11 +214,24 @@ engine.bullets=[
 ];
 engine.updateBullets(1/60);assert.equal(engine.bullets.length,0,'An enemy bullet and a player missile follow the original interception rules');
 engine.mothership=M.create(811);engine.mothership.x=engine.mothership.px=960;
+engine.fxEvents=[];
 engine.bullets=[
   {id:7004,owner:-2,mothership:true,x:960,y:540,vx:600,vy:0,guided:false},
   {id:7005,owner:0,x:300,y:540,vx:60000,vy:0,guided:false}
 ];
+const impact=M.circleSweep(engine.mothership,{px:300,py:540,x:1300,y:540},4);
 engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.bullets[0].owner,-2,'Mounted guns can fire over their own deck; player shots stop at the real hull');
+assert.equal(engine.fxEvents.length,1,'A normal bullet produces one existing local particle explosion');
+assert.equal(engine.fxEvents[0].kind,'explosion');
+assert.ok(Math.hypot(engine.fxEvents[0].x-impact.x,engine.fxEvents[0].y-impact.y)<.08,'The effect starts at the swept contact point, not the end of a fast bullet');
+engine.absorbMothershipShots(1/60);assert.equal(engine.fxEvents.length,1,'Consumed bullets and own mounted guns cannot repeat an impact');
+engine.fxEvents=[];engine.bullets=[{id:7100,owner:0,x:300,y:950,vx:60000,vy:0,guided:false}];
+engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,1);assert.equal(engine.fxEvents.length,0,'A near miss has no phantom explosion');
+engine.bullets=[{id:7101,owner:1,x:300,y:540,vx:60000,vy:0,guided:true}];
+engine.absorbMothershipShots(1/60);assert.equal(engine.fxEvents.length,1);assert.equal(engine.fxEvents[0].kind,'disintegrate','Missiles retain their original particle effect');
+engine.fxEvents=[];engine.bullets=Array.from({length:80},(_,i)=>({id:7200+i,owner:i%2,x:300,y:540,vx:60000,vy:0,guided:false}));
+engine.absorbMothershipShots(1/60);assert.equal(engine.bullets.length,0);assert.equal(engine.fxEvents.length,32,'High cadence reuses the existing bounded local FX queue');
+assert.ok(engine.publicState().fx.every(e=>e.kind==='explosion'),'The normal CPU renderer receives the existing explosion effect without a new event type');
 engine.finished=true;assert.equal(engine.restart(),true);assert.ok(engine.mothership,'Repeating the opening level restores the test encounter');
 assert.equal(engine.bullets.length,0,'Repeating clears the prior volley');
 console.log(`Mothership OK: replacement GLB at 540 units, four turrets and no central gun, smooth +/-15 bank and +/-8 heading, 31 matching hulls, calibrated turning muzzles, ${sectorCases} nearest-sector cases, unique targets, ${totalVolleys} spaced twin volleys at 400 units/s, ${contacts} irregular contacts, shield/missile rules and CPU-only lifecycle.`);
