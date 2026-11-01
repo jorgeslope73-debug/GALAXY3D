@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.18: las CPU anticipan hasta 1,6 segundos de movimiento ante la nodriza, incluyendo velocidad, inercia, giro y balanceo del casco. Comparan frenada, aceleracion y salidas laterales con el mismo integrador y el contorno real; la seguridad prevalece sobre persecucion y decisiones almacenadas en las tres dificultades. Mantienen brevemente la maniobra para evitar cambios nerviosos. Son calculos locales, con sondas reutilizadas y sin nuevos campos de red.
+
 V24.17: las balas normales que chocan con la nodriza reutilizan la explosion de particulas de los meteoritos en el punto de contacto continuo. El efecto recorre la cola y los pools locales existentes, limitados y sin mensajes ni cambios de protocolo online. Los misiles conservan su desintegracion.
 
 V24.16: sustituye nodriza.glb por el nuevo archivo del usuario sin la torreta central (13.558 triangulos). Recalibra los datos del GLB y controla solo las cuatro torretas laterales, incluidas la punteria por sectores, las bocas de disparo y la precarga. Conserva escala, balanceo, cadencia y las cinco toberas con particulas azules.

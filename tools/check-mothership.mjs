@@ -9,6 +9,45 @@ const source=async name=>readFile(new URL('../docs/'+name+'.js',import.meta.url)
 const ctx=vm.createContext({window:{},console,Date,performance,setTimeout,clearTimeout});
 for(const name of ['net-protocol','campaign-config','collision-profiles','physics-core','mothership-data','mothership-core','shot-history','host-physics','local-cpu'])vm.runInContext(await source(name),ctx,{filename:name+'.js'});
 const M=ctx.window.GalaxyMothership,P=ctx.window.GalaxyPhysicsCore,D=M.data;
+// The cheap lookahead must describe the same banked concave hull as contacts.
+for(const direction of [-1,1])for(const yaw of [-8,0,8])for(const bank of [-15,0,15]){
+  const mother=M.create(88,direction);mother.x=960;mother.y=540;mother.angle+=yaw*Math.PI/180;mother.bank=bank*Math.PI/180;
+  for(const [x,y]of [[960,540],[600,540],[1350,540],[950,340],[950,740],[1250,800],[700,300]])assert.ok(Math.abs(M.clearance(mother,x,y)-M.surface(mother,x,y).distance)<1e-8,'Read-only AI clearance matches the real rotated silhouette');
+}
+const avoid=ctx.window.GalaxyLocalCpu.prototype.cpuMothershipSafetyControl;
+const chase=(p,goal)=>{const error=((Math.atan2(-(goal.x-p.x),-(goal.y-p.y))*180/Math.PI-p.rot+540)%360)-180;return {turn:Math.max(-1,Math.min(1,error/38)),thrust:Math.abs(error)<68,fire:false};};
+function avoidancePass(direction,angle,velocity,enabled){
+  const mother=M.create(90,direction);mother.x=mother.px=960;mother.y=mother.py=540;
+  const dx=Math.cos(angle)*500,dy=Math.sin(angle)*500;
+  const p={cpu:true,index:1,dead:false,spawnFx:0,protection:0,shield:0,bank:0,x:960+dx,y:540+dy,vx:-Math.cos(angle)*velocity,vy:-Math.sin(angle)*velocity,speed:velocity>200?2:1,rot:(Math.atan2(dx,dy)*180/Math.PI+360)%360};
+  const goal={x:960-dx,y:540-dy},engine={mothership:mother};
+  for(let tick=0;tick<300;tick++){
+    if(tick%2===0||!p.aiControl){const intent=chase(p,goal);p.aiControl=(enabled?avoid.call(engine,p,intent):null)||intent;}
+    assert.ok(Number.isFinite(p.aiControl.turn)&&Math.abs(p.aiControl.turn)<=1);
+    P.stepShipMovement(p,p.aiControl,1/60,1920,1080);M.step(mother,1/60,[],()=>0);
+    if(M.contact(mother,p,'ship'))return true;
+  }
+  return false;
+}
+let unguardedContacts=0,guardedContacts=0,avoidanceCases=0;
+for(const direction of [-1,1])for(const angle of [0,.65,1.25,2.05,2.65,Math.PI])for(const velocity of [0,180,360]){
+  unguardedContacts+=Number(avoidancePass(direction,angle,velocity,false));guardedContacts+=Number(avoidancePass(direction,angle,velocity,true));avoidanceCases++;
+}
+assert.ok(unguardedContacts>=30);assert.ok(guardedContacts<=unguardedContacts*.25,'Anticipation avoids at least three quarters of otherwise certain collisions, including speed upgrades and both crossing directions');
+for(const difficulty of ['facil','medio','dificil']){
+  const engine=new ctx.window.GalaxyLocalCpu({});engine.start('AVOID',difficulty,1,null,false,1);
+  const p=engine.players[1];Object.assign(p,{x:1450,y:540,vx:-140,vy:0,rot:90,speed:1,spawnFx:0,protection:2,shield:0});engine.mothership.x=engine.mothership.px=960;
+  const intent={turn:0,thrust:true,fire:true};engine.chooseCpuIntent=()=>intent;
+  const before=JSON.stringify(p),bodyBefore=JSON.stringify(engine.mothership),control=engine.chooseCpuControls(p);
+  assert.notEqual(control,intent,'Avoidance overrides every difficulty and higher pursuit/spawn tactics');assert.equal(control.fire,false);
+  assert.equal(JSON.stringify(p),before);assert.equal(JSON.stringify(engine.mothership),bodyBefore,'Lookahead cannot advance authoritative bodies');
+  engine.mothership.age+=.1;assert.equal(engine.chooseCpuControls(p),control,'A short commitment prevents left/right jitter');
+  assert.equal(avoid.call(engine,{...p,cpu:false},intent),null,'Human controls are never overridden');
+  assert.equal(avoid.call(engine,{...p,dead:true},intent),null);
+  engine.mothership=null;assert.equal(engine.chooseCpuControls(p),intent,'Normal decisions resume as soon as the mothership leaves');
+  assert.ok(!('mothershipAvoidanceScratch' in engine.publicState())&&!('mothershipAvoidanceMemory' in engine.publicState()),'AI probes stay local and outside snapshots');
+}
+console.log(`Mothership avoidance OK: ${avoidanceCases} closed-loop pursuit cases, contacts ${unguardedContacts} -> ${guardedContacts}; all difficulties, immutable probes, stable turns and no network fields.`);
 const bytes=await readFile(new URL('../docs/assets/models/nodriza.glb',import.meta.url));
 assert.equal(createHash('sha256').update(bytes).digest('hex'),D.sha256,'Physics calibration must match the exact supplied GLB');
 assert.equal(D.length,540,'The calibrated ship is ten percent smaller than its previous 600-unit length');

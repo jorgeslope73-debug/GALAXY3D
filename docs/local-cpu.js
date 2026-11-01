@@ -1844,6 +1844,11 @@
       };
     }
     chooseCpuControls(cpu){
+      const intent=this.chooseCpuIntent(cpu);
+      // Safety also overrides cached EASY decisions, spawn escape and pursuit.
+      return this.cpuMothershipSafetyControl(cpu,intent)||intent;
+    }
+    chooseCpuIntent(cpu){
       const spawnEscape=PHYSICS_CORE.cpuSpawnEscapeControl(cpu,this.players,this.fxClock,W,H);
       if(spawnEscape)return spawnEscape;
       if(cpu.dead)return IDLE_CONTROL;
@@ -1874,6 +1879,48 @@
       cpu.easyControl=control;
       cpu.easyNextDecision=this.fxClock+rand(.48,.82);
       return control;
+    }
+    cpuMothershipSafetyControl(cpu,intent=null){
+      const mother=this.mothership;
+      if(!mother||!MOTHERSHIP||!cpu||!cpu.cpu||cpu.dead)return null;
+      const memory=this.mothershipAvoidanceMemory||(this.mothershipAvoidanceMemory=new WeakMap()),held=memory.get(cpu);
+      if(held&&held.mother===mother&&mother.age<held.until)return held.control;
+      const speed=Math.max(1,Number(cpu.speed)||1),radius=cpu.shield>0?PHYSICS_CORE.SHIELD_RADIUS:PHYSICS_CORE.SHIP_PROJECTILE_RADIUS;
+      const horizon=1.6,steps=16,dt=horizon/steps;
+      const reach=MOTHERSHIP.data.radius+radius+80+(Math.max(180*speed,Math.hypot(cpu.vx,cpu.vy))+Math.hypot(mother.vx,mother.vy))*horizon;
+      if((cpu.x-mother.x)**2+(cpu.y-mother.y)**2>reach*reach)return null;
+      // Reuse a tiny probe and future poses; prediction never mutates real ships.
+      const scratch=this.mothershipAvoidanceScratch||(this.mothershipAvoidanceScratch={probe:{},control:{},poses:Array.from({length:steps},()=>({}))});
+      for(let i=0;i<steps;i++){
+        const t=(i+1)*dt,pose=scratch.poses[i];
+        pose.x=mother.x+mother.vx*t;pose.y=mother.y+mother.vy*t;
+        pose.angle=mother.heading+MOTHERSHIP.yawAt(mother.age+t);pose.bank=MOTHERSHIP.bankAt(mother.age+t);
+      }
+      const simulate=(turn,thrust,escape=true)=>{
+        const p=scratch.probe,c=scratch.control;
+        p.x=cpu.x;p.y=cpu.y;p.vx=cpu.vx;p.vy=cpu.vy;p.rot=cpu.rot;p.speed=speed;p.bank=Number(cpu.bank)||0;
+        let minimum=Infinity,total=0,last=0;
+        for(let i=0;i<steps;i++){
+          // Preview the initial turn then a straight exit, rather than a full circle.
+          c.turn=i<4?turn:0;c.thrust=thrust||(escape&&i>=4);PHYSICS_CORE.stepShipMovement(p,c,dt,W,H);
+          last=MOTHERSHIP.clearance(scratch.poses[i],p.x,p.y)-radius;
+          minimum=Math.min(minimum,last);total+=Math.min(180,last);
+        }
+        return {minimum,last,score:Math.min(180,minimum)*6+Math.min(350,last)+total*.12};
+      };
+      const current=MOTHERSHIP.clearance(mother,cpu.x,cpu.y)-radius;
+      const previous=cpu.aiControl,course=simulate(Number(intent?.turn)||0,intent?!!intent.thrust:true,false);
+      if(current>90&&course.minimum>55)return null;
+      if(course.minimum>current+8&&course.last>current+55)return null;
+      let best=null,bestScore=-Infinity;
+      for(const turn of [-1,0,1])for(const thrust of [false,true]){
+        const result=simulate(turn,thrust);
+        const continuity=turn*Math.sign(Number(previous?.turn)||0)>0?8:0;
+        const score=result.score+continuity+(thrust?1:0);
+        if(score>bestScore){bestScore=score;best={turn,thrust,fire:false};}
+      }
+      memory.set(cpu,{mother,until:mother.age+(best.turn===0?.12:.3),control:best});
+      return best;
     }
     // V21.67: capa de seguridad predictiva muy barata para CPU.
     // Solo interviene ante una trayectoria real de choque y no modifica

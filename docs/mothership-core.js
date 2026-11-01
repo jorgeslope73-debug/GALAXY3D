@@ -148,6 +148,19 @@
     const d=Math.sqrt(best);if(d>1e-9){nx=(x-px)/d*(inside?-1:1);ny=(y-py)/d*(inside?-1:1);}
     return {x:px,y:py,nx,ny,distance:(inside?-d:d)};
   }
+  // Read-only lookahead distance: avoids allocating SAT shapes for speculative poses.
+  function clearance(body,x,y){
+    const c=Math.cos(body.angle),s=Math.sin(body.angle),dx=x-body.x,dy=y-body.y;
+    const qx=dx*c+dy*s,qy=-dx*s+dy*c,points=hullProfile(body).outline;
+    let inside=false,best=Infinity;
+    for(let i=0,j=points.length-1;i<points.length;j=i++){
+      const a=points[j],b=points[i],vx=b[0]-a[0],vy=b[1]-a[1],length=vx*vx+vy*vy;
+      if((a[1]>qy)!==(b[1]>qy)&&qx<vx*(qy-a[1])/vy+a[0])inside=!inside;
+      const t=Math.max(0,Math.min(1,((qx-a[0])*vx+(qy-a[1])*vy)/(length||1)));
+      best=Math.min(best,(qx-a[0]-vx*t)**2+(qy-a[1]-vy*t)**2);
+    }
+    return Math.sqrt(best)*(inside?-1:1);
+  }
   function circleContact(body,other,radius){
     if(Math.hypot(other.x-body.x,other.y-body.y)>data.radius+radius+1)return null;
     const hit=surface(body,other.x,other.y);return hit.distance<radius?{...hit,depth:radius-hit.distance}:null;
@@ -187,5 +200,5 @@
     if(inside)first=0;
     return Number.isFinite(first)?{t:first,x:x0+(projectile.x-x0)*first,y:y0+(projectile.y-y0)*first}:null;
   }
-  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,circleSweep,hullProfile,bankAt,yawAt,yawFor,canTarget,assignTargets,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
+  window.GalaxyMothership=Object.freeze({data,create,pivot,muzzle,step,contact,separate,surface,clearance,circleSweep,hullProfile,bankAt,yawAt,yawFor,canTarget,assignTargets,BANK_LIMIT,BANK_PERIOD,YAW_LIMIT,YAW_PERIOD,SHOT_SPEED,SHOT_INTERVAL,VOLLEY_GAP});
 })();
