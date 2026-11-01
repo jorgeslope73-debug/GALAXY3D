@@ -260,8 +260,9 @@ function playableClientFixture(){
 }
 async function checkLocalCpuStartup(){
   const f=playableClientFixture(),{ctx,engines}=f;
-  let releaseMothership;
-  ctx.window.Galaxy3D.prepareMothership=()=>new Promise(resolve=>{releaseMothership=resolve;});
+  let releaseGraphics,mothershipRequests=0;
+  ctx.window.Galaxy3D.prepareMatch=()=>new Promise(resolve=>{releaseGraphics=resolve;});
+  ctx.window.Galaxy3D.prepareMothership=()=>{mothershipRequests++;return new Promise(()=>{});};
   const connection=f.attach(),previousOnlineMotor=ctx.hostPhysics;
   await ctx.startLocalCpu();
   for(let i=0;i<20;i++)await Promise.resolve();
@@ -275,11 +276,14 @@ async function checkLocalCpuStartup(){
   assert.equal(ctx.inGame,true,'the real start event reaches countdown and beginGame');
   assert.equal(ctx.onlineStartPending,true,'PREPARADOS holds until preparation and the minimum ready period finish');
   assert.equal(cpu.fxClock,0,'preparation does not advance the real CPU simulation');
+  assert.equal(cpu.mothership,null,'JUGAR no longer creates the opening test encounter');
+  assert.equal(mothershipRequests,0,'CPU startup does not request the unused mothership');
   f.advanceStart(ctx.ONLINE_READY_MS);
-  assert.equal(ctx.matchStartGate.phase,'preparing','CPU waits for the mothership even after the minimum ready period');
-  assert.equal(cpu.fxClock,0,'loading the mothership cannot advance the real encounter');
-  releaseMothership();for(let i=0;i<30;i++)await Promise.resolve();
+  assert.equal(ctx.matchStartGate.phase,'preparing','CPU still waits for required graphics even after the minimum ready period');
+  assert.equal(cpu.fxClock,0,'loading the graphics cannot advance the real encounter');
+  releaseGraphics();for(let i=0;i<30;i++)await Promise.resolve();
   assert.equal(ctx.matchStartGate.phase,'countdown');
+  assert.equal(mothershipRequests,0,'Optional scenery cannot block the actual countdown');
   f.advanceStart(ctx.ONLINE_ENTRY_MS);assert.equal(ctx.matchStartGate.phase,'go');
   assert.equal(ctx.onlineStartPending,false);assert.ok(ctx.onlineStartAt>0);
   assert.equal(ctx.menu.classList.contains('hidden'),true);assert.equal(ctx.lobby.classList.contains('hidden'),true);
