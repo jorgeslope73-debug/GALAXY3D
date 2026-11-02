@@ -3,10 +3,12 @@ export const MENU_MOTHERSHIP_DEPTH=-900;
 // A complete hull stays outside the camera at both ends, before it can be drawn.
 export const MENU_MOTHERSHIP_MARGIN=420;
 const W=1920,MARGIN=MENU_MOTHERSHIP_MARGIN;
+const menuTurrets=new WeakMap();
 export function prepareMenuMothership(visual,mobile=false){
   visual.scale.multiplyScalar(mobile?.48:.64);
-  const materials=new Map();
+  const materials=new Map(),turrets=[];
   visual.traverse(object=>{
+    if(/^AEGIS_Yaw_(Aft|Forward)_[LR]$/.test(object.name))turrets.push({pivot:object,rest:object.rotation.y});
     if(!object.isMesh)return;
     const original=object.material;
     if(!materials.has(original)){
@@ -15,11 +17,14 @@ export function prepareMenuMothership(visual,mobile=false){
     }
     object.material=materials.get(original);
   });
-  return visual;
+  menuTurrets.set(visual,turrets);return visual;
 }
 export function setMenuMothershipPose(visual,pose){
   const direction=pose.direction||(Math.sin(pose.angle)>=0?1:-1);
   visual.rotation.set(0,-direction*Math.abs(pose.bank),-pose.angle,'ZYX');
+  // Independent, gentle scans around each authored yaw null; menu presentation only.
+  const age=Math.max(0,Number(pose.age)||0),turrets=menuTurrets.get(visual);
+  if(turrets)for(let i=0;i<turrets.length;i++)turrets[i].pivot.rotation.y=turrets[i].rest+Math.sin(age*(.45+i*.04)+i*1.7)*22*Math.PI/180;
 }
 export function createMenuMothershipFlight({random=Math.random,reducedMotion=false}={}){
   let clock=0,last=null,next=24000+random()*12000,flight=null;
@@ -40,7 +45,7 @@ export function createMenuMothershipFlight({random=Math.random,reducedMotion=fal
       const x=-MARGIN+(W+MARGIN*2)*progress;
       return {x:flight.direction>0?x:W-x,y:flight.y+flight.drift*(progress-.5)+Math.sin(age*.0004)*6,
         angle:flight.direction*Math.PI/2+Math.sin(age*.00028)*.025,
-        bank:(80+3*Math.sin(age*.00022))*Math.PI/180,direction:flight.direction};
+        bank:(80+3*Math.sin(age*.00022))*Math.PI/180,direction:flight.direction,age:age/1000};
     }
   };
 }

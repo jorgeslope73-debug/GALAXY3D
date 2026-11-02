@@ -49,6 +49,23 @@ const bytes=await readFile(new URL('../docs/assets/models/nodriza.glb',import.me
 const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
 const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 const definition=definitionScope.window.GalaxyMothershipData,factory=createMothershipFactory(prepareMothershipTemplate(gltf.scene,definition),definition);
+// All four real yaw nulls scan independently and remain bounded/smooth on each menu clone.
+const gameplay=factory(),visitor=prepareMenuMothership(factory()),guns=definition.turrets.map(t=>visitor.getObjectByName(t.name));
+const ranges=guns.map(()=>[Infinity,-Infinity]);let previousAngles=null;
+for(let frame=0;frame<=1200;frame++){
+  const age=frame/60;setMenuMothershipPose(visitor,{angle:Math.PI/2,bank:80*Math.PI/180,direction:1,age});
+  const angles=guns.map(g=>g.rotation.y);
+  for(let i=0;i<guns.length;i++){
+    assert.ok(Math.abs(angles[i])<=22*Math.PI/180+1e-12,'scans stay within 22 degrees');
+    if(previousAngles)assert.ok(Math.abs(angles[i]-previousAngles[i])<14*Math.PI/180/60,'scans have no frame-to-frame snaps');
+    assert.equal(Math.abs(guns[i].rotation.x),0);assert.equal(Math.abs(guns[i].rotation.z),0);
+    ranges[i][0]=Math.min(ranges[i][0],angles[i]);ranges[i][1]=Math.max(ranges[i][1],angles[i]);
+  }
+  previousAngles=angles;
+}
+assert.ok(ranges.every(([min,max])=>max-min>.7),'every cannon visibly moves both ways');
+assert.equal(new Set(previousAngles.map(a=>a.toFixed(4))).size,4,'the guns do not turn in unison');
+for(const turret of definition.turrets)assert.equal(gameplay.getObjectByName(turret.name).rotation.y,0,'menu scans cannot modify gameplay aiming');
 for(const mobile of [false,true])for(const direction of [-1,1]){
   const visual=prepareMenuMothership(factory(),mobile),flight=createMenuMothershipFlight({random:()=>direction>0?0:.99});let first=null,last=null;
   for(let t=0;t<120000;t+=40){const pose=flight.update(t,true);if(pose){first??=pose;last=pose;}else if(first)break;}

@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.30: las cuatro torretas de la nodriza decorativa exploran suavemente a ambos lados, con un giro de hasta 22 grados y ritmos independientes. Usan los nulls del GLB y el tiempo de la propia pasada, sin disparos, fisica ni trafico de red.
+
 V24.29: la nodriza decorativa de la portada es opaca, conserva el color, luces y reflejos originales y aumenta un 60% su escala en escritorio y movil. Cruza en 50-60 segundos, con margenes ampliados para entrar y salir completamente fuera de pantalla. Mantiene su vista lateral, balanceo, apariciones ocasionales y carga diferida.
 
 V24.28: la oleada final de la fase 2 tiene seis OVNIs unicos, uno cada cuatro segundos, y 30 segundos desde la primera entrada para destruirlos. El contador superior muestra el tiempo restante y cambia a rojo en los ultimos diez segundos. Si sobrevive alguno al agotarse el plazo, escapan, aparece DEJASTE ESCAPAR AL ENEMIGO y hay que volver a empezar. Las bajas no se reponen; destruir los seis antes del limite conserva el viaje automatico a la fase 3. Todo se calcula localmente.
