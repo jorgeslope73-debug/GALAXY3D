@@ -8,18 +8,18 @@ import {createMenuMothershipFlight,prepareMenuMothership,setMenuMothershipPose,M
 const random=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 let visits=0;const directions=new Set();
 for(let seed=1;seed<=8;seed++){
-  const flight=createMenuMothershipFlight({random:random(seed)});let previous=null,ended=null,count=0;
+  const flight=createMenuMothershipFlight({random:random(seed)});let previous=null,ended=null,count=0,started=null;
   for(let time=0;time<=720000;time+=40){
     const pose=flight.update(time,true);
     assert.equal(flight.needsAssets,time>=6000,'large assets wait for visible menu dwell');
     if(pose){
-      if(!previous){count++;if(ended===null)assert.ok(time>=24000&&time<=36040);else assert.ok(time-ended>=100000,'passes have long quiet intervals');}
-      if(previous)assert.ok(Math.hypot(pose.x-previous.x,pose.y-previous.y)<3.8,'the distant ship crosses slowly and continuously');
+      if(!previous){count++;started=time;if(ended===null)assert.ok(time>=24000&&time<=36040);else assert.ok(time-ended>=100000,'passes have long quiet intervals');}
+      if(previous)assert.ok(Math.hypot(pose.x-previous.x,pose.y-previous.y)<2.3,'the enlarged ship crosses more slowly and continuously');
       if(!previous)assert.equal(pose.x,pose.direction>0?-MENU_MOTHERSHIP_MARGIN:1920+MENU_MOTHERSHIP_MARGIN,'a passage always starts offscreen');
       assert.ok(pose.x>=-MENU_MOTHERSHIP_MARGIN&&pose.x<=1920+MENU_MOTHERSHIP_MARGIN);assert.ok(pose.y>290&&pose.y<450);
       assert.ok(pose.bank>77*Math.PI/180-.001&&pose.bank<83*Math.PI/180+.001,'the hull stays in lateral view');
       directions.add(pose.direction);
-    }else if(previous){assert.ok(previous.x< -MENU_MOTHERSHIP_MARGIN+4||previous.x>1920+MENU_MOTHERSHIP_MARGIN-4,'the full ship leaves before disappearing');ended=time;}
+    }else if(previous){assert.ok(time-started>=50000&&time-started<=60040,'a crossing lasts 50-60 seconds');assert.ok(previous.x< -MENU_MOTHERSHIP_MARGIN+4||previous.x>1920+MENU_MOTHERSHIP_MARGIN-4,'the full ship leaves before disappearing');ended=time;}
     previous=pose;
   }
   assert.ok(count>=4&&count<=6,'scenery is occasional during twelve minutes');visits+=count;
@@ -33,9 +33,9 @@ const poses=[];for(const step of [20,50]){const f=createMenuMothershipFlight({ra
 for(const mobile of [false,true]){
   const original=new T.MeshStandardMaterial({color:0xddeeff,emissive:0xff9955,emissiveIntensity:7,envMapIntensity:.85});original.map=new T.Texture();original.normalMap=new T.Texture();
   const visual=new T.Group();visual.scale.setScalar(36.6);visual.add(new T.Mesh(new T.BoxGeometry(),original),new T.Mesh(new T.BoxGeometry(),original));
-  const faded=prepareMenuMothership(visual,mobile);assert.equal(faded,visual);assert.equal(faded.scale.x,36.6*(mobile?.3:.4));
+  const prepared=prepareMenuMothership(visual,mobile);assert.equal(prepared,visual);assert.equal(prepared.scale.x,36.6*(mobile?.48:.64));
   const material=visual.children[0].material;assert.notEqual(material,original);assert.equal(material,visual.children[1].material);assert.equal(material.map,original.map);assert.equal(material.normalMap,original.normalMap);
-  assert.equal(material.opacity,.34);assert.equal(material.depthWrite,false);assert.equal(original.opacity,1);assert.equal(original.emissiveIntensity,7,'menu atmosphere cannot fade the gameplay material');
+  assert.equal(material.opacity,1);assert.equal(material.transparent,false);assert.equal(material.depthWrite,true);assert.equal(material.color.getHex(),original.color.getHex());assert.equal(material.emissiveIntensity,7);assert.equal(material.envMapIntensity,.85);assert.equal(original.opacity,1);assert.equal(original.emissiveIntensity,7,'menu preparation cannot change the gameplay material');
   for(const direction of [-1,1]){
     setMenuMothershipPose(visual,{bank:80*Math.PI/180,angle:direction*Math.PI/2,direction});
     assert.ok(Math.abs(visual.rotation.y+direction*80*Math.PI/180)<1e-12);
@@ -51,7 +51,7 @@ const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byt
 const definition=definitionScope.window.GalaxyMothershipData,factory=createMothershipFactory(prepareMothershipTemplate(gltf.scene,definition),definition);
 for(const mobile of [false,true])for(const direction of [-1,1]){
   const visual=prepareMenuMothership(factory(),mobile),flight=createMenuMothershipFlight({random:()=>direction>0?0:.99});let first=null,last=null;
-  for(let t=0;t<80000;t+=40){const pose=flight.update(t,true);if(pose){first??=pose;last=pose;}else if(first)break;}
+  for(let t=0;t<120000;t+=40){const pose=flight.update(t,true);if(pose){first??=pose;last=pose;}else if(first)break;}
   for(const [pose,entering]of [[first,true],[last,false]]){
     setMenuMothershipPose(visual,pose);visual.position.x=pose.x;
     const bounds=new T.Box3().setFromObject(visual),left=entering?direction>0:direction<0;
@@ -67,4 +67,4 @@ for(let i=0;i<20;i++)menu.call(api,ctx,i*40);assert.equal(requests,1);assert.equ
 scope.createImportedMothership=()=>{};menu.call(api,ctx,1000);assert.equal(frames,1);assert.equal(ctx.canvas.dataset.menuMothership,'flying');
 scope.createImportedMothership=null;scope.mothershipLoad=null;scope.prepareMothership=()=>{requests++;return Promise.reject(new Error('offline'));};menu.call(api,ctx,1040);await Promise.resolve();assert.equal(scope.menuMothershipFailed,true);menu.call(api,ctx,1080);assert.equal(requests,2,'optional failures do not loop requests or break the renderer');
 scope.menuMothershipFlight=null;menu.call(api,ctx,1120);assert.equal(ctx.canvas.dataset.menuMothership,'idle','startup also works before the optional controller arrives');
-console.log(`Menu mothership OK: ${visits} occasional passes, both directions, lateral distant materials, slow travel, long pauses, reduced motion, hidden-tab reset, shared textures and non-blocking optional loading/failure.`);
+console.log(`Menu mothership OK: ${visits} occasional passes, both directions, opaque original materials, 60% larger size, 50-60 second travel, fully offscreen entry/exit, long pauses, reduced motion, hidden-tab reset, shared textures and non-blocking optional loading/failure.`);

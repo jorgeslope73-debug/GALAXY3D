@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.29: la nodriza decorativa de la portada es opaca, conserva el color, luces y reflejos originales y aumenta un 60% su escala en escritorio y movil. Cruza en 50-60 segundos, con margenes ampliados para entrar y salir completamente fuera de pantalla. Mantiene su vista lateral, balanceo, apariciones ocasionales y carga diferida.
+
 V24.28: la oleada final de la fase 2 tiene seis OVNIs unicos, uno cada cuatro segundos, y 30 segundos desde la primera entrada para destruirlos. El contador superior muestra el tiempo restante y cambia a rojo en los ultimos diez segundos. Si sobrevive alguno al agotarse el plazo, escapan, aparece DEJASTE ESCAPAR AL ENEMIGO y hay que volver a empezar. Las bajas no se reponen; destruir los seis antes del limite conserva el viaje automatico a la fase 3. Todo se calcula localmente.
 
 V24.26: la segunda fase termina con una oleada de diez OVNIs unicos despues de vencer a los rivales CPU. Entra uno nuevo cada cuatro segundos hasta completar diez; no se reponen los eliminados y los supervivientes no se retiran por tiempo. El contador muestra bajas sobre diez y solo al destruirlos todos se completa la fase y comienza el viaje automatico al nivel 3. Reutiliza el GLB, animaciones, reflejos, colisiones, efectos y botin existentes; los misiles conservan objetivos estables al cambiar el OVNI principal. La nodriza de la primera fase, las partidas online y el entrenamiento mantienen su comportamiento.

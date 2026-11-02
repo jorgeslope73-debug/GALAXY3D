@@ -1,17 +1,16 @@
 /* Distant menu scenery only. No physics, projectiles, AI or network state. */
 export const MENU_MOTHERSHIP_DEPTH=-900;
 // A complete hull stays outside the camera at both ends, before it can be drawn.
-export const MENU_MOTHERSHIP_MARGIN=320;
+export const MENU_MOTHERSHIP_MARGIN=420;
 const W=1920,MARGIN=MENU_MOTHERSHIP_MARGIN;
 export function prepareMenuMothership(visual,mobile=false){
-  visual.scale.multiplyScalar(mobile?.30:.40);
+  visual.scale.multiplyScalar(mobile?.48:.64);
   const materials=new Map();
   visual.traverse(object=>{
     if(!object.isMesh)return;
     const original=object.material;
     if(!materials.has(original)){
-      const material=original.clone();material.transparent=true;material.opacity=.34;material.depthWrite=false;
-      material.color.multiplyScalar(.72);material.emissiveIntensity*=.25;material.envMapIntensity*=.7;
+      const material=original.clone();material.transparent=false;material.opacity=1;material.depthWrite=true;
       materials.set(original,material);
     }
     object.material=materials.get(original);
@@ -34,7 +33,7 @@ export function createMenuMothershipFlight({random=Math.random,reducedMotion=fal
       if(elapsed<0||elapsed>500){flight=null;next=Math.max(next,clock+24000);return null;}
       clock+=elapsed;
       if(!ready)return null;
-      if(!flight&&clock>=next)flight={born:clock,duration:28000+random()*8000,direction:random()<.5?1:-1,y:320+random()*100,drift:(random()-.5)*30};
+      if(!flight&&clock>=next)flight={born:clock,duration:50000+random()*10000,direction:random()<.5?1:-1,y:320+random()*100,drift:(random()-.5)*30};
       if(!flight)return null;
       const age=clock-flight.born,progress=age/flight.duration;
       if(progress>=1){flight=null;next=clock+100000+random()*60000;return null;}
