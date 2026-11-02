@@ -8,18 +8,20 @@ import {createMenuMothershipFlight,prepareMenuMothership,setMenuMothershipPose,M
 const random=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 let visits=0;const directions=new Set();
 for(let seed=1;seed<=8;seed++){
-  const flight=createMenuMothershipFlight({random:random(seed)});let previous=null,ended=null,count=0,started=null;
+  const flight=createMenuMothershipFlight({random:random(seed)});let previous=null,ended=null,count=0,started=null,minY=Infinity,maxY=-Infinity;
   for(let time=0;time<=720000;time+=40){
     const pose=flight.update(time,true);
     assert.equal(flight.needsAssets,time>=6000,'large assets wait for visible menu dwell');
     if(pose){
-      if(!previous){count++;started=time;if(ended===null)assert.ok(time>=24000&&time<=36040);else assert.ok(time-ended>=100000,'passes have long quiet intervals');}
+      if(!previous){count++;started=time;minY=Infinity;maxY=-Infinity;if(ended===null)assert.ok(time>=24000&&time<=36040);else assert.ok(time-ended>=100000,'passes have long quiet intervals');}
+      minY=Math.min(minY,pose.y);maxY=Math.max(maxY,pose.y);
       if(previous)assert.ok(Math.hypot(pose.x-previous.x,pose.y-previous.y)<2.3,'the enlarged ship crosses more slowly and continuously');
       if(!previous)assert.equal(pose.x,pose.direction>0?-MENU_MOTHERSHIP_MARGIN:1920+MENU_MOTHERSHIP_MARGIN,'a passage always starts offscreen');
-      assert.ok(pose.x>=-MENU_MOTHERSHIP_MARGIN&&pose.x<=1920+MENU_MOTHERSHIP_MARGIN);assert.ok(pose.y>290&&pose.y<450);
+      assert.ok(pose.x>=-MENU_MOTHERSHIP_MARGIN&&pose.x<=1920+MENU_MOTHERSHIP_MARGIN);assert.ok(pose.y>110&&pose.y<630);
+      if(previous){const tangent=Math.atan2(pose.x-previous.x,-(pose.y-previous.y));assert.ok(Math.abs(tangent-pose.angle)<.002,'the hull follows the curve tangent in both directions');}
       assert.ok(pose.bank>77*Math.PI/180-.001&&pose.bank<83*Math.PI/180+.001,'the hull stays in lateral view');
       directions.add(pose.direction);
-    }else if(previous){assert.ok(time-started>=50000&&time-started<=60040,'a crossing lasts 50-60 seconds');assert.ok(previous.x< -MENU_MOTHERSHIP_MARGIN+4||previous.x>1920+MENU_MOTHERSHIP_MARGIN-4,'the full ship leaves before disappearing');ended=time;}
+    }else if(previous){assert.ok(maxY-minY>100,'every passage follows a visible broad arc');assert.ok(time-started>=50000&&time-started<=60040,'a crossing lasts 50-60 seconds');assert.ok(previous.x< -MENU_MOTHERSHIP_MARGIN+4||previous.x>1920+MENU_MOTHERSHIP_MARGIN-4,'the full ship leaves before disappearing');ended=time;}
     previous=pose;
   }
   assert.ok(count>=4&&count<=6,'scenery is occasional during twelve minutes');visits+=count;
@@ -56,14 +58,14 @@ for(let frame=0;frame<=1200;frame++){
   const age=frame/60;setMenuMothershipPose(visitor,{angle:Math.PI/2,bank:80*Math.PI/180,direction:1,age});
   const angles=guns.map(g=>g.rotation.y);
   for(let i=0;i<guns.length;i++){
-    assert.ok(Math.abs(angles[i])<=22*Math.PI/180+1e-12,'scans stay within 22 degrees');
-    if(previousAngles)assert.ok(Math.abs(angles[i]-previousAngles[i])<14*Math.PI/180/60,'scans have no frame-to-frame snaps');
+    assert.ok(Math.abs(angles[i])<=40*Math.PI/180+1e-12,'scans stay within 40 degrees');
+    if(previousAngles)assert.ok(Math.abs(angles[i]-previousAngles[i])<25*Math.PI/180/60,'scans have no frame-to-frame snaps');
     assert.equal(Math.abs(guns[i].rotation.x),0);assert.equal(Math.abs(guns[i].rotation.z),0);
     ranges[i][0]=Math.min(ranges[i][0],angles[i]);ranges[i][1]=Math.max(ranges[i][1],angles[i]);
   }
   previousAngles=angles;
 }
-assert.ok(ranges.every(([min,max])=>max-min>.7),'every cannon visibly moves both ways');
+assert.ok(ranges.every(([min,max])=>max-min>1.3),'every cannon visibly moves both ways');
 assert.equal(new Set(previousAngles.map(a=>a.toFixed(4))).size,4,'the guns do not turn in unison');
 for(const turret of definition.turrets)assert.equal(gameplay.getObjectByName(turret.name).rotation.y,0,'menu scans cannot modify gameplay aiming');
 for(const mobile of [false,true])for(const direction of [-1,1]){

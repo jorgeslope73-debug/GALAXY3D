@@ -138,7 +138,8 @@ export function createMenuUfoFlight({random=Math.random,reducedMotion=false}={})
         if(target){const d=Math.hypot(target.x-p.x,target.y-p.y)||1;lookX=(target.x-p.x)/d;lookY=(target.y-p.y)/d;}
       }
       return {...p,vx,vy,phase:observing?'observing':'flying',target:leg.target,
-        bank:-vx/SPEED*.12-look*lookX*.09,pitch:-.98+vy/SPEED*.08+look*lookY*.10,
+        bank:-vx/SPEED*.12-look*lookX*.09+Math.sin(age*.0007+.4)*.12,
+        pitch:-1.25+Math.sin(age*.00055+.5)*.62+vy/SPEED*.05+look*lookY*.07,
         angle:(clock*.072+70*Math.sin(clock*.0006+.8))%360};
     }
   };

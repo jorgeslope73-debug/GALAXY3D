@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.31: el OVNI de portada balancea lentamente y deja ver parte de su base a intervalos, conservando sus visitas y distancias a los objetos. La nodriza recorre un arco amplio hacia arriba o abajo y orienta el morro con la tangente de la trayectoria; sus cuatro torretas amplian el barrido independiente a +/-40 grados. Animaciones exclusivas de portada con los modelos, luces y reflejos existentes.
+
 V24.30: las cuatro torretas de la nodriza decorativa exploran suavemente a ambos lados, con un giro de hasta 22 grados y ritmos independientes. Usan los nulls del GLB y el tiempo de la propia pasada, sin disparos, fisica ni trafico de red.
 
 V24.29: la nodriza decorativa de la portada es opaca, conserva el color, luces y reflejos originales y aumenta un 60% su escala en escritorio y movil. Cruza en 50-60 segundos, con margenes ampliados para entrar y salir completamente fuera de pantalla. Mantiene su vista lateral, balanceo, apariciones ocasionales y carga diferida.

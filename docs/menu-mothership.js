@@ -24,7 +24,7 @@ export function setMenuMothershipPose(visual,pose){
   visual.rotation.set(0,-direction*Math.abs(pose.bank),-pose.angle,'ZYX');
   // Independent, gentle scans around each authored yaw null; menu presentation only.
   const age=Math.max(0,Number(pose.age)||0),turrets=menuTurrets.get(visual);
-  if(turrets)for(let i=0;i<turrets.length;i++)turrets[i].pivot.rotation.y=turrets[i].rest+Math.sin(age*(.45+i*.04)+i*1.7)*22*Math.PI/180;
+  if(turrets)for(let i=0;i<turrets.length;i++)turrets[i].pivot.rotation.y=turrets[i].rest+Math.sin(age*(.45+i*.04)+i*1.7)*40*Math.PI/180;
 }
 export function createMenuMothershipFlight({random=Math.random,reducedMotion=false}={}){
   let clock=0,last=null,next=24000+random()*12000,flight=null;
@@ -38,13 +38,15 @@ export function createMenuMothershipFlight({random=Math.random,reducedMotion=fal
       if(elapsed<0||elapsed>500){flight=null;next=Math.max(next,clock+24000);return null;}
       clock+=elapsed;
       if(!ready)return null;
-      if(!flight&&clock>=next)flight={born:clock,duration:50000+random()*10000,direction:random()<.5?1:-1,y:320+random()*100,drift:(random()-.5)*30};
+      if(!flight&&clock>=next)flight={born:clock,duration:50000+random()*10000,direction:random()<.5?1:-1,y:320+random()*100,drift:(random()-.5)*30,curve:(random()<.5?-1:1)*(120+random()*60)};
       if(!flight)return null;
       const age=clock-flight.born,progress=age/flight.duration;
       if(progress>=1){flight=null;next=clock+100000+random()*60000;return null;}
-      const x=-MARGIN+(W+MARGIN*2)*progress;
-      return {x:flight.direction>0?x:W-x,y:flight.y+flight.drift*(progress-.5)+Math.sin(age*.0004)*6,
-        angle:flight.direction*Math.PI/2+Math.sin(age*.00028)*.025,
+      const span=W+MARGIN*2,x=-MARGIN+span*progress;
+      const y=flight.y+flight.drift*(progress-.5)+flight.curve*Math.sin(progress*Math.PI)+Math.sin(age*.0004)*6;
+      const dy=flight.drift+flight.curve*Math.PI*Math.cos(progress*Math.PI)+6*.0004*flight.duration*Math.cos(age*.0004);
+      return {x:flight.direction>0?x:W-x,y,
+        angle:Math.atan2(flight.direction*span,-dy),
         bank:(80+3*Math.sin(age*.00022))*Math.PI/180,direction:flight.direction,age:age/1000};
     }
   };
