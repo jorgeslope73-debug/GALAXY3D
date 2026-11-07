@@ -1495,7 +1495,8 @@
       if(victim.cpu)victim.flarePending=null;
       if(!victim.cpu)this.humanMeteorDecision=null;
       // V22.46: toda muerte resta una baja, sin bajar de cero.
-      if(!this.bossEncounter)victim.kills=Math.max(0,victim.kills-1);
+      const stormLife=!!(this.bossEncounter?.type==='storm-core'&&!victim.cpu);
+      if(!this.bossEncounter||stormLife)victim.kills=Math.max(0,victim.kills-1);
 
       // V21.33: la embestida con escudo conserva su efecto de colision/baja,
       // pero ya no roba ni transfiere armamento o mejoras del rival.
@@ -1505,6 +1506,7 @@
 
       victim.bullets=0;victim.cadence=30;victim.speed=1;victim.shield=0;victim.camo=0;victim.reload=0;victim.guided=false;victim.guidedTarget=-1;victim.guidedAmmo=0;victim.joystickRocketHeld=false;victim.flareHold=0;victim.flareGesture=false;victim.specialReleaseLock=false;victim.shockwave=false;victim.shockReachAt=0;victim.shockExplodeAt=0;victim.shockOwner=-1;
       this.noDeathTime=0;this.emitShipImpact(victim,null,true);this.emit({t:'sound',kind:'impact'});
+      if(stormLife&&victim.kills===0){victim.pendingSpawn=null;victim.respawn=0;this.finishCampaignBoss(false);return;}
       if(attacker&&attacker!==victim){
         attacker.kills++;
         if(attacker.kills>=SCORE_TO_WIN&&!this.beginCampaignBoss(attacker)){
@@ -2524,7 +2526,7 @@
       }
       this.updateMothership(dt);this.updateStormCore(dt);
       if(this.bossEncounter?.type!=='storm-core')this.updateAsteroids(dt);
-      this.resolveMothershipContacts();this.resolveStormContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);if(this.finished)return;this.updateBullets(dt);this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.resolveMothershipContacts();this.resolveStormContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
     needsMothershipBoss(){return !!(!this.trainingMode&&MOTHERSHIP&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='mothership');}
     needsUfoBoss(){return !!(!this.trainingMode&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='ufo-wave');}
@@ -2939,6 +2941,7 @@
               }
               // El atacante suma su baja; la victima no pierde punto por baja ajena.
               this.destroyShip(p,attacker,false,false,b);
+              if(this.finished)return;
             }else{
               this.emitShipImpact(p,b,false);
               if(shipHit.guided){
@@ -3668,7 +3671,7 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='storm-core'?{hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,

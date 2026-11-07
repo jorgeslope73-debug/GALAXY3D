@@ -1,7 +1,7 @@
 'use strict';
 // Campaign-only authority. Rendering consumes snapshots and never advances combat.
 (() => {
-  const TAU=Math.PI*2,CORE_RADIUS=74,SHIELD_RADIUS=106,SATELLITE_RADIUS=28,ORBIT=190;
+  const TAU=Math.PI*2,CORE_RADIUS=122,SHIELD_RADIUS=170,SATELLITE_RADIUS=42,ORBIT=280;
   const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2});
   const alive=body=>body.satellites.filter(part=>part.hp>0);
   const vulnerable=body=>body.hp>0&&body.phase==='core'&&body.attack==='cooldown';

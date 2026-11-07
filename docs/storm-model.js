@@ -1,7 +1,7 @@
 /* Authored low-poly GLBs. Presentation consumes authority snapshots only. */
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
-export const STORM_VISUAL_RADII=Object.freeze({core:74,satellite:28});
+export const STORM_VISUAL_RADII=Object.freeze({core:122,satellite:42});
 export function prepareStormTemplate(T,source,kind){
   const name=kind==='core'?'NUCLEO_ROOT':'SAT_ROOT';
   if(!source.getObjectByName(name))throw new Error('Falta '+name+' en el modelo del núcleo');
@@ -33,18 +33,18 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
   const dark=new T.MeshBasicMaterial({color:0x25334a});
   const warningMaterial=new T.MeshBasicMaterial({color:0xffad52,transparent:true,opacity:.17,depthWrite:false,side:T.DoubleSide,toneMapped:false});
   const shieldMaterial=new T.MeshBasicMaterial({color:0x837cff,transparent:true,opacity:.13,depthWrite:false,side:T.FrontSide,toneMapped:false});
-  const geometry={halo:new T.TorusGeometry(106,1.5,4,mobile?32:48),
-    shield:new T.SphereGeometry(106,mobile?16:24,12),pip:new T.BoxGeometry(8,5,3),ray:new T.PlaneGeometry(1,1)};
+  const geometry={halo:new T.TorusGeometry(170,1.5,4,mobile?32:48),
+    shield:new T.SphereGeometry(170,mobile?16:24,12),pip:new T.BoxGeometry(8,5,3),ray:new T.PlaneGeometry(1,1)};
   const fan=new T.BufferGeometry();fan.setAttribute('position',new T.Float32BufferAttribute([0,0,0,Math.cos(.84)*780,Math.sin(.84)*780,0,Math.cos(.84)*780,-Math.sin(.84)*780,0],3));
   const ownedMaterials=new Set([light,dark,warningMaterial,shieldMaterial]),axis=new T.Vector3(0,1,0);
   const mesh=(parent,shape,material,x=0,y=0,z=0)=>{const m=new T.Mesh(shape,material);m.position.set(x,y,z);parent.add(m);return m;};
   const create=()=>{
     const root=new T.Group(),rotor=new T.Group();root.add(rotor);
     const core=templates.core.clone(true);rotor.add(core);
-    const health=Array.from({length:6},(_,i)=>mesh(root,geometry.pip,light,-30+i*12,-88,40));
+    const health=Array.from({length:6},(_,i)=>mesh(root,geometry.pip,light,-30+i*12,-142,65));
     const satellites=Array.from({length:3},()=>{
       const group=new T.Group();root.add(group);group.add(templates.satellite.clone(true));
-      const pips=[-7,7].map(x=>mesh(group,geometry.pip,light,x,-34,28));
+      const pips=[-10,10].map(x=>mesh(group,geometry.pip,light,x,-50,40));
       return {group,pips};
     });
     // Geometry and textures stay shared; each encounter owns its animated materials.

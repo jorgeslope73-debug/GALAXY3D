@@ -39,7 +39,7 @@ for(const reducedMotion of [false,true]){
     visual.root.traverse(o=>{if(o.geometry)assert.ok(geometries.has(o.geometry),'all frames reuse geometry');assert.ok(o.matrixWorld.elements.every(Number.isFinite));});
   }
   assert.notEqual(JSON.stringify(S.snapshot(body)),before);assert.ok(geometries.size<=17);assert.ok(materials.size<=13);
-  const box=new T.Box3().setFromObject(visual.root);assert.ok(!box.isEmpty());assert.ok(box.max.z<150,'the model remains on the gameplay plane');
+  const box=new T.Box3().setFromObject(visual.root);assert.ok(!box.isEmpty());assert.ok(box.max.z<=S.SHIELD_RADIUS+.01,'the model remains inside the enlarged shield depth');
   visual.update(null);assert.equal(visual.root.visible,false);
   let disposed=0;for(const material of materials)material.addEventListener('dispose',()=>disposed++);create.dispose();assert.equal(disposed,materials.size,'owned animated materials and effects are released');
 }

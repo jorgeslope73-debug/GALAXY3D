@@ -1941,6 +1941,7 @@
               }
               // El atacante suma su baja; la victima no pierde punto por baja ajena.
               this.destroyShip(p,attacker,false,false,b);
+              if(this.finished)return;
             }else{
               this.emitShipImpact(p,b,false);
               if(shipHit.guided){

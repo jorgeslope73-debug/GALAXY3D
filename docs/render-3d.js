@@ -664,7 +664,7 @@
         for(const [i,type]of ['ammo1','ammo3','cadence','speed','mira','flare','shockwave','shield','camo'].entries())api.pickup('warm-pickup-'+i,160+i*180,420,type,0);
         api.ufo('warm-ufo',960,420,pass*30);
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
-        if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*190,y:540+Math.sin(i*2.1)*190,hp:pass<2?2:0,maxHp:2}))});
+        if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*280,y:540+Math.sin(i*2.1)*280,hp:pass<2?2:0,maxHp:2}))});
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the

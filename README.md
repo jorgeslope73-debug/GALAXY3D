@@ -1,3 +1,5 @@
+V24.34: núcleo de fase 3 un 65 % mayor y satélites un 50 % mayores, con órbitas, escudo y colisiones ajustados. Las cinco bajas previas son las vidas de este jefe: cada muerte resta una y llegar a cero termina la campaña. El daño causado al jefe se conserva al reaparecer.
+
 # GALAXY3D
 
 V24.33: la fase 3 termina con El Núcleo de la Tormenta, un jefe local con tres satélites orbitales de dos puntos de vida que protegen un núcleo de seis. Los ataques tienen un aviso de dirección y una pausa para contraatacar; el núcleo se protege durante la carga y acelera sus ráfagas con poca vida. Destruirlo conserva el viaje automático a la fase 4. Modelos low poly `nucleo.glb` y `satelite.glb`, con texturas incrustadas: 5.364 y 1.060 triángulos. Se cargan al preparar la fase 3, comparten geometría entre instancias y se precalientan antes de jugar.
