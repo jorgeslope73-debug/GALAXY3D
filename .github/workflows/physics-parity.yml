@@ -308,7 +308,7 @@ jobs:
         run: node tools/check-mothership.mjs
       - name: Check campaign boss gate, two passes and mission outcome
         run: node tools/check-campaign-boss.js
-      - name: Check level-three storm boss and native model
+      - name: Check level-three storm boss and authored GLBs
         run: node tools/check-storm-boss.js && node tools/check-storm-model.mjs
       - name: Check level-two UFO wave identity, counts and progression
         run: node tools/check-ufo-boss.js

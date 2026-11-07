@@ -6316,6 +6316,7 @@
       if(webMusicLoadPromise)await webMusicLoadPromise;
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();
+      if(roomCode==='LOCAL'&&localCpu?.needsStormBoss())await window.Galaxy3D.prepareStorm();
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
       await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
