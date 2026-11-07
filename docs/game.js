@@ -4049,7 +4049,7 @@
         const oldBoss=state?.boss,boss=m.boss;
         if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
           playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
-          playNoticeText=boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
+          playNoticeText=boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
           huntFxUntil=0;leaderAnnouncement=null;
         }
       }
@@ -6870,6 +6870,16 @@
     ctx.restore();
   }
 
+  function drawStormBossProgress(boss){
+    if(boss?.type!=='storm-core'||boss.phase!=='fighting')return;
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';
+    ctx.font=isMobile?'32px Flashback,Arial':'27px Flashback,Arial';
+    ctx.fillStyle=boss.attack==='charging'?'#ffad52':'#a5fff0';
+    const key=boss.satellites>0?'stormBossSatellites':boss.attack==='charging'?'stormBossDodge':boss.enraged?'stormBossEnraged':'stormBossOpen';
+    const label=tr(key,{count:3-boss.satellites,total:3});ctx.strokeText(label,W/2,130);ctx.fillText(label,W/2,130);
+    if(!boss.satellites){const hp=tr('stormBossHealth',{hp:boss.hp,total:boss.maxHp});ctx.font=isMobile?'29px Flashback,Arial':'24px Flashback,Arial';ctx.strokeText(hp,W/2,174);ctx.fillText(hp,W/2,174);}
+    ctx.restore();
+  }
   function drawUfoBossProgress(boss){
     if(boss?.type!=='ufo-wave')return;
     ctx.save();
@@ -7065,6 +7075,7 @@
     drawAsteroidDust(Math.min(.033,Math.max(.008,smoothedStateInterval/1000)));
 
     if(localCpuActive&&renderState.mothership)scene3D.mothership(renderState.mothership);
+    if(localCpuActive&&renderState.stormCore)scene3D.storm(renderState.stormCore);
     for(const a of renderState.asteroids){
       const old=previousLookup.asteroids.get(a.id);
       const x=old?lerp(old.x,a.x,blend):a.x;
@@ -7170,7 +7181,7 @@
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
-    if(localCpuActive)drawUfoBossProgress(renderState.boss);
+    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);}
     drawLocalRespawnCountdown(now);
     drawLocalEntryCountdown(now);
     if(perfStats){
