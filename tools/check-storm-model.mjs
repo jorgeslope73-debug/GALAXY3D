@@ -5,13 +5,14 @@ import * as T from '../docs/vendor/three.module.min.js';
 import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {createStormFactory,prepareStormTemplate,STORM_VISUAL_RADII} from '../docs/storm-model.js';
 const templates={};
-for(const [kind,file,expected] of [['core','nucleo.glb',5364],['satellite','satelite.glb',1060]]){
+for(const [kind,file,expected] of [['core','nucleo.glb',6900],['satellite','satelite.glb',1060]]){
   const bytes=fs.readFileSync('docs/assets/models/'+file),length=bytes.readUInt32LE(12),json=JSON.parse(bytes.subarray(20,20+length));
   assert.equal(bytes.readUInt32LE(8),bytes.length);assert.ok(bytes.length<2*1024*1024);
   assert.equal(json.images.length,2);assert.ok(json.images.every(image=>image.mimeType==='image/png'&&Number.isInteger(image.bufferView)&&!image.uri));
-  assert.ok(json.buffers.every(buffer=>!buffer.uri));assert.equal(json.animations?.length||0,0);assert.equal(json.cameras?.length||0,0);
+  assert.ok(json.buffers.every(buffer=>!buffer.uri));assert.equal(json.animations?.length||0,kind==='core'?1:0);assert.equal(json.cameras?.length||0,0);
   const loader=new GLTFLoader();loader.register(()=>({name:'HEADLESS_TEXTURES',loadTexture(){return Promise.resolve(new T.Texture());}}));
   const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+  if(kind==='core')templates.shotClip=gltf.animations.find(c=>c.name.toUpperCase()==='DISPARO');
   let triangles=0;gltf.scene.traverse(o=>{if(o.isMesh)triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;});assert.equal(triangles,expected);
   templates[kind]=prepareStormTemplate(T,gltf.scene,kind);templates[kind].updateMatrixWorld(true);
   let radius=0;const v=new T.Vector3();templates[kind].traverse(o=>{if(o.isMesh){const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);radius=Math.max(radius,Math.hypot(v.x,v.y));}}});
@@ -22,7 +23,7 @@ const ctx=vm.createContext({window:{}});vm.runInContext(fs.readFileSync('docs/st
 const S=ctx.window.GalaxyStormCore;
 assert.equal(STORM_VISUAL_RADII.core,S.CORE_RADIUS);assert.equal(STORM_VISUAL_RADII.satellite,S.SATELLITE_RADIUS);
 for(const reducedMotion of [false,true]){
-  const environment=new T.Texture(),create=createStormFactory(T,{templates,environment,mobile:true,reducedMotion}),visual=create(),second=create(),body=S.create(1);
+  const environment=new T.Texture(),create=createStormFactory(T,{templates,environment,mobile:true,reducedMotion,combat:S}),visual=create(),second=create(),body=S.create(1);
   assert.equal(visual.root.getObjectByName('CORE_Hull').geometry,second.root.getObjectByName('CORE_Hull').geometry);
   assert.notEqual(visual.root.getObjectByName('CORE_Energy_Panels').material,second.root.getObjectByName('CORE_Energy_Panels').material);
   assert.equal(visual.root.getObjectByName('CORE_Hull').material.map,templates.core.getObjectByName('CORE_Hull').material.map);
@@ -40,7 +41,8 @@ for(const reducedMotion of [false,true]){
   if(reducedMotion)assert.ok(startRotation.angleTo(endRotation)<1e-8,'reduced motion keeps the sphere still');
   else assert.ok(startRotation.angleTo(endRotation)>.7,'the sphere has a clearly visible independent 3D spin');
   visual.update(pose);assert.ok(endRotation.angleTo(heart.quaternion)<1e-8,'rotation is determined by authority time, not frame count');
-  for(let i=2;i<=6;i++)assert.equal(visual.root.getObjectByName('TURRET_01_Hull').geometry,visual.root.getObjectByName('TURRET_0'+i+'_Hull').geometry);
+  const gunMesh=(root,i)=>{let found;root.getObjectByName('TURRET_0'+i+'_PIVOT').traverse(o=>{if(o.isMesh&&o.material.name==='MAT_nucleo_PBR')found=o;});return found;};
+  for(let i=2;i<=6;i++)assert.equal(gunMesh(visual.root,1).geometry,gunMesh(visual.root,i).geometry);
   const geometries=new Set(),materials=new Set();visual.root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);});
   const before=JSON.stringify(S.snapshot(body)),target={x:230,y:400};let id=0;
   for(let frame=0;frame<720;frame++){

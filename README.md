@@ -1,3 +1,5 @@
+V24.38: incorpora la animación DISPARO del núcleo. Los seis cañones apuntan con velocidad angular limitada al punto anunciado; el retroceso empieza justo antes del disparo y se recupera después. Las balas nacen en las bocas reales deformadas del GLB, incluida su altura. Física y presentación comparten la calibración de los cañones y el tiempo de la animación. Se mantienen las ráfagas de cinco/siete balas.
+
 V24.35: destruir el núcleo activa el viaje automático a la fase 4 aunque queden menos de cinco vidas. La victoria confirmada del jefe deja de esperar al contador 5/5 de las bajas normales. La esfera de hexágonos gira en 3D independientemente del anillo; sus placas y juntas luminosas permanecen unidas. Se respeta la preferencia de movimiento reducido.
 
 V24.34: núcleo de fase 3 un 65 % mayor y satélites un 50 % mayores, con órbitas, escudo y colisiones ajustados. Las cinco bajas previas son las vidas de este jefe: cada muerte resta una y llegar a cero termina la campaña. El daño causado al jefe se conserva al reaparecer.

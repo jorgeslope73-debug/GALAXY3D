@@ -10,6 +10,8 @@ on:
       - 'tools/check-ufo-boss.js'
       - 'tools/check-storm-boss.js'
       - 'tools/check-storm-model.mjs'
+      - 'tools/check-storm-fire.mjs'
+      - 'tools/build-storm-guns.mjs'
       - 'docs/storm-core.js'
       - 'docs/storm-model.js'
       - 'docs/physics-core.js'
@@ -117,6 +119,8 @@ on:
       - 'tools/check-ufo-boss.js'
       - 'tools/check-storm-boss.js'
       - 'tools/check-storm-model.mjs'
+      - 'tools/check-storm-fire.mjs'
+      - 'tools/build-storm-guns.mjs'
       - 'docs/storm-core.js'
       - 'docs/storm-model.js'
       - 'docs/physics-core.js'
@@ -309,7 +313,7 @@ jobs:
       - name: Check campaign boss gate, two passes and mission outcome
         run: node tools/check-campaign-boss.js
       - name: Check level-three storm boss and authored GLBs
-        run: node tools/check-storm-boss.js && node tools/check-storm-model.mjs
+        run: node tools/check-storm-boss.js && node tools/check-storm-model.mjs && node tools/check-storm-fire.mjs
       - name: Check level-two UFO wave identity, counts and progression
         run: node tools/check-ufo-boss.js
       - name: Check decorative menu UFO timing and clearance

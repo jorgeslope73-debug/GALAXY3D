@@ -7147,7 +7147,7 @@
     for(const b of renderState.bullets){
       const x=b.x+b.vx*age,y=b.y+b.vy*age;
       if(b.g)scene3D.rocket(b.id,x,y,Math.atan2(-b.vx,-b.vy)*180/Math.PI,b.o);
-      else scene3D.bolt(x,y,b.vx,b.vy,b.id);
+      else scene3D.bolt(x,y,b.vx,b.vy,b.id,b.z);
     }
     // El rastro se calcula y pinta solo en esta maquina. Las nuevas particulas
     // se emiten al dibujar las naves y apareceran desde el siguiente frame.
