@@ -6879,6 +6879,7 @@
     const key=boss.satellites>0?'stormBossSatellites':boss.attack==='charging'?'stormBossDodge':boss.enraged?'stormBossEnraged':'stormBossOpen';
     const label=tr(key,{count:3-boss.satellites,total:3});ctx.strokeText(label,W/2,130);ctx.fillText(label,W/2,130);
     if(!boss.satellites){const hp=tr('stormBossHealth',{hp:boss.hp,total:boss.maxHp});ctx.font=isMobile?'29px Flashback,Arial':'24px Flashback,Arial';ctx.strokeText(hp,W/2,174);ctx.fillText(hp,W/2,174);}
+    if(Number.isFinite(boss.lives)){const lives=tr('stormBossLives',{lives:boss.lives,total:boss.maxLives||5}),y=boss.satellites?174:218;ctx.font=isMobile?'27px Flashback,Arial':'23px Flashback,Arial';ctx.fillStyle=boss.lives<=2?'#ff7777':'#d9f4ff';ctx.strokeText(lives,W/2,y);ctx.fillText(lives,W/2,y);}
     ctx.restore();
   }
   function drawUfoBossProgress(boss){
