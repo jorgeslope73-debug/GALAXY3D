@@ -104,7 +104,7 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
         item.material.emissiveIntensity=item.intensity*(charging?1.25:1);
       }
       shield.visible=!body.vulnerable;halo.visible=!body.vulnerable;shieldMaterial.opacity=charging?.19:.13;
-      halo.rotation.set(.45,.18,reducedMotion?0:age*.08);
+      halo.rotation.set(0,0,reducedMotion?0:age*.08);
       health.forEach((pip,i)=>{pip.material=i<body.hp?light:dark;});
       body.satellites.forEach((part,i)=>{
         const sat=satellites[i];sat.group.visible=part.hp>0;
