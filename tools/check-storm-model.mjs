@@ -27,6 +27,14 @@ for(const reducedMotion of [false,true]){
   assert.notEqual(visual.root.getObjectByName('CORE_Energy_Panels').material,second.root.getObjectByName('CORE_Energy_Panels').material);
   assert.equal(visual.root.getObjectByName('CORE_Hull').material.map,templates.core.getObjectByName('CORE_Hull').material.map);
   assert.equal(visual.root.getObjectByName('CORE_Hull').material.envMap,environment);
+  const heart=visual.root.getObjectByName('storm-energy-rotor');
+  assert.equal(visual.root.getObjectByName('CORE_Energy_Panels').parent,heart);
+  assert.equal(visual.root.getObjectByName('CORE_Energy_Glow').parent,heart,'panels and luminous seams cannot drift apart');
+  const pose=S.snapshot(body);pose.age=2;visual.update(pose);const startRotation=heart.quaternion.clone();
+  pose.age=4;visual.update(pose);const endRotation=heart.quaternion.clone();
+  if(reducedMotion)assert.ok(startRotation.angleTo(endRotation)<1e-8,'reduced motion keeps the sphere still');
+  else assert.ok(startRotation.angleTo(endRotation)>.7,'the sphere has a clearly visible independent 3D spin');
+  visual.update(pose);assert.ok(endRotation.angleTo(heart.quaternion)<1e-8,'rotation is determined by authority time, not frame count');
   for(let i=2;i<=6;i++)assert.equal(visual.root.getObjectByName('TURRET_01_Hull').geometry,visual.root.getObjectByName('TURRET_0'+i+'_Hull').geometry);
   const geometries=new Set(),materials=new Set();visual.root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);});
   const before=JSON.stringify(S.snapshot(body)),target={x:230,y:400};let id=0;

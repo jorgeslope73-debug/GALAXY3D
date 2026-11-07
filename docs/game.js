@@ -4514,6 +4514,9 @@
     else if(Number(backgroundRound)>0)selectMatchBackgroundForRound(backgroundRound);
     else if(!roomCode)selectNextMatchBackground();
     stopMusic();updateMobileControlUi();resetLocalVisual();resetRemoteVisuals();lastControlThrust=false;lastControlSentAt=0;lastSentControlTurn=NaN;lastSentControlThrust=false;lastSentControlFire=false;inGame=true;menu.classList.add('hidden');lobby.classList.add('hidden');victory.classList.remove('winner-celebration');victory.classList.add('hidden');if(preparingOnline){topbar.classList.remove('hidden');mobileControls.classList.add('hidden');if(mobileExit)mobileExit.classList.remove('hidden');}else activateGameUi();scheduleCanvasResolution();}
+  function isLocalBossVictory(i){
+    return roomCode==='LOCAL'&&localCpuActive&&state?.finished===true&&state?.boss?.phase==='won'&&Number(i)===Number(myIndex)&&Number(state.winner)===Number(i);
+  }
   function queueVictory(i){
     const winnerIndex=Number(i);
     const failedBoss=roomCode==='LOCAL'&&localCpuActive&&state?.boss?.phase==='failed'&&winnerIndex===-1;
@@ -4531,7 +4534,7 @@
     if(Number(pendingVictoryIndex)===Number(myIndex)&&killScorePendingValue!==null){
       delay=Math.max(delay,killScoreFxStart-now+650);
     }
-    if(roomCode==='LOCAL'&&Number(pendingVictoryIndex)===Number(myIndex)){
+    if(roomCode==='LOCAL'&&Number(pendingVictoryIndex)===Number(myIndex)&&!isLocalBossVictory(pendingVictoryIndex)){
       // Esperar a un fotograma que haya mostrado 5/5, tambien tras volver
       // de una pestaña en segundo plano o recibir un estado retrasado.
       if(victoryHudScoreShownAt===null)return Math.max(100,killScoreFxStart-now);
@@ -4550,7 +4553,7 @@
       // El snapshot final puede llegar DESPUES de programar el cartel.
       // Revalidar aqui impide que un temporizador antiguo lo adelante.
       const scoreStillPending=Number(winnerIndex)===Number(myIndex)&&killScorePendingValue!==null&&now<killScoreFxStart+650;
-      const localHudStillPending=roomCode==='LOCAL'&&Number(winnerIndex)===Number(myIndex)&&(victoryHudScoreShownAt===null||now<victoryHudScoreShownAt+650);
+      const localHudStillPending=roomCode==='LOCAL'&&Number(winnerIndex)===Number(myIndex)&&!isLocalBossVictory(winnerIndex)&&(victoryHudScoreShownAt===null||now<victoryHudScoreShownAt+650);
       if(scoreStillPending||localHudStillPending){maybeScheduleVictory();return;}
       pendingVictoryIndex=null;
       showVictory(winnerIndex);

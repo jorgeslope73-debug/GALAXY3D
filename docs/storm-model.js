@@ -60,7 +60,7 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
       }
       o.material=materialCopies.get(original);
     });
-    const heart=new T.Group();heart.position.y=.28;core.getObjectByName('NUCLEO_ROOT').add(heart);
+    const heart=new T.Group();heart.name='storm-energy-rotor';heart.position.y=.28;core.getObjectByName('NUCLEO_ROOT').add(heart);
     for(const name of ['CORE_Energy_Glow','CORE_Energy_Panels']){const part=core.getObjectByName(name);heart.add(part);part.position.y=-.28;}
     const pivots=Array.from({length:6},(_,i)=>{
       const pivot=core.getObjectByName('TURRET_'+String(i+1).padStart(2,'0')+'_PIVOT');
@@ -75,7 +75,9 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
     return {root,update(body){
       root.visible=!!body&&body.hp>0;if(!root.visible)return;
       const age=Number(body.age)||0,charging=body.attack==='charging',enraged=!!body.enraged;
-      const spin=reducedMotion?0:age*.08;rotor.rotation.z=spin;heart.rotation.y=reducedMotion?0:-age*.16;
+      const spin=reducedMotion?0:age*.08;rotor.rotation.z=spin;
+      // The panels and luminous seams roll together around the authored centre.
+      heart.rotation.set(reducedMotion?0:.18,reducedMotion?0:age*.55,reducedMotion?0:age*.22);
       for(const item of pivots){
         let yaw=0;
         if(body.warning?.slot===-1){const error=-body.warning.angle-spin-item.heading;yaw=Math.max(-.35,Math.min(.35,Math.atan2(Math.sin(error),Math.cos(error))));}
