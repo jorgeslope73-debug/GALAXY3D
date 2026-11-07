@@ -28,10 +28,15 @@ for(const reducedMotion of [false,true]){
   assert.equal(visual.root.getObjectByName('CORE_Hull').material.map,templates.core.getObjectByName('CORE_Hull').material.map);
   assert.equal(visual.root.getObjectByName('CORE_Hull').material.envMap,environment);
   const heart=visual.root.getObjectByName('storm-energy-rotor');
+  const sourcePanels=templates.core.getObjectByName('CORE_Energy_Panels');sourcePanels.geometry.computeBoundingBox();
+  const authoredCenter=sourcePanels.geometry.boundingBox.getCenter(new T.Vector3()).applyMatrix4(sourcePanels.matrixWorld);
   assert.equal(visual.root.getObjectByName('CORE_Energy_Panels').parent,heart);
   assert.equal(visual.root.getObjectByName('CORE_Energy_Glow').parent,heart,'panels and luminous seams cannot drift apart');
   const pose=S.snapshot(body);pose.age=2;visual.update(pose);const startRotation=heart.quaternion.clone();
   pose.age=4;visual.update(pose);const endRotation=heart.quaternion.clone();
+  visual.root.updateMatrixWorld(true);const displayedPanels=visual.root.getObjectByName('CORE_Energy_Panels');
+  const displayedCenter=displayedPanels.geometry.boundingBox.getCenter(new T.Vector3()).applyMatrix4(displayedPanels.matrixWorld);
+  assert.ok(displayedCenter.distanceTo(authoredCenter)<1e-4,'the rotating sphere preserves the supplied GLB translation and scale');
   if(reducedMotion)assert.ok(startRotation.angleTo(endRotation)<1e-8,'reduced motion keeps the sphere still');
   else assert.ok(startRotation.angleTo(endRotation)>.7,'the sphere has a clearly visible independent 3D spin');
   visual.update(pose);assert.ok(endRotation.angleTo(heart.quaternion)<1e-8,'rotation is determined by authority time, not frame count');
