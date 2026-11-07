@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.32: la fase 3 termina con El Núcleo de la Tormenta, un jefe local con tres satélites orbitales de dos puntos de vida que protegen un núcleo de seis. Los ataques tienen un aviso de dirección y una pausa para contraatacar; el núcleo se protege durante la carga y acelera sus ráfagas con poca vida. Destruirlo conserva el viaje automático a la fase 4. Modelo 3D nativo, sin nuevas descargas de imágenes ni modelos; geometría y materiales reutilizados y precalentados antes de jugar.
+
 V24.31: el OVNI de portada balancea lentamente y deja ver parte de su base a intervalos, conservando sus visitas y distancias a los objetos. La nodriza recorre un arco amplio hacia arriba o abajo y orienta el morro con la tangente de la trayectoria; sus cuatro torretas amplian el barrido independiente a +/-40 grados. Animaciones exclusivas de portada con los modelos, luces y reflejos existentes.
 
 V24.30: las cuatro torretas de la nodriza decorativa exploran suavemente a ambos lados, con un giro de hasta 22 grados y ritmos independientes. Usan los nulls del GLB y el tiempo de la propia pasada, sin disparos, fisica ni trafico de red.

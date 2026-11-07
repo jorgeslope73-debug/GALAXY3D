@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 function world(){
   const random=Object.create(Math),events=[];
   const ctx=vm.createContext({window:{},console,Math:random,Date,performance,setTimeout,clearTimeout});
-  for(const name of ['net-protocol','campaign-config','collision-profiles','physics-core','mothership-data','mothership-core','shot-history','host-physics','local-cpu'])vm.runInContext(fs.readFileSync('docs/'+name+'.js','utf8'),ctx,{filename:name+'.js'});
+  for(const name of ['net-protocol','campaign-config','collision-profiles','physics-core','mothership-data','mothership-core','storm-core','shot-history','host-physics','local-cpu'])vm.runInContext(fs.readFileSync('docs/'+name+'.js','utf8'),ctx,{filename:name+'.js'});
   const engine=new ctx.window.GalaxyLocalCpu({onEvent:e=>events.push(e)});engine.start('PILOT','medio',3,null,false,1);
   engine.updateAsteroids=()=>{};engine.asteroids=[];
   for(const p of engine.players){p.spawnFx=0;p.protection=0;p.shield=0;}
@@ -63,7 +63,7 @@ for(const pass of [1,2]){
   for(const edge of ['left','right','top','bottom']){const body=f.M.create(100,edge);let active=true,ticks=0;while(active&&ticks++<4000)active=f.M.step(body,1/60,[],()=>1).active;assert.ok(!active);assert.ok(edge==='top'?body.y>1080+f.M.data.radius:edge==='bottom'?body.y< -f.M.data.radius:edge==='left'?body.x>1920+f.M.data.radius:body.x< -f.M.data.radius);}
 }
 for(const level of [1,2,3]){
-  const f=world(),e=f.engine;e.start('P','facil',1,null,false,level);e.players[0].kills=4;e.players[1].protection=0;e.players[1].shield=0;e.destroyShip(e.players[1],e.players[0]);assert.equal(e.finished,level>2);
+  const f=world(),e=f.engine;e.start('P','facil',1,null,false,level);e.players[0].kills=4;e.players[1].protection=0;e.players[1].shield=0;e.destroyShip(e.players[1],e.players[0]);assert.equal(e.finished,level>3);
   e.startTraining();assert.equal(e.needsMothershipBoss(),false);assert.equal(e.bossEncounter,null);
 }
 // Exercise the actual client failure screen and automatic trip callback without timers or WebGL.
