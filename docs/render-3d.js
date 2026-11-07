@@ -525,9 +525,9 @@
         record.trim.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
         record.paint.color.setHex(colors[Math.max(0,Math.min(3,Number(owner)||0))]);
       },
-      bolt(x,y,vx,vy,id){
+      bolt(x,y,vx,vy,id,z=16){
         if(bolts>=256)return;
-        position.set(x-W/2,H/2-y,16);
+        position.set(x-W/2,H/2-y,Number.isFinite(z)?z:16);
         euler.set(0,0,Math.atan2(-vx,-vy));quaternion.setFromEuler(euler);
         scale.set(1.8,15,1.8);matrix.compose(position,quaternion,scale);
         boltMesh.setMatrixAt(bolts++,matrix);
