@@ -60,8 +60,11 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
       }
       o.material=materialCopies.get(original);
     });
-    const heart=new T.Group();heart.name='storm-energy-rotor';heart.position.y=.28;core.getObjectByName('NUCLEO_ROOT').add(heart);
-    for(const name of ['CORE_Energy_Glow','CORE_Energy_Panels']){const part=core.getObjectByName(name);heart.add(part);part.position.y=-.28;}
+    const panels=core.getObjectByName('CORE_Energy_Panels');panels.geometry.computeBoundingBox();panels.updateMatrix();
+    const heart=new T.Group();heart.name='storm-energy-rotor';
+    panels.geometry.boundingBox.getCenter(heart.position).applyMatrix4(panels.matrix);
+    core.getObjectByName('NUCLEO_ROOT').add(heart);
+    for(const name of ['CORE_Energy_Glow','CORE_Energy_Panels']){const part=core.getObjectByName(name);heart.add(part);part.position.sub(heart.position);}
     const pivots=Array.from({length:6},(_,i)=>{
       const pivot=core.getObjectByName('TURRET_'+String(i+1).padStart(2,'0')+'_PIVOT');
       if(!pivot)throw new Error('Falta el pivote de una torreta del núcleo');
