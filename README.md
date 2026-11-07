@@ -1,5 +1,7 @@
 # GALAXY3D
 
+V24.33: la fase 3 termina con El Núcleo de la Tormenta, un jefe local con tres satélites orbitales de dos puntos de vida que protegen un núcleo de seis. Los ataques tienen un aviso de dirección y una pausa para contraatacar; el núcleo se protege durante la carga y acelera sus ráfagas con poca vida. Destruirlo conserva el viaje automático a la fase 4. Modelos low poly `nucleo.glb` y `satelite.glb`, con texturas incrustadas: 5.364 y 1.060 triángulos. Se cargan al preparar la fase 3, comparten geometría entre instancias y se precalientan antes de jugar.
+
 V24.31: el OVNI de portada balancea lentamente y deja ver parte de su base a intervalos, conservando sus visitas y distancias a los objetos. La nodriza recorre un arco amplio hacia arriba o abajo y orienta el morro con la tangente de la trayectoria; sus cuatro torretas amplian el barrido independiente a +/-40 grados. Animaciones exclusivas de portada con los modelos, luces y reflejos existentes.
 
 V24.30: las cuatro torretas de la nodriza decorativa exploran suavemente a ambos lados, con un giro de hasta 22 grados y ritmos independientes. Usan los nulls del GLB y el tiempo de la propia pasada, sin disparos, fisica ni trafico de red.
@@ -423,3 +425,5 @@ La versión publicada es la que aparece en `docs/index.html` y en `docs/sw.js`. 
 - V20.80: el intervalo mínimo entre dos lanzamientos de cargas de bengalas baja de 2 a 1 segundo para jugadores y CPU, tanto en partidas locales como online. Cada carga sigue desplegando tres bengalas y cada bengala conserva sus 3 segundos de vida.
 
 - La campaña CONTRA LA MÁQUINA tiene cinco niveles. Ganar el nivel 4 permite continuar al nivel 5, con fondo05.jpg en PC y fondo05_1280.jpg en móvil. El título CAMPEÓN INTERESTELAR se obtiene al ganar el nivel 5. El último nivel aumenta la frecuencia de peligros y mantiene el límite de cinco asteroides activos.
+
+Los modelos `nucleo.glb` y `satelite.glb` de la fase 3 llevan las texturas incrustadas y se cargan durante PREPARADOS al entrar en esa fase. La geometría se comparte entre torretas e instancias de satélite; las colisiones y el combate siguen siendo autoritativos en CPU. Prueba directa: `prueba-nucleo.html`.

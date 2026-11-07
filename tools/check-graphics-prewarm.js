@@ -29,6 +29,13 @@ async function gpuCase({legacy=false,lost=false,failed=false}={}){
   assert.equal(calls.filter(c=>c[0]==='mothership').length,4,'the CPU model and all four turret poses are GPU-warmed before readiness');
   assert.ok(calls.filter(c=>c[0]==='mothership').every(c=>c[1].turrets.length===4),'warmup uses the new four-turret model');
   assert.ok(calls.filter(c=>c[0]==='mothership').every(c=>c[1].hp===6&&c[1].maxHp===6),'the attached health panel is visible and GPU-warmed before readiness');
+  assert.equal(calls.filter(c=>c[0]==='storm').length,0,'default/online startup does not prepare the phase-three boss');
+  ctx.createStorm=()=>{};api.storm=body=>calls.push(['storm',body]);
+  const stormWarm=ctx.warmScene(1280,720);
+  for(let i=0;i<30;i++)await Promise.resolve();finish();await stormWarm;
+  const stormPoses=calls.filter(c=>c[0]==='storm').map(c=>c[1]);
+  assert.equal(stormPoses.length,4,'all GLB attack, shield and damage variants are warmed before CPU readiness');
+  assert.ok(stormPoses.some(body=>body.vulnerable)&&stormPoses.some(body=>body.warning)&&stormPoses.some(body=>body.enraged));
   const game=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n'),a=game.indexOf('  function prepareGameAssets('),b=game.indexOf('\n  function warmGameAssetsWhenIdle(',a);assert.ok(a>=0&&b>a);
   let modelsReady,gpuReady;const models=new Promise(r=>modelsReady=r),gpu=new Promise(r=>gpuReady=r);
   const assets=vm.createContext({gameAssetsReady:false,gameAssetsPromise:null,Promise,imageDecodePromises:{},document:{fonts:{load:()=>Promise.resolve()}},updateCanvasResolution(){},warmRendererCaches(){},warmOnlineStartCaches(){},canvas:{width:1280,height:720},window:{Galaxy3D:{ready:models,prepareMatch:()=>gpu}}});

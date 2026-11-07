@@ -43,6 +43,7 @@
     },
     {
       id:3,nameKey:'campaignWorld3',
+      boss:{type:'storm-core',satelliteHp:2,coreHp:6},
       background:{file:'assets/sprites/fondo03.jpg',mobileKey:'bg03',stars:false},
       ufos:2,
       hazards:{

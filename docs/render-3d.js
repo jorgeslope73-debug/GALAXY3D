@@ -39,6 +39,11 @@
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
       try{return await world.prepareMothership();}catch(error){fallback(error);throw error;}
     },
+    async prepareStorm(){
+      const loaded=await assetsReady;
+      if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
+      try{return await world.prepareStorm();}catch(error){fallback(error);throw error;}
+    },
     begin(ctx,now,snapshot,localIndex){
       if(!this.active||world.preparing)return null;
       try{world.begin(ctx,now,snapshot,localIndex);return world;}catch(error){fallback(error);return null;}
@@ -89,6 +94,7 @@
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,menuMothershipFlight=null,menuMothershipAssets=null,menuMothershipFailed=false,winnerStage=null;
+    let createStorm=null;
     let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,createImportedMothershipHealth=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
@@ -298,6 +304,17 @@
       console.warn('[GALAXY3D] No se pudo cargar nave.glb; se conserva la nave de respaldo:',error?.message||error);
       throw error;
     }));
+    // Campaign-only GLBs are fetched once during phase-three PREPARADOS, never on online startup.
+    let stormLoad=null;
+    function prepareStorm(){
+      if(!stormLoad)stormLoad=Promise.all([import('./storm-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
+        const templates=await assets.loadStormTemplates(T);
+        createStorm=assets.createStormFactory(T,{templates,environment:reflections.texture,mobile,reducedMotion});
+        document.documentElement.dataset.galaxyStorm='nucleo-satelite-glb';
+        return true;
+      }).catch(error=>{stormLoad=null;throw error;});
+      return stormLoad;
+    }
     function model(kind){
       if(kind.startsWith('ship:'))return shipModel(Number(kind.split(':')[1])||0);
       const root=new T.Group();
@@ -318,6 +335,7 @@
         root.add(createImportedUfo());
         return {root};
       }
+      if(kind==='storm-core')return createStorm();
       if(kind==='mothership'){
         const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile}),health=createImportedMothershipHealth(visual);
         root.add(visual,exhaust.points);return {root,visual,exhaust,health};
@@ -520,6 +538,10 @@
         record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
         record.torus.rotation.set(.2,0,now*.0005);
       },
+      storm(body){
+        if(!body||!createStorm)return;
+        const record=take('storm-core',body.id);place(record.root,body.x,body.y,0);record.update(body);
+      },
       mothership(body){
         if(!body||!createImportedMothership)return;
         const record=take('mothership',body.id);place(record.root,body.x,body.y,0);
@@ -642,6 +664,7 @@
         for(const [i,type]of ['ammo1','ammo3','cadence','speed','mira','flare','shockwave','shield','camo'].entries())api.pickup('warm-pickup-'+i,160+i*180,420,type,0);
         api.ufo('warm-ufo',960,420,pass*30);
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
+        if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*190,y:540+Math.sin(i*2.1)*190,hp:pass<2?2:0,maxHp:2}))});
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the
@@ -657,7 +680,7 @@
     api.preparing=false;
     api.prepareMatch=(width,height)=>{
       width=Math.max(256,Math.min(mobile?1280:1920,Math.round(Number(width)||W)));
-      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'');
+      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'');
       preparationQueue=preparationQueue.then(async()=>{
         if(preparedViewport===key&&surface.width===width)return {width,height,programs:renderer.info.programs?.length||0};
         api.preparing=true;
@@ -667,6 +690,7 @@
       return preparationQueue;
     };
     api.prepareMothership=prepareMothership;
+    api.prepareStorm=prepareStorm;
     api.ready=Promise.all(modelLoads).then(async()=>{
       api.preparing=true;
       try{await warmScene(256,144);}finally{api.preparing=false;}
@@ -675,7 +699,7 @@
     });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
-    window.addEventListener('beforeunload',()=>{projectileLighting?.dispose();renderer.dispose();},{once:true});
+    window.addEventListener('beforeunload',()=>{createStorm?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
     return api;
   }
 })();
