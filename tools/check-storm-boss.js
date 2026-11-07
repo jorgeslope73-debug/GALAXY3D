@@ -122,8 +122,8 @@ function source(name){const a=game.indexOf('  function '+name+'('),b=game.indexO
 const i18n=vm.createContext({window:{},localStorage:{getItem:()=> 'es'},document:{querySelectorAll:()=>[],getElementById:()=>null,documentElement:{}}});vm.runInContext(fs.readFileSync('docs/i18n.js','utf8'),i18n);
 const tr=i18n.window.GalaxyI18n.t,labels=[];
 const hud=vm.createContext({ctx:{save(){},restore(){},strokeText(){},fillText:t=>labels.push(t)},W:1920,isMobile:true,tr});vm.runInContext(source('drawStormBossProgress'),hud);
-hud.drawStormBossProgress({type:'storm-core',phase:'fighting',satellites:2,attack:'cooldown',hp:6,maxHp:6,lives:4,maxLives:5});assert.ok(labels.includes('SATÉLITES DESTRUIDOS: 1/3'));assert.ok(labels.includes('VIDAS: 4/5'));
-hud.drawStormBossProgress({type:'storm-core',phase:'fighting',satellites:0,attack:'charging',hp:2,maxHp:6});assert.ok(labels.includes('CARGANDO · ESQUIVA LA RÁFAGA'));
+hud.drawStormBossProgress({type:'storm-core',phase:'fighting',satellites:2,attack:'cooldown',hp:6,maxHp:6,lives:4,maxLives:5});assert.ok(labels.includes('SATELITES DESTRUIDOS: 1/3'));assert.ok(labels.includes('VIDAS: 4/5'));
+hud.drawStormBossProgress({type:'storm-core',phase:'fighting',satellites:0,attack:'charging',hp:2,maxHp:6});assert.ok(labels.includes('CARGANDO · ESQUIVA LA RAFAGA'));
 let callback,clicks=0;const button={disabled:false,click(){clicks++;}},c=vm.createContext({localCpuActive:true,localCpu:{},state:{boss:{type:'storm-core',phase:'won'}},localCampaignAwaitingContinue:true,localCampaignLevel:3,roomCode:'LOCAL',inGame:false,victory:{classList:{contains:()=>false}},bossTravelTimer:null,setTimeout:fn=>{callback=fn;return 1;},clearTimeout(){}});
 vm.runInContext(source('scheduleBossTravel'),c);c.scheduleBossTravel(button);callback();assert.equal(clicks,1,'victory uses automatic travel to the next world');
 for(const path of ['docs/index.html','docs/build-version.js'])assert.ok(fs.readFileSync(path,'utf8').indexOf('storm-core.js')<fs.readFileSync(path,'utf8').indexOf('local-cpu.js'),'authority loads before the local engine');
