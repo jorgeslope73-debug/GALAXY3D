@@ -22,9 +22,10 @@ export function prepareStormTemplate(T,source,kind){
 export async function loadStormTemplates(T){
   const loader=new GLTFLoader(),version=new URL(import.meta.url).search;
   const load=async(kind,file)=>{const url=new URL('./assets/models/'+file,import.meta.url);url.search=version;
-    const gltf=await loader.loadAsync(url.href);return prepareStormTemplate(T,gltf.scene,kind);};
+    const gltf=await loader.loadAsync(url.href);return {template:prepareStormTemplate(T,gltf.scene,kind),animations:gltf.animations||[]};};
   const [core,satellite]=await Promise.all([load('core','nucleo.glb'),load('satellite','satelite.glb')]);
-  return {core,satellite};
+  return {core:core.template,satellite:satellite.template,
+    shotClip:core.animations.find(clip=>clip.name.toUpperCase()==='DISPARO')||null};
 }
 
 export function createStormFactory(T,{templates,environment=null,mobile=false,reducedMotion=false}={}){
@@ -41,6 +42,10 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
   const create=()=>{
     const root=new T.Group(),rotor=new T.Group();root.add(rotor);
     const core=templates.core.clone(true);rotor.add(core);
+    // A glTF morph animation is not attached to scene.clone(): retain its clip.
+    const shotMixer=templates.shotClip?new T.AnimationMixer(core):null;
+    const shotAction=shotMixer?.clipAction(templates.shotClip);
+    if(shotAction){shotAction.setLoop(T.LoopOnce,1);shotAction.clampWhenFinished=true;shotAction.play();}
     const health=Array.from({length:6},(_,i)=>mesh(root,geometry.pip,light,-30+i*12,-142,65));
     const satellites=Array.from({length:3},()=>{
       const group=new T.Group();root.add(group);group.add(templates.satellite.clone(true));
@@ -68,23 +73,42 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
     const pivots=Array.from({length:6},(_,i)=>{
       const pivot=core.getObjectByName('TURRET_'+String(i+1).padStart(2,'0')+'_PIVOT');
       if(!pivot)throw new Error('Falta el pivote de una torreta del núcleo');
-      return {pivot,rest:i*Math.PI/3,heading:Math.PI/2+i*Math.PI/3};
+      return {pivot,original:pivot.quaternion.clone(),yaw:0,heading:Math.PI/2+i*Math.PI/3};
     });
     const shield=mesh(root,geometry.shield,shieldMaterial),halo=mesh(root,geometry.halo,light);
     const tell=new T.Group();root.add(tell);
     const sector=mesh(tell,fan,warningMaterial,0,0,-25);
     const ray=mesh(tell,geometry.ray,warningMaterial,390,0,-22);ray.scale.set(780,3,1);
     const portal=mesh(root,geometry.halo,light,0,0,-35);
+    let lastAge=null;
+    const yawQuat=new T.Quaternion();
     return {root,update(body){
       root.visible=!!body&&body.hp>0;if(!root.visible)return;
       const age=Number(body.age)||0,charging=body.attack==='charging',enraged=!!body.enraged;
       const spin=reducedMotion?0:age*.08;rotor.rotation.z=spin;
       // The panels and luminous seams roll together around the authored centre.
       heart.rotation.set(reducedMotion?0:.18,reducedMotion?0:age*.55,reducedMotion?0:age*.22);
+      // Keep the authored GLB pivot rotations. Limit angular velocity to avoid
+      // jumps when a warning starts, ends, or the aim passes across +/-PI.
+      const dt=lastAge===null?0:Math.max(0,Math.min(.1,age-lastAge));
+      lastAge=age;
       for(const item of pivots){
-        let yaw=0;
-        if(body.warning?.slot===-1){const error=-body.warning.angle-spin-item.heading;yaw=Math.max(-.35,Math.min(.35,Math.atan2(Math.sin(error),Math.cos(error))));}
-        item.pivot.quaternion.setFromAxisAngle(axis,item.rest+yaw);
+        let desired=0;
+        if(body.warning?.slot===-1){
+          const error=-body.warning.angle-spin-item.heading;
+          desired=Math.max(-.95,Math.min(.95,Math.atan2(Math.sin(error),Math.cos(error))));
+        }
+        const step=2.8*dt;
+        item.yaw+=Math.max(-step,Math.min(step,desired-item.yaw));
+        item.pivot.quaternion.copy(item.original).multiply(yawQuat.setFromAxisAngle(axis,item.yaw));
+      }
+      // The 10-frame DISPARO morph plays during the last part of the telegraph,
+      // so its recoil leads into the actual projectile spawn.
+      if(shotMixer){
+        const warning=body.warning?.slot===-1?body.warning:null;
+        const clipDuration=templates.shotClip.duration;
+        const shotTime=warning?Math.max(0,Math.min(clipDuration,clipDuration-warning.remaining)):0;
+        shotMixer.setTime(shotTime);
       }
       light.color.setHex(charging?0xffad52:body.vulnerable?0xa5fff0:0x9dbaff);
       for(const item of emissives){
