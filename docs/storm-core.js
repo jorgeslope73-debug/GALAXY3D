@@ -35,21 +35,42 @@
     return GUNS.weights[i-1]+(GUNS.weights[i]-GUNS.weights[i-1])*t;
   }
   function gunYaw(body,index){return -body.turrets[index].angle-body.age*.08-GUNS.guns[index].forward;}
-  function gunPose(body,index,side=0){
-    const g=GUNS.guns[index],spin=body.age*.08,angle=body.turrets[index].angle,yaw=gunYaw(body,index);
+  function gunPose(body,index,side=0,angle=body.turrets[index].angle){
+    const g=GUNS.guns[index],spin=body.age*.08,yaw=-angle-spin-g.forward;
     const weight=shotWeight(body.clipTime),m=g.muzzles[side],lx=m.base[0]+m.delta[0]*weight,lz=m.base[2]+m.delta[2]*weight;
     const c=Math.cos(yaw),s=Math.sin(yaw),cs=Math.cos(spin),sn=Math.sin(spin);
     const mx=g.pivot[0]+c*lx+s*lz,my=-(g.pivot[2]-s*lx+c*lz);
     return {x:body.x+(cs*mx-sn*my)*GUNS.scale,y:body.y-(sn*mx+cs*my)*GUNS.scale,z:10+(g.pivot[1]+m.base[1]+m.delta[1]*weight)*GUNS.scale,angle,yaw};
   }
   function updateGuns(body,dt){
-    const warning=body.warning?.slot===-1?body.warning:null,spin=body.age*.08,cs=Math.cos(spin),sn=Math.sin(spin);
+    const warning=body.warning?.slot===-1?body.warning:null,spin=body.age*.08;
     for(let i=0;i<6;i++){
-      const g=GUNS.guns[i],x=body.x+(cs*g.pivot[0]+sn*g.pivot[2])*GUNS.scale,y=body.y-(sn*g.pivot[0]-cs*g.pivot[2])*GUNS.scale;
-      const desired=warning?Math.atan2(warning.targetY-y,warning.targetX-x):g.rest-spin;
+      // One shared heading keeps the barrels and their real projectiles parallel.
+      const desired=warning?warning.angle:GUNS.guns[i].rest-spin;
       const error=wrap(desired-body.turrets[i].angle),limit=2.8*dt;
       body.turrets[i].angle+=Math.max(-limit,Math.min(limit,error));
     }
+  }
+  function volleyMuzzles(body,angle,count,central=null,aligned=false){
+    const nx=-Math.sin(angle),ny=Math.cos(angle),available=[];
+    for(let turret=0;turret<6;turret++)for(let side=0;side<2;side++){
+      const p=gunPose(body,turret,side,aligned?angle:body.turrets[turret].angle);
+      available.push({turret,side,p,lane:(p.x-body.x)*nx+(p.y-body.y)*ny});
+    }
+    // Keep one central lane, then use the widest gaps across the entire hull.
+    // Selecting the nearest turrets instead clusters their twin barrels together.
+    available.sort((a,b)=>Math.abs(a.lane)-Math.abs(b.lane)||Math.hypot(a.p.x-body.x,a.p.y-body.y)-Math.hypot(b.p.x-body.x,b.p.y-body.y));
+    if(central){const i=available.findIndex(m=>m.turret===central.turret&&m.side===central.side);available.unshift(...available.splice(i,1));}
+    const selected=[available.shift()];
+    while(selected.length<count){
+      let best=0,distance=-1;
+      for(let i=0;i<available.length;i++){
+        const gap=Math.min(...selected.map(m=>Math.abs(m.lane-available[i].lane)));
+        if(gap>distance){best=i;distance=gap;}
+      }
+      selected.push(available.splice(best,1)[0]);
+    }
+    return selected;
   }
   function step(body,dt,target,uid){
     if(!(body.hp>0)||!(dt>0))return [];
@@ -60,6 +81,10 @@
     if(!body.warning&&body.age+1e-8>=body.nextAt){
       const parts=alive(body),part=parts.length?parts[body.cursor++%parts.length]:body,duration=parts.length?.85:1.25;
       body.warning={slot:parts.length?part.slot:-1,angle:Math.atan2(target.y-part.y,target.x-part.x),targetX:target.x,targetY:target.y,remaining:duration,duration,at:body.age+duration};
+      if(!parts.length){
+        const [{turret,side}]=volleyMuzzles(body,body.warning.angle,1,null,true);
+        body.warning.central={turret,side};
+      }
       body.attack='charging';
     }
     const warning=body.warning;
@@ -67,6 +92,14 @@
       const source=warning.slot<0?body:body.satellites[warning.slot];
       warning.remaining=Math.max(0,warning.at-body.age);
       warning.angle=Math.atan2(warning.targetY-source.y,warning.targetX-source.x);
+      if(warning.slot<0&&Math.hypot(warning.targetX-body.x,warning.targetY-body.y)>SHIELD_RADIUS+20){
+        // Aim the central barrel at the announced point; every other barrel
+        // copies its heading rather than converging on that same point.
+        for(let i=0;i<4;i++){
+          const p=gunPose(body,warning.central.turret,warning.central.side,warning.angle);
+          warning.angle=Math.atan2(warning.targetY-p.y,warning.targetX-p.x);
+        }
+      }
       if(warning.slot<0&&body.age>=warning.at-GUNS.lead)body.clipTime=Math.min(GUNS.duration,Math.max(0,body.age-warning.at+GUNS.lead));
     }
     updateGuns(body,dt);
@@ -74,10 +107,8 @@
     const source=warning.slot<0?body:body.satellites[warning.slot];
     if(source.hp>0){
       if(warning.slot<0){
-        const order=GUNS.guns.map((g,i)=>({i,d:Math.hypot(gunPose(body,i).x-warning.targetX,gunPose(body,i).y-warning.targetY)})).sort((a,b)=>a.d-b.d);
-        const count=body.hp<=2?7:5;
-        for(let n=0;n<count;n++){
-          const turret=order[Math.floor(n/2)].i,side=n%2,p=gunPose(body,turret,side),dx=Math.cos(p.angle),dy=Math.sin(p.angle);
+        for(const {turret,side,p} of volleyMuzzles(body,warning.angle,body.hp<=2?7:5,warning.central)){
+          const dx=Math.cos(p.angle),dy=Math.sin(p.angle);
           shots.push({id:uid(),owner:-3,storm:true,turret,side,x:p.x,y:p.y,z:p.z,px:p.x,py:p.y,vx:dx*330,vy:dy*330,age:0,travel:0,guided:false});
         }
       }else{
