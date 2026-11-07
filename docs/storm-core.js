@@ -40,8 +40,26 @@
       if(source.hp>0){
         const offsets=warning.slot<0?(body.hp<=2?[-.84,-.56,-.28,0,.28,.56,.84]:[-.66,-.33,0,.33,.66]):[0];
         const radius=warning.slot<0?SHIELD_RADIUS:SATELLITE_RADIUS;
-        for(const offset of offsets){
-          const angle=warning.angle+offset,dx=Math.cos(angle),dy=Math.sin(angle),x=source.x+dx*(radius+8),y=source.y+dy*(radius+8);
+        for(let index=0;index<offsets.length;index++){
+          const offset=offsets[index],angle=warning.angle+offset,dx=Math.cos(angle),dy=Math.sin(angle);
+          let x=source.x+dx*(radius+8),y=source.y+dy*(radius+8);
+          if(warning.slot<0){
+            // The six authored turret pivots sit at radius 2.72. Each has
+            // two muzzles at 1.055 forward and +/-0.205 sideways. Convert
+            // to the gameplay scale of the imported core (~32.4 units/m).
+            const spin=body.age*.08,baseRadius=88,barrelLength=34,muzzleHalfWidth=6.6;
+            let chosen=0,best=Infinity,heading=0;
+            for(let i=0;i<6;i++){
+              const candidate=-Math.PI/2-i*Math.PI/3-spin;
+              const delta=Math.atan2(Math.sin(angle-candidate),Math.cos(angle-candidate));
+              if(Math.abs(delta)<best){best=Math.abs(delta);chosen=i;heading=candidate;}
+            }
+            // The chosen turret faces the requested shot angle; alternating
+            // left/right muzzle locations avoids spawning at the core centre.
+            const side=index%2?1:-1;
+            x=source.x+Math.cos(heading)*baseRadius+dx*barrelLength-side*dy*muzzleHalfWidth;
+            y=source.y+Math.sin(heading)*baseRadius+dy*barrelLength+side*dx*muzzleHalfWidth;
+          }
           shots.push({id:uid(),owner:-3,storm:true,x,y,px:x,py:y,vx:dx*330,vy:dy*330,age:0,travel:0,guided:false});
         }
       }
