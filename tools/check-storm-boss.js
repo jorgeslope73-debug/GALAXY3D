@@ -92,7 +92,7 @@ for(const dt of [1/30,1/60,1/120]){
   p.protection=3;e.destroyShip(p);assert.equal(p.kills,5,'protected contacts never cost a life');p.protection=0;
   p.shield=3;e.destroyShip(p);assert.equal(p.kills,5,'a shield prevents life loss');p.shield=0;
   for(let remaining=4;remaining>=0;remaining--){
-    p.protection=0;p.spawnFx=0;e.destroyShip(p);assert.equal(p.kills,remaining);assert.equal(e.publicState().boss.lives,remaining);
+    p.protection=0;p.shield=0;p.spawnFx=0;e.destroyShip(p);assert.equal(p.kills,remaining);assert.equal(e.publicState().boss.lives,remaining);
     e.destroyShip(p);assert.equal(p.kills,remaining,'duplicate damage during death cannot cost another life');
     if(remaining){
       assert.equal(e.finished,false);while(p.dead)e.update(dt);
@@ -127,4 +127,36 @@ hud.drawStormBossProgress({type:'storm-core',phase:'fighting',satellites:0,attac
 let callback,clicks=0;const button={disabled:false,click(){clicks++;}},c=vm.createContext({localCpuActive:true,localCpu:{},state:{boss:{type:'storm-core',phase:'won'}},localCampaignAwaitingContinue:true,localCampaignLevel:3,roomCode:'LOCAL',inGame:false,victory:{classList:{contains:()=>false}},bossTravelTimer:null,setTimeout:fn=>{callback=fn;return 1;},clearTimeout(){}});
 vm.runInContext(source('scheduleBossTravel'),c);c.scheduleBossTravel(button);callback();assert.equal(clicks,1,'victory uses automatic travel to the next world');
 for(const path of ['docs/index.html','docs/build-version.js'])assert.ok(fs.readFileSync(path,'utf8').indexOf('storm-core.js')<fs.readFileSync(path,'utf8').indexOf('local-cpu.js'),'authority loads before the local engine');
-console.log('Storm boss OK: enlarged hull/orbit, earned lives 5 to 0, protected/duplicate deaths, preserved damage, final-life shot and contact, single loss, guarded restart, real weapon sweeps, warnings and level-four progression at 30/60/120 Hz.');
+// Exercise the real result queue as well as the actual continue-button handler.
+// A won boss can retain fewer than five kills because these are now its lives.
+function travelClient(f){
+  let now=0,id=0;const timers=new Map(),trips=[],wire=[];
+  const ui=()=>{const hidden=new Set();return {disabled:false,textContent:'',style:{setProperty(){}},classList:{add(...xs){xs.forEach(x=>hidden.add(x));},remove(...xs){xs.forEach(x=>hidden.delete(x));},contains:x=>hidden.has(x)}};};
+  const elements=new Map(),get=id=>{if(!elements.has(id))elements.set(id,ui());return elements.get(id);},button=get('restartMatch');
+  const c=vm.createContext({console,roomCode:'LOCAL',myIndex:0,localCpuActive:true,localCpu:f.e,state:f.e.publicState(),localCampaignLevel:3,LOCAL_CAMPAIGN_LEVELS:5,localCampaignAwaitingContinue:false,localCampaignComplete:false,localCampaignGameOver:false,inGame:true,leaderAnnouncement:null,bossTravelTimer:null,
+    pendingVictoryIndex:null,victoryShowTimer:null,victoryHudScoreShownAt:null,killScorePendingValue:null,killScoreFxStart:0,performance:{now:()=>now},
+    document:{getElementById:get},lobbyPlayers:[],playerColors:['blue'],topbar:ui(),mobileControls:ui(),mobileExit:null,victory:ui(),resetMobileTouchControls(){},resetVictoryJoystickControls(){},clearSeriesChampionPresentation(){},sinTildes:s=>s,localCampaignWorldName:()=> 'TORMENTA',tr:key=>key,
+    setTimeout(fn,ms){timers.set(++id,{fn,at:now+ms});return id;},clearTimeout:i=>timers.delete(i),onlineRoomUnavailable:false,showShareToast(){},runInterstellarTravel:async level=>{trips.push(level);return true;},send:message=>{wire.push(message);f.e.handleMessage(message);return true;}});
+  const names=['queueVictory','victoryDisplayDelay','maybeScheduleVictory','scheduleBossTravel','showVictory'];
+  if(game.includes('  function isLocalBossVictory('))names.unshift('isLocalBossVictory');
+  for(const name of names)vm.runInContext(source(name),c);
+  const at=game.indexOf("if(restartMatchBtn)restartMatchBtn.addEventListener('click',async()=>{"),start=game.indexOf('{',at),end=game.lastIndexOf('  });',game.indexOf("document.getElementById('back').addEventListener",start));assert.ok(at>0&&end>start);
+  vm.runInContext('async function continueRound()'+game.slice(start,end)+'}',c);c.restartMatchBtn=button;button.click=()=>{c.trip=c.continueRound();};
+  async function advance(ms){const until=now+ms;let count=0;while(true){const due=[...timers].filter(([,t])=>t.at<=until).sort((a,b)=>a[1].at-b[1].at)[0];if(!due)break;assert.ok(++count<100,'result queue must not spin forever');now=due[1].at;timers.delete(due[0]);due[1].fn();for(let n=0;n<4;n++)await Promise.resolve();}now=until;}
+  return {c,timers,trips,wire,advance};
+}
+(async()=>{
+  for(const lives of [1,2,3,4,5]){
+    const f=fixture();enter(f);const p=f.e.players[0];
+    for(let i=5;i>lives;i--){p.protection=0;p.shield=0;p.spawnFx=0;f.e.destroyShip(p);f.e.respawnPlayer(p);}
+    for(let slot=0;slot<3;slot++)hit(f,slot,'missile');hit(f,-1,'missile');hit(f,-1,'missile');
+    assert.equal(p.kills,lives);assert.equal(f.e.bossEncounter.phase,'won');
+    const client=travelClient(f);client.c.queueVictory(0);await client.advance(3500);
+    assert.deepEqual(client.trips,[4],`a boss won with ${lives} lives automatically travels to level four`);
+    assert.equal(client.wire.length,1);assert.equal(f.e.campaignLevel,4);assert.equal(f.e.finished,false);assert.equal(f.e.bossEncounter,null);assert.equal(f.e.stormCore,null);
+    assert.ok(f.e.players.slice(1).every(p=>!p.dead),'rivals return in the next phase');
+  }
+  const failed=fixture();enter(failed);failed.e.finishCampaignBoss(false);const loss=travelClient(failed);loss.c.queueVictory(-1);await loss.advance(3500);assert.equal(loss.trips.length,0);assert.equal(failed.e.campaignLevel,3);
+  const normal=fixture();normal.e.bossEncounter=null;const match=travelClient(normal);match.c.queueVictory(0);await match.advance(1200);assert.equal(match.c.inGame,true,'normal CPU victories still wait for their final HUD score');assert.equal(match.trips.length,0);
+  console.log('Storm boss OK: combat/lives at 30/60/120 Hz, actual result queue and automatic level-four restart with 1/2/3/4/5 lives, normal score gate and no travel after defeat.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
