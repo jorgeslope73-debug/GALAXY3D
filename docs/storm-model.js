@@ -56,8 +56,7 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
       }
     `
   });
-  const geometry={halo:new T.TorusGeometry(170,1.5,4,mobile?32:48),
-    shield:new T.SphereGeometry(170,mobile?16:24,12),pip:new T.BoxGeometry(8,5,3),ray:new T.PlaneGeometry(1,1)};
+  const geometry={shield:new T.SphereGeometry(170,mobile?16:24,12),pip:new T.BoxGeometry(8,5,3),ray:new T.PlaneGeometry(1,1)};
   const ownedMaterials=new Set([light,dark,warningMaterial,shieldMaterial]),axis=new T.Vector3(0,1,0);
   const mesh=(parent,shape,material,x=0,y=0,z=0)=>{const m=new T.Mesh(shape,material);m.position.set(x,y,z);parent.add(m);return m;};
   const create=()=>{
@@ -100,12 +99,12 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
       if(!pivot)throw new Error('Falta el pivote de una torreta del núcleo');
       return {pivot,index:i};
     });
-    const shield=mesh(root,geometry.shield,shieldMaterial),halo=mesh(root,geometry.halo,light);
+    const shield=mesh(root,geometry.shield,shieldMaterial);
+    let wasProtected=false,shieldAppearedAt=0,lastAge=-1;
     const tell=new T.Group();root.add(tell);
     const ray=mesh(tell,geometry.ray,warningMaterial,390,0,-22);ray.scale.set(780,3,1);
-    const portal=mesh(root,geometry.halo,light,0,0,-35);
     return {root,update(body){
-      root.visible=!!body&&body.hp>0;if(!root.visible)return;
+      root.visible=!!body&&body.hp>0;if(!root.visible){wasProtected=false;lastAge=-1;return;}
       const age=Number(body.age)||0,charging=body.attack==='charging',enraged=!!body.enraged;
       const spin=age*.08;rotor.rotation.z=spin;
       // The panels and luminous seams roll together around the authored centre.
@@ -123,8 +122,14 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
         else item.material.emissive.copy(item.color);
         item.material.emissiveIntensity=item.intensity*(charging?1.25:1);
       }
-      shield.visible=!body.vulnerable;halo.visible=!body.vulnerable;shieldMaterial.uniforms.shieldOpacity.value=charging?1.1:.8;
-      halo.rotation.set(0,0,reducedMotion?0:age*.08);
+      const protectedNow=!body.vulnerable;
+      if(protectedNow&&(!wasProtected||age<lastAge))shieldAppearedAt=age;
+      wasProtected=protectedNow;lastAge=age;
+      const elapsed=Math.max(0,age-shieldAppearedAt);
+      // One short fade-in/dim/return on activation, never a repeating flash.
+      const reveal=reducedMotion?Math.min(1,elapsed/.18):elapsed<.12?elapsed/.12:
+        elapsed<.22?1-(elapsed-.12)/.1*.85:elapsed<.36?.15+(elapsed-.22)/.14*.85:1;
+      shield.visible=protectedNow;shieldMaterial.uniforms.shieldOpacity.value=(charging?1.1:.8)*reveal;
       health.forEach((pip,i)=>{pip.material=i<body.hp?light:dark;});
       body.satellites.forEach((part,i)=>{
         const sat=satellites[i];sat.group.visible=part.hp>0;
@@ -138,7 +143,6 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
         tell.position.set(source.x-body.x,body.y-source.y,0);tell.rotation.z=-warning.angle;
         warningMaterial.opacity=.06+.12*(1-warning.remaining/warning.duration);
       }
-      portal.visible=age<1.5;if(portal.visible)portal.scale.setScalar(1+age*1.2);
     }};
   };
   create.dispose=()=>{for(const g of Object.values(geometry))g.dispose();for(const m of ownedMaterials)m.dispose();ownedMaterials.clear();};
