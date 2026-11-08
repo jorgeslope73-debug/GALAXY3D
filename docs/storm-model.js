@@ -33,7 +33,29 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
   const light=new T.MeshBasicMaterial({color:0x89ecff,toneMapped:false});
   const dark=new T.MeshBasicMaterial({color:0x25334a});
   const warningMaterial=new T.MeshBasicMaterial({color:0xffad52,transparent:true,opacity:.17,depthWrite:false,side:T.DoubleSide,toneMapped:false});
-  const shieldMaterial=new T.MeshBasicMaterial({color:0x837cff,transparent:true,opacity:.13,depthWrite:false,side:T.FrontSide,toneMapped:false});
+  const shieldMaterial=new T.ShaderMaterial({
+    transparent:true,depthWrite:false,side:T.FrontSide,toneMapped:false,
+    uniforms:{shieldColour:{value:new T.Color(0x837cff)},shieldOpacity:{value:.8}},
+    vertexShader:`
+      varying vec3 shieldNormal;
+      void main(){
+        shieldNormal=normalMatrix*normal;
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+      }
+    `,
+    fragmentShader:`
+      uniform vec3 shieldColour;
+      uniform float shieldOpacity;
+      varying vec3 shieldNormal;
+      void main(){
+        // Match the ship shield's orthographic edge fade, with zero centre alpha.
+        float edge=1.0-clamp(abs(normalize(shieldNormal).z),0.0,1.0);
+        float opacity=0.42*pow(edge,2.0)*shieldOpacity;
+        gl_FragColor=vec4(shieldColour,opacity);
+        #include <colorspace_fragment>
+      }
+    `
+  });
   const geometry={halo:new T.TorusGeometry(170,1.5,4,mobile?32:48),
     shield:new T.SphereGeometry(170,mobile?16:24,12),pip:new T.BoxGeometry(8,5,3),ray:new T.PlaneGeometry(1,1)};
   const ownedMaterials=new Set([light,dark,warningMaterial,shieldMaterial]),axis=new T.Vector3(0,1,0);
@@ -101,7 +123,7 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
         else item.material.emissive.copy(item.color);
         item.material.emissiveIntensity=item.intensity*(charging?1.25:1);
       }
-      shield.visible=!body.vulnerable;halo.visible=!body.vulnerable;shieldMaterial.opacity=charging?.19:.13;
+      shield.visible=!body.vulnerable;halo.visible=!body.vulnerable;shieldMaterial.uniforms.shieldOpacity.value=charging?1.1:.8;
       halo.rotation.set(0,0,reducedMotion?0:age*.08);
       health.forEach((pip,i)=>{pip.material=i<body.hp?light:dark;});
       body.satellites.forEach((part,i)=>{
