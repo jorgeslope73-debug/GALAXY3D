@@ -116,6 +116,36 @@ for(const dt of [1/30,1/60,1/120]){
   const f=fixture(),body=enter(f),{e}=f,p=e.players[0];p.kills=1;p.protection=0;p.shield=0;p.spawnFx=0;p.x=p.px=body.x;p.y=p.py=body.y;
   e.resolveStormContacts();assert.equal(p.kills,0);assert.equal(e.finished,true,'enlarged hull collision also consumes the final life');
 }
+// Screen exits must use the normal ship integrator, never a sweep through the boss.
+let wrapCases=0;
+for(const dt of [1/30,1/60,1/120])for(const phase of ['satellites','core'])for(const protection of ['none','spawn','shield']){
+  const f=fixture(),b=enter(f,dt),{e,S}=f,p=e.players[0],core=f.ctx.window.GalaxyPhysicsCore;
+  if(phase==='core')for(let slot=0;slot<3;slot++)S.damage(b,slot,'missile');
+  b.nextAt=Infinity;b.warning=null;e.bullets.length=0;
+  for(let repeat=0;repeat<2;repeat++)for(const [sx,sy] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]){
+    Object.assign(p,{dead:false,spawnFx:0,protection:protection==='spawn'?10:0,shield:protection==='shield'?10:0,
+      x:sx<0?.1:sx>0?1919.9:b.x,y:sy<0?.1:sy>0?1079.9:b.y,vx:sx*300,vy:sy*300,thrust:false});
+    p.px=p.x;p.py=p.y;const expected={...p};core.stepShipMovement(expected,{turn:0,thrust:false},dt);
+    e.update(dt);
+    assert.equal(p.dead,false,`screen wrap cannot create a phantom ${phase} contact (${sx},${sy}), ${protection}, ${dt}`);
+    assert.equal(p.kills,5,'crossing an edge cannot consume an earned boss life');
+    assert.ok(Math.hypot(p.x-expected.x,p.y-expected.y)<1e-7,'reappears at the opposite edge, not beside a satellite/core');
+    assert.ok(Math.hypot(p.vx-expected.vx,p.vy-expected.vy)<1e-7,'wrap preserves ordinary ship velocity instead of boss knockback');
+    wrapCases++;
+  }
+}
+for(const protection of [0,10]){
+  const f=fixture(),b=enter(f),p=f.e.players[0];
+  Object.assign(p,{spawnFx:0,protection,shield:0,px:b.x-220,py:b.y,x:b.x+220,y:b.y});
+  f.e.resolveStormContacts();assert.equal(p.dead,protection===0,'real continuous hull contact still damages or repels normally');
+}
+{
+  const f=fixture(),b=enter(f),p=f.e.players[0];for(let slot=0;slot<3;slot++)f.S.damage(b,slot,'missile');
+  b.x=b.px=1915;b.y=b.py=500;
+  Object.assign(p,{spawnFx:0,protection:0,shield:0,px:.1,py:500,x:1915,y:500});
+  f.e.resolveStormContacts();assert.equal(p.dead,true,'an actual overlap at the destination is not ignored during a wrap');
+}
+console.log('Storm screen wrap OK: '+wrapCases+' ordinary-movement comparisons across four edges/corners, both boss phases, 30/60/120 Hz, shields/protection, repeated exits and real contacts.');
 // Actual HUD, translations and existing automatic-travel callback.
 const game=fs.readFileSync('docs/game.js','utf8');
 function source(name){const a=game.indexOf('  function '+name+'('),b=game.indexOf('\n  }',a);assert.ok(a>=0&&b>a);return game.slice(a,b+4);}

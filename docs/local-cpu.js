@@ -2634,7 +2634,11 @@
         if(p.cpu||p.dead||p.spawnFx>0)continue;
         // The energy shield stops shots. Its charging pulse must not grow a
         // lethal hull around a nearby pilot before the announced volley.
-        const hit=STORM.firstHit(body,{px:p.px??p.x,py:p.py??p.y,x:p.x,y:p.y},shipCollisionRadius(p),{hullOnly:true});
+        const px=p.px??p.x,py=p.py??p.y;
+        // Match ordinary ship contacts: a screen wrap is a teleport, not a
+        // continuous path across the core and its satellites. Keep real arrival overlaps.
+        const wrapped=Math.abs(p.x-px)>W*.5||Math.abs(p.y-py)>H*.5;
+        const hit=STORM.firstHit(body,{px:wrapped?p.x:px,py:wrapped?p.y:py,x:p.x,y:p.y},shipCollisionRadius(p),{hullOnly:true});
         if(!hit)continue;
         if(p.protection>0||p.shield>0){
           const part=hit.slot<0?body:body.satellites[hit.slot],r=(hit.slot<0?STORM.CORE_RADIUS:STORM.SATELLITE_RADIUS)+shipCollisionRadius(p)+2;
