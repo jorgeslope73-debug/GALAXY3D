@@ -67,4 +67,32 @@ for(let degrees=0;degrees<360;degrees++)for(const hp of [6,2]){
  for(let tick=0;tick<120&&!shots.length;tick++)shots=S.step(b,1/60,target,()=>++id);
  assert.equal(shots.length,hp===2?7:5);checkLanes(shots,target);
 }
-console.log('Storm fire OK: '+cases+' static/moving-target visual/frame-rate/reduced-motion cases and 720 full-circle volleys; live central aim, shallow expanding fan, authored recoil, exact GLB muzzles and continuous aim/return.');
+let satelliteCases=0;
+for(const dt of [1/30,1/60,1/120])for(const motion of ['still','moving','reverse','stop','fast','missing']){
+ const body=S.create(1),target={x:250,y:350,vx:0,vy:motion==='still'?0:240};body.nextAt=0;
+ if(motion==='missing'){delete target.vx;delete target.vy;}
+ let shots=[],id=0,sawLead=false,sawChange=false;
+ for(let tick=0;tick<Math.ceil(1.2/dt)&&!shots.length;tick++){
+  if(motion==='reverse'&&tick*dt>.45){target.vy=-240;sawChange=true;}
+  if(motion==='stop'&&tick*dt>.45){target.vy=0;sawChange=true;}
+  if(motion==='fast')target.vy=10000;
+  if(motion!=='fast')target.y+=(target.vy||0)*dt;
+  shots=S.step(body,dt,target,()=>++id);
+  if(body.warning){
+   const w=S.snapshot(body).warning,dx=w.targetX-target.x,dy=w.targetY-target.y;
+   assert.ok(Math.hypot(dx,dy)<=75+1e-7,'satellite lead stays modest even at extreme speeds');
+   if(target.vy){assert.ok(dy*target.vy>0,'vector leads in the current movement direction');assert.ok(Math.abs(dx)<1e-8);sawLead=true;}
+   else{assert.equal(dx,0);assert.equal(dy,0,'stopping or missing velocity removes anticipation');}
+   if(motion==='reverse'&&sawChange)assert.ok(w.targetY<target.y,'reversal updates the defensive vector before release');
+  }
+ }
+ assert.equal(shots.length,1);assert.equal(shots[0].guided,false);
+ if(motion!=='still'&&motion!=='missing')assert.ok(sawLead);
+ if(motion==='reverse'||motion==='stop')assert.ok(sawChange);
+ const shot=shots[0],dx=shot.vx/330,dy=shot.vy/330,along=(target.x-shot.x)*dx+(target.y-shot.y)*dy;
+ const closest={x:shot.x+dx*along,y:shot.y+dy*along};
+ if(target.vy)assert.ok((closest.y-target.y)*target.vy>0,'released bullet follows the predicted vector');
+ else assert.ok(Math.hypot(closest.x-target.x,closest.y-target.y)<1e-6,'stationary target receives no artificial lead');
+ satelliteCases++;
+}
+console.log('Storm fire OK: '+cases+' core visual/frame-rate cases, 720 full-circle volleys and '+satelliteCases+' defensive satellite tracking cases; live bounded prediction, stops/reversals, shallow fan, exact GLB muzzles and continuous aim.');
