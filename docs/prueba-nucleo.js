@@ -18938,7 +18938,7 @@ window.GALAXY_CONFIG = {
       });
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       matchStartGate.markLocalReady();
-      revealInterstellarTravel();
+      if(roomCode==='LOCAL')revealInterstellarTravel();
       if(!authority)sendStartPreparationReady();
     }catch(error){console.warn('[GALAXY3D] Preparacion de partida pendiente:',error?.message||error);}
   }

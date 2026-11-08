@@ -250,7 +250,7 @@ function playableClientFixture(){
     maybeScheduleVictory:noop,selectMatchBackgroundForRound:noop,selectLocalCampaignBackground:noop,
     updateMobileControlUi:noop,scheduleCanvasResolution:noop,menu:ui(),lobby:ui(),victory:ui(),topbar:ui(),mobileControls:ui(),mobileExit:ui(),
     p2p:{close:noop},isMobile:false,onlineSeriesReturnTimer:null,victoryShowTimer:null,pendingVictoryIndex:null,
-    resetVictoryJoystickControls:noop,cancelInterstellarTravel:noop,clearSeriesChampionPresentation:noop,
+    resetVictoryJoystickControls:noop,cancelInterstellarTravel:noop,revealInterstellarTravel:noop,clearSeriesChampionPresentation:noop,
     refreshCpuLearningControl:noop,setMobileKeyboardActive:noop,resetMobileTouchControls:noop,
     i18n:null,authToken:()=>'',roomClientId:()=>ctx.inputSessionId,testRoomPermitToken:()=>'',renderPublicRooms:noop,
     loadLobbyChatHistory:noop,showPlayerJoinedNotice:noop
