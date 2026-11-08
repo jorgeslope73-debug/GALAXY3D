@@ -44,6 +44,32 @@ for(const index of [0,1]){
 const build=fs.readFileSync('docs/build-version.js','utf8'),index=fs.readFileSync('docs/index.html','utf8');
 assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));assert.ok(index.indexOf('src="startup-preparation.js')<index.indexOf('src="game.js'));
 (async()=>{
+  // Exercise the real travel/fade lifecycle, including slow preparation and exit races.
+  for(const mobile of [false,true])for(const reduced of [false,true]){
+    let now=0,id=0;const frames=new Map(),loads=[],fills=[];
+    const g={setTransform(){},save(){},restore(){},translate(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},arc(){},fill(){},fillText(){},fillRect(){fills.push(this.fillStyle);}};
+    const layer={style:{},dataset:{},setAttribute(){},getContext:()=>g};
+    const c=vm.createContext({isMobile:mobile,performance:{now:()=>now},requestAnimationFrame:fn=>{frames.set(++id,fn);return id;},cancelAnimationFrame:i=>frames.delete(i),clearTimeout(){},
+      document:{createElement:()=>layer,body:{appendChild(){}},documentElement:{clientWidth:1280,clientHeight:720}},window:{innerWidth:1280,innerHeight:720,devicePixelRatio:1,matchMedia:()=>({matches:reduced})},
+      victory:{classList:{add(){}}},localCampaignConfig:()=>({background:{mobileKey:'bg04',file:'world4.jpg'}}),assetList:{},loadGameImage:(...args)=>{loads.push(args);return Promise.resolve(true);},tr:()=> 'DESTINO',localCampaignWorldName:()=> 'ABISMO'});
+    const stateAt=source.indexOf('  let interstellarTravelCanvas='),stateEnd=source.indexOf('  function scheduleBossTravel(',stateAt);
+    vm.runInContext(source.slice(stateAt,stateEnd)+extract('ensureInterstellarTravelCanvas')+extract('cancelInterstellarTravel')+extract('revealInterstellarTravel')+extract('runInterstellarTravel'),c);
+    const advance=ms=>{now+=ms;const pending=[...frames.values()];frames.clear();for(const fn of pending)fn(now);};
+    const travel=c.runInterstellarTravel(4);assert.equal(layer.style.opacity,'0','travel enters by fading over the old scene');
+    advance(reduced?35:100);assert.ok(Number(layer.style.opacity)>0&&Number(layer.style.opacity)<1);
+    advance(3000);assert.equal(await travel,true);assert.equal(layer.dataset.phase,'waiting');assert.equal(layer.style.display,'block');assert.equal(layer.style.opacity,'1');
+    advance(8000);assert.equal(layer.style.display,'block','a slow destination stays covered until readiness');
+    assert.deepEqual(loads[0],['bg04','world4.jpg'],'destination preload starts during travel');assert.ok(!fills.includes('#ffffff'),'no hard white flash at the handoff');
+    c.revealInterstellarTravel();const duration=reduced?300:600;advance(duration/2);
+    assert.ok(Number(layer.style.opacity)>.49&&Number(layer.style.opacity)<.51,'the destination is visible halfway through the blend');
+    c.revealInterstellarTravel();assert.equal(frames.size,1,'duplicate readiness cannot restart the fade');
+    advance(duration/2);assert.equal(layer.style.display,'none');assert.equal(layer.style.willChange,'');assert.equal(frames.size,0);
+    const cancelled=c.runInterstellarTravel(4),stale=[...frames.values()][0];c.cancelInterstellarTravel();assert.equal(await cancelled,false);
+    const next=c.runInterstellarTravel(4);stale(now+5000);assert.equal(layer.dataset.phase,'travel');assert.equal(frames.size,1,'stale callbacks cannot cancel a newer scene transition');
+    advance(3000);assert.equal(await next,true);c.revealInterstellarTravel();advance(duration/4);
+    const staleFade=[...frames.values()][0];c.cancelInterstellarTravel();assert.equal(layer.style.display,'none');assert.equal(frames.size,0);
+    const last=c.runInterstellarTravel(4);staleFade(now+5000);assert.equal(layer.dataset.phase,'travel','a cancelled reveal cannot hide the next transition');c.cancelInterstellarTravel();assert.equal(await last,false);
+  }
   const {engineContext}=require('./check-session-regressions.js');
   for(const [name,mode] of [['GalaxyLocalCpu','cpu'],['GalaxyHostPhysics','host']]){
     const contexts=[engineContext(),engineContext()];
@@ -74,5 +100,5 @@ assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));
   await assert.rejects(Gate.warmSimulation(Shadow,{frame:async()=>{throw Error('frame cancelled');}}));
   assert.equal(stopped,2,'errors also stop the motor and invalidate the cache');
   assert.equal(await Gate.warmSimulation(Shadow,{frame:async()=>{}}),true);
-  console.log('Start preparation OK: long loads, human readiness, cancellation, confirmed authority, private initial countdown, runtime/cache ordering and isolated simulation warmup preserving state, IDs and RNG.');
+  console.log('Start preparation OK: long loads, phase crossfades, stale-frame/exit cancellation, human readiness, confirmed authority, private initial countdown, runtime/cache ordering and isolated simulation warmup preserving state, IDs and RNG.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

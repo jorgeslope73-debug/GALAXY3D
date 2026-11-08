@@ -4362,7 +4362,7 @@
   // V20.96: transicion puramente visual entre mundos de la campana CPU.
   // Se ejecuta con la partida terminada, en un canvas UI independiente, por lo
   // que no modifica fisica, red, temporizadores de simulacion ni colisiones.
-  let interstellarTravelCanvas=null,interstellarTravelRaf=0,interstellarTravelResolve=null,interstellarTravelGeneration=0,bossTravelTimer=null;
+  let interstellarTravelCanvas=null,interstellarTravelRaf=0,interstellarTravelResolve=null,interstellarTravelGeneration=0,interstellarTravelAwaitingScene=false,bossTravelTimer=null;
   function scheduleBossTravel(button){
     if(bossTravelTimer!==null){clearTimeout(bossTravelTimer);bossTravelTimer=null;}
     if(!button||!localCpuActive||state?.boss?.phase!=='won'||!localCampaignAwaitingContinue)return;
@@ -4389,13 +4389,36 @@
     if(bossTravelTimer!==null){clearTimeout(bossTravelTimer);bossTravelTimer=null;}
     interstellarTravelGeneration++;
     if(interstellarTravelRaf)cancelAnimationFrame(interstellarTravelRaf);
-    interstellarTravelRaf=0;
-    if(interstellarTravelCanvas)interstellarTravelCanvas.style.display='none';
+    interstellarTravelRaf=0;interstellarTravelAwaitingScene=false;
+    if(interstellarTravelCanvas){
+      Object.assign(interstellarTravelCanvas.style,{display:'none',opacity:'1',willChange:''});
+      interstellarTravelCanvas.dataset.phase='idle';
+    }
     if(interstellarTravelResolve){
       const resolve=interstellarTravelResolve;
       interstellarTravelResolve=null;
       resolve(false);
     }
+  }
+  function revealInterstellarTravel(){
+    if(!interstellarTravelAwaitingScene||!interstellarTravelCanvas)return;
+    interstellarTravelAwaitingScene=false;
+    const c=interstellarTravelCanvas,generation=interstellarTravelGeneration,started=performance.now();
+    const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const duration=reduced?300:600;
+    c.dataset.phase='reveal';
+    const frame=now=>{
+      if(generation!==interstellarTravelGeneration)return;
+      const t=Math.max(0,Math.min(1,(now-started)/duration)),ease=t*t*(3-2*t);
+      c.style.opacity=String(1-ease);
+      if(t>=1){
+        interstellarTravelRaf=0;
+        Object.assign(c.style,{display:'none',opacity:'1',willChange:''});c.dataset.phase='idle';
+        return;
+      }
+      interstellarTravelRaf=requestAnimationFrame(frame);
+    };
+    interstellarTravelRaf=requestAnimationFrame(frame);
   }
   function runInterstellarTravel(targetLevel){
     cancelInterstellarTravel();
@@ -4408,7 +4431,9 @@
     const dpr=Math.min(isMobile?1.25:1.5,Math.max(1,Number(window.devicePixelRatio)||1));
     c.width=Math.max(1,Math.round(cssW*dpr));
     c.height=Math.max(1,Math.round(cssH*dpr));
-    c.style.display='block';
+    Object.assign(c.style,{display:'block',opacity:'0',willChange:'opacity'});c.dataset.phase='travel';
+    const targetBackground=localCampaignConfig(targetLevel).background;
+    loadGameImage(targetBackground.mobileKey,assetList[targetBackground.mobileKey]||targetBackground.file);
     const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const duration=reduced?700:(isMobile?2100:2450);
     const count=isMobile?46:78;
@@ -4426,15 +4451,19 @@
       interstellarTravelResolve=resolve;
       const started=performance.now();
       const finish=ok=>{
-        if(interstellarTravelRaf)cancelAnimationFrame(interstellarTravelRaf);
-        interstellarTravelRaf=0;
-        c.style.display='none';
+        if(generation===interstellarTravelGeneration){
+          if(interstellarTravelRaf)cancelAnimationFrame(interstellarTravelRaf);
+          interstellarTravelRaf=0;interstellarTravelAwaitingScene=ok;
+          c.style.opacity='1';c.dataset.phase=ok?'waiting':'idle';
+          if(!ok){c.style.display='none';c.style.willChange='';}
+        }
         if(interstellarTravelResolve===resolve)interstellarTravelResolve=null;
         resolve(ok);
       };
       const frame=now=>{
         if(generation!==interstellarTravelGeneration){finish(false);return;}
         const t=Math.max(0,Math.min(1,(now-started)/duration));
+        c.style.opacity=String(Math.min(1,t/.1));
         const accel=t*t;
         g.setTransform(dpr,0,0,dpr,0,0);
         g.globalCompositeOperation='source-over';
@@ -4463,8 +4492,7 @@
         }
         g.restore();
 
-        // Portal central sencillo y barato. El destello tapa el corte antes de
-        // aparecer el siguiente fondo, sin necesitar texturas adicionales.
+        // Keep the final travel frame until the destination is decoded and GPU-ready.
         const portal=Math.sin(Math.min(1,t*1.15)*Math.PI);
         g.save();
         g.globalCompositeOperation='lighter';
@@ -4477,7 +4505,7 @@
         g.beginPath();g.arc(cx,cy,42+145*portal,0,Math.PI*2);g.stroke();
         g.restore();
 
-        const textAlpha=Math.min(1,t/.18)*Math.min(1,(1-t)/.12);
+        const textAlpha=Math.min(1,t/.18);
         g.save();
         g.globalAlpha=Math.max(0,textAlpha);
         g.textAlign='center';
@@ -4491,14 +4519,6 @@
         g.font=(isMobile?'28px ':'36px ')+'Flashback,Arial,Helvetica,sans-serif';
         g.fillText(tr('destinationLevel',{level:targetLevel,name:localCampaignWorldName(targetLevel)}),cx,cy+34);
         g.restore();
-
-        // Flash final muy corto para enlazar de forma limpia con el nuevo mundo.
-        if(t>.88){
-          g.globalCompositeOperation='source-over';
-          g.globalAlpha=Math.pow((t-.88)/.12,2)*.88;
-          g.fillStyle='#ffffff';
-          g.fillRect(0,0,cssW,cssH);
-        }
 
         if(t>=1){finish(true);return;}
         interstellarTravelRaf=requestAnimationFrame(frame);
@@ -5065,7 +5085,7 @@
         localCampaignLevel=previousLevel;
         localCampaignAwaitingContinue=wasContinue;
         localCampaignGameOver=wasGameOver;
-        if(wasContinue)victory.classList.remove('hidden');
+        if(wasContinue){cancelInterstellarTravel();victory.classList.remove('hidden');}
       }
     }else if(isHost&&p2p){
       // Validar localmente la ronda finalizada antes de publicar la transicion.
@@ -6329,6 +6349,7 @@
       });
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       matchStartGate.markLocalReady();
+      if(roomCode==='LOCAL')revealInterstellarTravel();
       if(!authority)sendStartPreparationReady();
     }catch(error){console.warn('[GALAXY3D] Preparacion de partida pendiente:',error?.message||error);}
   }
