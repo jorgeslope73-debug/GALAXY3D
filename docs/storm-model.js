@@ -36,7 +36,6 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
   const shieldMaterial=new T.MeshBasicMaterial({color:0x837cff,transparent:true,opacity:.13,depthWrite:false,side:T.FrontSide,toneMapped:false});
   const geometry={halo:new T.TorusGeometry(170,1.5,4,mobile?32:48),
     shield:new T.SphereGeometry(170,mobile?16:24,12),pip:new T.BoxGeometry(8,5,3),ray:new T.PlaneGeometry(1,1)};
-  const fan=new T.BufferGeometry();fan.setAttribute('position',new T.Float32BufferAttribute([0,0,0,Math.cos(.84)*780,Math.sin(.84)*780,0,Math.cos(.84)*780,-Math.sin(.84)*780,0],3));
   const ownedMaterials=new Set([light,dark,warningMaterial,shieldMaterial]),axis=new T.Vector3(0,1,0);
   const mesh=(parent,shape,material,x=0,y=0,z=0)=>{const m=new T.Mesh(shape,material);m.position.set(x,y,z);parent.add(m);return m;};
   const create=()=>{
@@ -81,7 +80,6 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
     });
     const shield=mesh(root,geometry.shield,shieldMaterial),halo=mesh(root,geometry.halo,light);
     const tell=new T.Group();root.add(tell);
-    const sector=mesh(tell,fan,warningMaterial,0,0,-25);
     const ray=mesh(tell,geometry.ray,warningMaterial,390,0,-22);ray.scale.set(780,3,1);
     const portal=mesh(root,geometry.halo,light,0,0,-35);
     return {root,update(body){
@@ -111,16 +109,16 @@ export function createStormFactory(T,{templates,environment=null,mobile=false,re
         sat.group.position.set(part.x-body.x,body.y-part.y,0);sat.group.rotation.z=reducedMotion?0:age*.35+i;
         sat.pips.forEach((pip,h)=>{pip.material=h<part.hp?light:dark;});
       });
-      tell.visible=!!body.warning;
-      if(body.warning){
+      // Only satellites retain their thin aim line. The core has no locator.
+      tell.visible=!!body.warning&&body.warning.slot>=0;
+      if(tell.visible){
         const warning=body.warning,source=warning.slot<0?body:body.satellites[warning.slot];
         tell.position.set(source.x-body.x,body.y-source.y,0);tell.rotation.z=-warning.angle;
-        sector.visible=warning.slot<0;sector.scale.y=enraged?1:.66/.84;
         warningMaterial.opacity=.06+.12*(1-warning.remaining/warning.duration);
       }
       portal.visible=age<1.5;if(portal.visible)portal.scale.setScalar(1+age*1.2);
     }};
   };
-  create.dispose=()=>{for(const g of Object.values(geometry))g.dispose();fan.dispose();for(const m of ownedMaterials)m.dispose();ownedMaterials.clear();};
+  create.dispose=()=>{for(const g of Object.values(geometry))g.dispose();for(const m of ownedMaterials)m.dispose();ownedMaterials.clear();};
   return create;
 }

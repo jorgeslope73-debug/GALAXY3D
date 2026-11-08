@@ -21,16 +21,18 @@ function measuredMuzzle(pivot,side){
  return center.divideScalar(n);
 }
 let cases=0;
-for(const dt of [1/30,1/60,1/120])for(const reducedMotion of [false,true])for(const hp of [6,2])for(const angle of [-Math.PI,-2,-.1,0,1.5,3.13]){
+for(const dt of [1/30,1/60,1/120])for(const reducedMotion of [false,true])for(const moving of [false,true])for(const hp of [6,2])for(const angle of [-Math.PI,-2,-.1,0,1.5,3.13]){
  const body=S.create(1),factory=createStormFactory(T,{templates,combat:S,reducedMotion}),visual=factory();
  for(let i=0;i<3;i++)S.damage(body,i,'missile');body.nextAt=0;body.hp=hp;
  const target={x:body.x+Math.cos(angle)*800,y:body.y+Math.sin(angle)*800};let fired=[],id=0,seenLead=false;
  for(let tick=0;tick<Math.ceil(2/dt)&&!fired.length;tick++){
+  if(moving){target.x=960+Math.cos(angle+.35*tick*dt)*800;target.y=525+Math.sin(angle+.35*tick*dt)*800;}
   const previous=body.turrets.map(t=>t.angle);fired=S.step(body,dt,target,()=>++id);
   body.turrets.forEach((t,i)=>assert.ok(Math.abs(t.angle-previous[i])<=2.8*dt+1e-9,'bounded angular speed, including +/-PI'));
   visual.update(S.snapshot(body));visual.root.position.set(body.x,-body.y,0);visual.root.updateMatrixWorld(true);
   if(body.warning&&body.warning.remaining>S.GUNS.lead+1e-6)assert.equal(S.shotWeight(body.clipTime),0,'animation does not run early');
   if(body.warning&&S.shotWeight(body.clipTime)>0)seenLead=true;
+  if(body.warning){assert.equal(body.warning.targetX,target.x,'target X stays live through recoil');assert.equal(body.warning.targetY,target.y,'target Y stays live through recoil');}
  }
  assert.equal(fired.length,hp===2?7:5);assert.ok(seenLead);assert.ok(S.shotWeight(body.clipTime)>.9,'recoil peak coincides with release');
  const morphs=[];visual.root.traverse(o=>{if(o.morphTargetInfluences)morphs.push(o);});assert.equal(morphs.length,12);for(const m of morphs)assert.ok(Math.abs(m.morphTargetInfluences[0]-S.shotWeight(body.clipTime))<1e-5,'every linked primitive animates');
@@ -39,7 +41,8 @@ for(const dt of [1/30,1/60,1/120])for(const reducedMotion of [false,true])for(co
   assert.ok(Math.hypot(point.x-shot.x,-point.y-shot.y,point.z-shot.z)<1e-4,'bullet starts at the deformed GLB muzzle');
   const hull=pivot.children.find(o=>o.name.includes('Hull')),forward=new T.Vector3(0,0,-1).transformDirection(hull.matrixWorld);
   assert.ok((forward.x*shot.vx-forward.y*shot.vy)/330>.999999,'bullet follows the real barrel direction');
-  assert.ok(Math.hypot(shot.vx-fired[0].vx,shot.vy-fired[0].vy)<1e-7,'all barrel directions remain parallel');
+  const spread=Math.atan2(shot.vy,shot.vx)-Math.atan2(fired[0].vy,fired[0].vx);
+  assert.ok(Math.abs(Math.atan2(Math.sin(spread),Math.cos(spread)))<=.221,'fan remains shallow');
  }
  checkLanes(fired,target);
  for(let tick=0;tick<Math.ceil(.6/dt);tick++){const previous=body.turrets.map(t=>t.angle);S.step(body,dt,target,()=>++id);body.turrets.forEach((t,i)=>assert.ok(Math.abs(t.angle-previous[i])<=2.8*dt+1e-9,'return to idle cannot snap'));}
@@ -47,14 +50,15 @@ for(const dt of [1/30,1/60,1/120])for(const reducedMotion of [false,true])for(co
 }
 function checkLanes(shots,target){
  const center=shots[0],nx=-center.vy/330,ny=center.vx/330;
- assert.ok(Math.abs((target.x-center.x)*nx+(target.y-center.y)*ny)<.02,'central bullet follows the announced point');
- const lanes=shots.map(s=>(s.x-center.x)*nx+(s.y-center.y)*ny);
- assert.ok(Math.min(...lanes)<-30&&Math.max(...lanes)>30,'bullets cover both sides of the central lane');
- assert.ok(Math.max(...lanes)-Math.min(...lanes)>150,'volley spans the hull instead of clustering in the nearest guns');
+ assert.ok(Math.abs((target.x-center.x)*nx+(target.y-center.y)*ny)<.02,'central bullet follows the latest target position');
+ const lanes=shots.map(s=>(s.x+s.vx-center.x-center.vx)*nx+(s.y+s.vy-center.y-center.vy)*ny);
+ assert.ok(Math.min(...lanes)<-30&&Math.max(...lanes)>30,'fan covers both sides of the central lane');
+ const width=t=>{const p=shots.map(s=>(s.x+s.vx*t-center.x)*nx+(s.y+s.vy*t-center.y)*ny);return Math.max(...p)-Math.min(...p);};
+ assert.ok(width(1)>width(0)+60,'fan expands by covering more space during flight');
+ assert.ok(width(2)>width(1),'fan keeps spreading instead of converging');
  for(let i=0;i<shots.length;i++)for(let j=i+1;j<shots.length;j++){
   const a=shots[i],b=shots[j],gap=Math.hypot(a.x-b.x,a.y-b.y);
   assert.ok(gap>12,'individual bullets leave physical space between each other');
-  for(const t of [.5,1,2])assert.ok(Math.abs(Math.hypot(a.x+a.vx*t-b.x-b.vx*t,a.y+a.vy*t-b.y-b.vy*t)-gap)<1e-6,'bullet spacing cannot collapse during flight');
  }
 }
 for(let degrees=0;degrees<360;degrees++)for(const hp of [6,2]){
@@ -63,4 +67,4 @@ for(let degrees=0;degrees<360;degrees++)for(const hp of [6,2]){
  for(let tick=0;tick<120&&!shots.length;tick++)shots=S.step(b,1/60,target,()=>++id);
  assert.equal(shots.length,hp===2?7:5);checkLanes(shots,target);
 }
-console.log('Storm fire OK: '+cases+' visual/frame-rate/reduced-motion cases and 720 full-circle volleys; central aim, parallel separated flight, hull-wide coverage, authored recoil, exact GLB muzzles and continuous aim/return.');
+console.log('Storm fire OK: '+cases+' static/moving-target visual/frame-rate/reduced-motion cases and 720 full-circle volleys; live central aim, shallow expanding fan, authored recoil, exact GLB muzzles and continuous aim/return.');
