@@ -96,6 +96,14 @@
     if(warning){
       const source=warning.slot<0?body:body.satellites[warning.slot];
       if(warning.slot<0){warning.targetX=target.x;warning.targetY=target.y;}
+      else{
+        // Follow the pilot throughout the defensive charge, with a modest lead.
+        // Use authoritative velocity so wrapping/respawning cannot fake a sprint.
+        const time=Math.min(.3,Math.hypot(target.x-source.x,target.y-source.y)/330*.2);
+        const vx=Number.isFinite(target.vx)?target.vx:0,vy=Number.isFinite(target.vy)?target.vy:0;
+        const scale=Math.min(1,75/(Math.hypot(vx,vy)*time||1));
+        warning.targetX=target.x+vx*time*scale;warning.targetY=target.y+vy*time*scale;
+      }
       warning.remaining=Math.max(0,warning.at-body.age);
       warning.angle=Math.atan2(warning.targetY-source.y,warning.targetX-source.x);
       if(warning.slot<0&&Math.hypot(warning.targetX-body.x,warning.targetY-body.y)>SHIELD_RADIUS+20){
