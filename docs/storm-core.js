@@ -44,9 +44,14 @@
   }
   function updateGuns(body,dt){
     const warning=body.warning?.slot===-1?body.warning:null,spin=body.age*.08;
+    const cs=Math.cos(spin),sn=Math.sin(spin);
+    const lane=index=>{const p=GUNS.guns[index].pivot,x=(cs*p[0]+sn*p[2])*GUNS.scale,y=-(sn*p[0]-cs*p[2])*GUNS.scale;
+      return -Math.sin(warning.angle)*x+Math.cos(warning.angle)*y;};
+    const spread=body.hp<=2?.22:.18;
     for(let i=0;i<6;i++){
-      // One shared heading keeps the barrels and their real projectiles parallel.
-      const desired=warning?warning.angle:GUNS.guns[i].rest-spin;
+      // A shallow outward fan follows the live target, including the release frame.
+      // The central barrel stays on target; the others cover its flanks.
+      const desired=warning?warning.angle+(i===warning.central.turret?0:Math.max(-1,Math.min(1,lane(i)/80))*spread):GUNS.guns[i].rest-spin;
       const error=wrap(desired-body.turrets[i].angle),limit=2.8*dt;
       body.turrets[i].angle+=Math.max(-limit,Math.min(limit,error));
     }
@@ -55,7 +60,7 @@
     const nx=-Math.sin(angle),ny=Math.cos(angle),available=[];
     for(let turret=0;turret<6;turret++)for(let side=0;side<2;side++){
       const p=gunPose(body,turret,side,aligned?angle:body.turrets[turret].angle);
-      available.push({turret,side,p,lane:(p.x-body.x)*nx+(p.y-body.y)*ny});
+      available.push({turret,side,p,lane:(p.x-body.x)*nx+(p.y-body.y)*ny+(aligned?0:Math.sin(p.angle-angle)*780)});
     }
     // Keep one central lane, then use the widest gaps across the entire hull.
     // Selecting the nearest turrets instead clusters their twin barrels together.
@@ -90,11 +95,11 @@
     const warning=body.warning;
     if(warning){
       const source=warning.slot<0?body:body.satellites[warning.slot];
+      if(warning.slot<0){warning.targetX=target.x;warning.targetY=target.y;}
       warning.remaining=Math.max(0,warning.at-body.age);
       warning.angle=Math.atan2(warning.targetY-source.y,warning.targetX-source.x);
       if(warning.slot<0&&Math.hypot(warning.targetX-body.x,warning.targetY-body.y)>SHIELD_RADIUS+20){
-        // Aim the central barrel at the announced point; every other barrel
-        // copies its heading rather than converging on that same point.
+        // Recompute the central aim from the current target every frame.
         for(let i=0;i<4;i++){
           const p=gunPose(body,warning.central.turret,warning.central.side,warning.angle);
           warning.angle=Math.atan2(warning.targetY-p.y,warning.targetX-p.x);
