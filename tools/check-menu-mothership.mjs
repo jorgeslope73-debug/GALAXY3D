@@ -19,7 +19,8 @@ for(let seed=1;seed<=8;seed++){
       if(!previous)assert.equal(pose.x,pose.direction>0?-MENU_MOTHERSHIP_MARGIN:1920+MENU_MOTHERSHIP_MARGIN,'a passage always starts offscreen');
       assert.ok(pose.x>=-MENU_MOTHERSHIP_MARGIN&&pose.x<=1920+MENU_MOTHERSHIP_MARGIN);assert.ok(pose.y>110&&pose.y<630);
       if(previous){const tangent=Math.atan2(pose.x-previous.x,-(pose.y-previous.y));assert.ok(Math.abs(tangent-pose.angle)<.002,'the hull follows the curve tangent in both directions');}
-      assert.ok(pose.bank>77*Math.PI/180-.001&&pose.bank<83*Math.PI/180+.001,'the hull stays in lateral view');
+      assert.ok(pose.bank>55*Math.PI/180-.001&&pose.bank<85*Math.PI/180+.001,'the lateral sway reveals more deck without flipping the hull');
+      if(previous)assert.ok(Math.abs(pose.bank-previous.bank)<4.3*Math.PI/180*.04,'the slow lateral sway has no abrupt changes');
       directions.add(pose.direction);
     }else if(previous){assert.ok(maxY-minY>100,'every passage follows a visible broad arc');assert.ok(time-started>=50000&&time-started<=60040,'a crossing lasts 50-60 seconds');assert.ok(previous.x< -MENU_MOTHERSHIP_MARGIN+4||previous.x>1920+MENU_MOTHERSHIP_MARGIN-4,'the full ship leaves before disappearing');ended=time;}
     previous=pose;
@@ -38,10 +39,10 @@ for(const mobile of [false,true]){
   const prepared=prepareMenuMothership(visual,mobile);assert.equal(prepared,visual);assert.equal(prepared.scale.x,36.6*(mobile?.48:.64));
   const material=visual.children[0].material;assert.notEqual(material,original);assert.equal(material,visual.children[1].material);assert.equal(material.map,original.map);assert.equal(material.normalMap,original.normalMap);
   assert.equal(material.opacity,1);assert.equal(material.transparent,false);assert.equal(material.depthWrite,true);assert.equal(material.color.getHex(),original.color.getHex());assert.equal(material.emissiveIntensity,7);assert.equal(material.envMapIntensity,.85);assert.equal(original.opacity,1);assert.equal(original.emissiveIntensity,7,'menu preparation cannot change the gameplay material');
-  for(const direction of [-1,1]){
-    setMenuMothershipPose(visual,{bank:80*Math.PI/180,angle:direction*Math.PI/2,direction});
-    assert.ok(Math.abs(visual.rotation.y+direction*80*Math.PI/180)<1e-12);
-    assert.ok(new T.Vector3(0,0,1).applyEuler(visual.rotation).y>.9,'The bridge remains above the hull in either crossing direction');
+  for(const direction of [-1,1])for(const bank of [55,70,85]){
+    setMenuMothershipPose(visual,{bank:bank*Math.PI/180,angle:direction*Math.PI/2,direction});
+    assert.ok(Math.abs(visual.rotation.y+direction*bank*Math.PI/180)<1e-12);
+    assert.ok(new T.Vector3(0,0,1).applyEuler(visual.rotation).y>.8,'The bridge remains above the hull through the full sway in either crossing direction');
   }
 }
 assert.ok(MENU_MOTHERSHIP_DEPTH< -500,'the ship lies behind every foreground floater');

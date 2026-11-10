@@ -47,7 +47,7 @@ export function createMenuMothershipFlight({random=Math.random,reducedMotion=fal
       const dy=flight.drift+flight.curve*Math.PI*Math.cos(progress*Math.PI)+6*.0004*flight.duration*Math.cos(age*.0004);
       return {x:flight.direction>0?x:W-x,y,
         angle:Math.atan2(flight.direction*span,-dy),
-        bank:(80+3*Math.sin(age*.00022))*Math.PI/180,direction:flight.direction,age:age/1000};
+        bank:(70+15*Math.sin(age*.00028))*Math.PI/180,direction:flight.direction,age:age/1000};
     }
   };
 }
