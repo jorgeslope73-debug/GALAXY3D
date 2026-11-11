@@ -6,7 +6,7 @@ import {GLTFLoader} from '../docs/vendor/GLTFLoader.js';
 import {prepareStormTemplate,createStormFactory} from '../docs/storm-model.js';
 import {readStormGunData} from './build-storm-guns.mjs';
 const context=vm.createContext({window:{}});vm.runInContext(fs.readFileSync('docs/storm-core.js','utf8'),context);const S=context.window.GalaxyStormCore;
-const practice=fs.readFileSync('docs/prueba-nucleo.js','utf8').replaceAll('\r\n','\n'),practiceStart=practice.indexOf('// storm-core.js\n'),practiceEnd=practice.indexOf('// local-cpu.js\n',practiceStart);
+const practice=fs.readFileSync('docs/prueba-nucleo.js','utf8').replaceAll('\r\n','\n'),practiceStart=practice.indexOf('// storm-core.js\n'),practiceEnd=practice.indexOf('\n;\n// ',practiceStart)+3;
 assert.ok(practiceStart>=0&&practiceEnd>practiceStart,'direct practice includes the combat authority');
 assert.equal(practice.slice(practiceStart,practiceEnd),'// storm-core.js\n'+fs.readFileSync('docs/storm-core.js','utf8').replaceAll('\r\n','\n')+'\n;\n','direct practice and the campaign use the same core firing logic');
 const bytes=fs.readFileSync('docs/assets/models/nucleo.glb'),calibration=await readStormGunData(bytes);
