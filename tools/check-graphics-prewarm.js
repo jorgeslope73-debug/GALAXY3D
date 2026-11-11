@@ -36,6 +36,14 @@ async function gpuCase({legacy=false,lost=false,failed=false}={}){
   const stormPoses=calls.filter(c=>c[0]==='storm').map(c=>c[1]);
   assert.equal(stormPoses.length,4,'all GLB attack, shield and damage variants are warmed before CPU readiness');
   assert.ok(stormPoses.some(body=>body.vulnerable)&&stormPoses.some(body=>body.warning)&&stormPoses.some(body=>body.enraged));
+  assert.equal(calls.filter(c=>c[0]==='devourer').length,0,'default/online startup does not load the phase-four model');
+  ctx.window={};vm.runInContext(fs.readFileSync('docs/devourer-core.js','utf8'),ctx);
+  ctx.createDevourer=()=>{};api.devourer=body=>calls.push(['devourer',body]);
+  const devourerWarm=ctx.warmScene(1280,720);
+  for(let i=0;i<30;i++)await Promise.resolve();finish();await devourerWarm;
+  const devourerPoses=calls.filter(c=>c[0]==='devourer').map(c=>c[1]);
+  assert.equal(devourerPoses.length,4,'the articulated GLB is GPU-warmed before phase-four readiness');
+  assert.ok(devourerPoses.some(body=>body.vulnerable)&&devourerPoses.some(body=>body.attack==='charge-warning'));
   const game=fs.readFileSync('docs/game.js','utf8').replaceAll('\r\n','\n'),a=game.indexOf('  function prepareGameAssets('),b=game.indexOf('\n  function warmGameAssetsWhenIdle(',a);assert.ok(a>=0&&b>a);
   let modelsReady,gpuReady;const models=new Promise(r=>modelsReady=r),gpu=new Promise(r=>gpuReady=r);
   const assets=vm.createContext({gameAssetsReady:false,gameAssetsPromise:null,Promise,imageDecodePromises:{},document:{fonts:{load:()=>Promise.resolve()}},updateCanvasResolution(){},warmRendererCaches(){},warmOnlineStartCaches(){},canvas:{width:1280,height:720},window:{Galaxy3D:{ready:models,prepareMatch:()=>gpu}}});

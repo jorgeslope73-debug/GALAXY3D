@@ -47,6 +47,11 @@ window.GALAXY_CONFIG = {
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
       try{return await world.prepareMothership();}catch(error){fallback(error);throw error;}
     },
+    async prepareDevourer(){
+      const loaded=await assetsReady;
+      if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
+      try{return await world.prepareDevourer();}catch(error){fallback(error);throw error;}
+    },
     async prepareStorm(){
       const loaded=await assetsReady;
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
@@ -102,7 +107,7 @@ window.GALAXY_CONFIG = {
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,menuMothershipFlight=null,menuMothershipAssets=null,menuMothershipFailed=false,winnerStage=null;
-    let createStorm=null;
+    let createStorm=null,createDevourer=null;
     let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,createImportedMothershipHealth=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
@@ -313,6 +318,15 @@ window.GALAXY_CONFIG = {
       throw error;
     }));
     // Campaign-only GLBs are fetched once during phase-three PREPARADOS, never on online startup.
+    let devourerLoad=null;
+    function prepareDevourer(){
+      if(!devourerLoad)devourerLoad=Promise.all([import('./devourer-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
+        const templates=await assets.loadDevourerTemplates(T);
+        createDevourer=assets.createDevourerFactory(T,{templates,environment:reflections.texture,reducedMotion});
+        document.documentElement.dataset.galaxyDevourer='devorador-glb';return true;
+      }).catch(error=>{devourerLoad=null;throw error;});
+      return devourerLoad;
+    }
     let stormLoad=null;
     function prepareStorm(){
       if(!stormLoad)stormLoad=Promise.all([import('./storm-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
@@ -343,6 +357,7 @@ window.GALAXY_CONFIG = {
         root.add(createImportedUfo());
         return {root};
       }
+      if(kind==='devourer')return createDevourer();
       if(kind==='storm-core')return createStorm();
       if(kind==='mothership'){
         const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile}),health=createImportedMothershipHealth(visual);
@@ -546,6 +561,10 @@ window.GALAXY_CONFIG = {
         record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
         record.torus.rotation.set(.2,0,now*.0005);
       },
+      devourer(body){
+        if(!body||!createDevourer)return;
+        const record=take('devourer',body.id);place(record.root,body.x,body.y,0);record.update(body);
+      },
       storm(body){
         if(!body||!createStorm)return;
         const record=take('storm-core',body.id);place(record.root,body.x,body.y,0);record.update(body);
@@ -673,6 +692,10 @@ window.GALAXY_CONFIG = {
         api.ufo('warm-ufo',960,420,pass*30);
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*280,y:540+Math.sin(i*2.1)*280,hp:pass<2?2:0,maxHp:2}))});
+        if(typeof createDevourer==='function'){
+          const body=window.GalaxyDevourer.create('warm-devourer');body.x=960;body.y=540;
+          const pose=window.GalaxyDevourer.snapshot(body);pose.vulnerable=pass===2;pose.attack=pass%2?'charge-warning':'patrol';pose.warning={x:500,y:400};api.devourer(pose);
+        }
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the
@@ -688,7 +711,7 @@ window.GALAXY_CONFIG = {
     api.preparing=false;
     api.prepareMatch=(width,height)=>{
       width=Math.max(256,Math.min(mobile?1280:1920,Math.round(Number(width)||W)));
-      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'');
+      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'')+(createDevourer?':devourer':'');
       preparationQueue=preparationQueue.then(async()=>{
         if(preparedViewport===key&&surface.width===width)return {width,height,programs:renderer.info.programs?.length||0};
         api.preparing=true;
@@ -699,6 +722,7 @@ window.GALAXY_CONFIG = {
     };
     api.prepareMothership=prepareMothership;
     api.prepareStorm=prepareStorm;
+    api.prepareDevourer=prepareDevourer;
     api.ready=Promise.all(modelLoads).then(async()=>{
       api.preparing=true;
       try{await warmScene(256,144);}finally{api.preparing=false;}
@@ -707,7 +731,7 @@ window.GALAXY_CONFIG = {
     });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
-    window.addEventListener('beforeunload',()=>{createStorm?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
+    window.addEventListener('beforeunload',()=>{createStorm?.dispose();createDevourer?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
     return api;
   }
 })();
@@ -951,6 +975,18 @@ window.GALAXY_CONFIG = {
   const STORAGE_KEY='galaxyCombatLanguage';
   const SUPPORTED=['es','en','it','fr','de','zh'];
   const dictionaries={"es":{"orientationTitle":"GIRA EL MOVIL","orientationCopy":"Galaxy Combat se juega en horizontal.","languageLabel":"IDIOMA / LANGUAGE","orientationInstallCopy":"PARA JUGAR MEJOR, AÑADE EL JUEGO A TU PANTALLA DE INICIO.","addHomeScreen":"NECESARIO AÑADIR A PANTALLA DE INICIO","pwaInstalled":"GALAXY COMBAT INSTALADO. YA PUEDES ABRIRLO DESDE TU PANTALLA DE INICIO COMO UNA APP.","pwaIosInstall":"EN IPHONE/IPAD: PULSA COMPARTIR Y DESPUES \"AÑADIR A PANTALLA DE INICIO\". SE ABRIRA COMO UNA APP A PANTALLA COMPLETA.","pwaBrowserInstall":"ABRE EL MENU DEL NAVEGADOR Y ELIGE \"INSTALAR APP\" O \"AÑADIR A PANTALLA DE INICIO\". DESPUES SE ABRIRA COMO UNA APP.","yourName":"TU NOMBRE","defaultPlayer":"JUGADOR","playerNameAria":"Nombre del jugador","connectingWait":"Conectando con el servidor... espera un momento.","connectingShort":"Conectando con el servidor...","modesAria":"Modos de juego","modeCpu":"CONTRA LA MAQUINA","cpuDifficultyAria":"Dificultad CPU","easy":"FACIL","medium":"MEDIO","hard":"DIFICIL","play":"JUGAR","modeOnline":"ONLINE · 2-4 JUGADORES","createGame":"CREAR PARTIDA","modeJoin":"UNIRSE A UNA SALA","join":"UNIRSE","roomTypeTitle":"TIPO DE PARTIDA","roomTypeCopy":"PUBLICA aparece en la lista. PRIVADA solo se puede abrir con su codigo.","publicRoom":"PUBLICA","privateRoom":"PRIVADA","cancel":"CANCELAR","publicGames":"PARTIDAS PUBLICAS","searchingGames":"Buscando partidas...","orEnterCode":"PARTIDA PRIVADA","codePlaceholder":"ESCRIBE CODIGO","roomCodeAria":"Codigo de sala","close":"CERRAR","voiceChatAria":"Chat de voz","activateVoice":"ACTIVAR MICRO","voiceActive":"MICRO ACTIVO","voiceEnabled":"VOZ ACTIVADA","voiceDisabled":"VOZ DESACTIVADA","rotateControl":"GIRAR","orArrows":"o flechas","accelerate":"ACELERAR","fire":"DISPARAR","mobileGuide":"Mitad izquierda: girar · mitad derecha: toque rapido dispara · mantener acelera.","mobileTouchGuide":"TOQUE: DISPARO · MANTEN: ACELERAR","room":"SALA","roomChat":"CHAT DE SALA","noMessages":"Sin mensajes","messagePlaceholder":"ESCRIBE MENSAJE...","messageAria":"Mensaje para la sala","send":"ENVIAR","start":"EMPEZAR","fillCpuHard":"JUGADORES CPU DE RELLENO","removeCpuFill":"QUITAR CPU","leaveRoom":"SALIR DE SALA","lobbyHelp":"Los demas abren esta misma direccion y escriben el codigo.","victory":"VICTORIA","sessionRanking":"RANKING DE LA SESION","gameWon":"PARTIDA GANADA","gamesWon":"PARTIDAS GANADAS","rematch":"REPETIR PARTIDA","mainMenu":"MENU PRINCIPAL","escExit":"ESC: salir","holdToTalk":"Mantener para hablar","exit":"SALIR","exitAria":"Salir de la partida y volver al inicio","sensorUnsupported":"Este navegador no ofrece sensor de orientacion.","motionPermissionDenied":"Permiso de movimiento denegado","motionError":"No se pudo activar el giro: {detail}","permissionUnavailable":"permiso no disponible","connectingServer":"Conectando con el servidor{dots} espera un momento.","serverStarting":"El servidor se esta iniciando{dots} Puede tardar hasta un minuto ({secs}s).","serverConfigMissing":"Falta configurar el servidor de partida en config.js","serverReady":"Servidor conectado · listo para jugar","reconnecting":"RECONECTANDO...","reconnectingGame":"Reconectando con la partida...","resumeFailed":"No se pudo recuperar la partida.","noPublicRooms":"NO HAY PARTIDAS PUBLICAS DISPONIBLES","inProgress":"EN PARTIDA","roomPrefix":"SALA","winnerName":"GANA {name}","winnerIndex":"GANA J{index}","restarting":"REINICIANDO...","penalty":"PENALIZACION -1","brutal":"BRUTAL","goodShot":"BUENA","pickupAmmo1":"+1 BALA","pickupAmmo6":"+6 BALAS","pickupCadence":"CADENCIA MEJORADA","pickupAim":"MISIL GUIADO","pickupFlare":"BENGALA","pickupShockwave":"ONDA DE CHOQUE","pickupSpeed":"VELOCIDAD","pickupShield":"ESCUDO","pickupGhost":"FANTASMA","incomingMissile":"MISIL ENTRANTE","ufoIdentifiedNotice":"OBJETO VOLANTE NO IDENTIFICADO","leader":"LIDER \"{name}\"","ghost":"FANTASMA","fireControl":"DISPARO","thrustControl":"ACELERAR","meteorShower":"LLUVIA DE METEORITOS","microphoneUnavailable":"MICROFONO NO DISPONIBLE","requestingMicrophone":"SOLICITANDO MICROFONO...","microphoneDenied":"PERMISO DE MICROFONO DENEGADO","tapVoiceToHear":"TOCA ACTIVAR MICRO PARA OIR A LOS DEMAS","talk":"HABLAR","talkingPlayer":"J{index} HABLANDO","voiceHintTalking":"V · HABLANDO","voiceHintTalk":"V · HABLAR","error":"Error","roomUnavailable":"Sala no disponible.","roomFull":"Sala llena.","reconnectExpired":"Ha pasado el tiempo de reconexión.","matchNotRecoverable":"La partida ya no se puede recuperar.","hostClosed":"El anfitrión cerró la sala.","hostDisconnected":"El anfitrión perdió la conexión.","soloHostClosed":"La partida se cierra porque solo queda el anfitrión.","previousRoomReplaced":"La sala anterior fue reemplazada por una nueva sesion.","activeRoomExists":"YA ESTAS EN UNA SALA ACTIVA.","testRoomLimitReached":"LIMITE DE SALAS DE PRUEBA ALCANZADO."},"en":{"orientationTitle":"ROTATE YOUR PHONE","orientationCopy":"Galaxy Combat is designed for landscape mode.","languageLabel":"LANGUAGE","orientationInstallCopy":"FOR THE BEST EXPERIENCE, ADD THE GAME TO YOUR HOME SCREEN.","addHomeScreen":"REQUIRED: ADD TO HOME SCREEN","pwaInstalled":"GALAXY COMBAT INSTALLED. YOU CAN NOW OPEN IT FROM YOUR HOME SCREEN LIKE AN APP.","pwaIosInstall":"ON IPHONE/IPAD: TAP SHARE, THEN \"ADD TO HOME SCREEN\". IT WILL OPEN FULL SCREEN LIKE AN APP.","pwaBrowserInstall":"OPEN YOUR BROWSER MENU AND CHOOSE \"INSTALL APP\" OR \"ADD TO HOME SCREEN\". THEN IT WILL OPEN LIKE AN APP.","yourName":"YOUR NAME","defaultPlayer":"PLAYER","playerNameAria":"Player name","connectingWait":"Connecting to the server... please wait.","connectingShort":"Connecting to the server...","modesAria":"Game modes","modeCpu":"VS CPU","cpuDifficultyAria":"CPU difficulty","easy":"EASY","medium":"MEDIUM","hard":"HARD","play":"PLAY","modeOnline":"ONLINE · 2-4 PLAYERS","createGame":"CREATE GAME","modeJoin":"JOIN A ROOM","join":"JOIN","roomTypeTitle":"GAME TYPE","roomTypeCopy":"PUBLIC appears in the list. PRIVATE can only be opened with its code.","publicRoom":"PUBLIC","privateRoom":"PRIVATE","cancel":"CANCEL","publicGames":"PUBLIC GAMES","searchingGames":"Searching for games...","orEnterCode":"PRIVATE GAME","codePlaceholder":"CODE","roomCodeAria":"Room code","close":"CLOSE","voiceChatAria":"Voice chat","activateVoice":"ENABLE MIC","voiceActive":"MIC ON","voiceEnabled":"VOICE ENABLED","voiceDisabled":"VOICE OFF","rotateControl":"TURN","orArrows":"or arrows","accelerate":"THRUST","fire":"FIRE","mobileGuide":"Left half: turn · right half: quick tap fires · hold to thrust.","mobileTouchGuide":"TAP: FIRE · HOLD: THRUST","room":"ROOM","roomChat":"ROOM CHAT","noMessages":"No messages","messagePlaceholder":"TYPE A MESSAGE...","messageAria":"Message to the room","send":"SEND","start":"START","fillCpuHard":"FILL WITH CPU","removeCpuFill":"REMOVE CPU","leaveRoom":"LEAVE ROOM","lobbyHelp":"The others open this same address and enter the code.","victory":"VICTORY","sessionRanking":"SESSION RANKING","gameWon":"GAME WON","gamesWon":"GAMES WON","rematch":"PLAY AGAIN","mainMenu":"MAIN MENU","escExit":"ESC: exit","holdToTalk":"Hold to talk","exit":"EXIT","exitAria":"Leave the match and return to the main menu","sensorUnsupported":"This browser does not provide an orientation sensor.","motionPermissionDenied":"Motion permission denied","motionError":"Could not enable tilt controls: {detail}","permissionUnavailable":"permission unavailable","connectingServer":"Connecting to the server{dots} please wait.","serverStarting":"The server is starting{dots} It may take up to a minute ({secs}s).","serverConfigMissing":"The game server is not configured in config.js","serverReady":"Server connected · ready to play","reconnecting":"RECONNECTING...","reconnectingGame":"Reconnecting to the match...","resumeFailed":"The match could not be recovered.","noPublicRooms":"NO PUBLIC GAMES AVAILABLE","inProgress":"IN PROGRESS","roomPrefix":"ROOM","winnerName":"{name} WINS","winnerIndex":"J{index} WINS","restarting":"RESTARTING...","penalty":"PENALTY -1","brutal":"BRUTAL","goodShot":"NICE","pickupAmmo1":"+1 BULLET","pickupAmmo6":"+6 BULLETS","pickupCadence":"FIRE RATE UP","pickupAim":"HOMING MISSILE","pickupFlare":"FLARE","pickupShockwave":"SHOCKWAVE","pickupSpeed":"SPEED","pickupShield":"SHIELD","pickupGhost":"GHOST","incomingMissile":"MISSILE INCOMING","ufoIdentifiedNotice":"UNIDENTIFIED FLYING OBJECT","leader":"LEADER \"{name}\"","ghost":"GHOST","fireControl":"FIRE","thrustControl":"THRUST","meteorShower":"METEOR SHOWER","microphoneUnavailable":"MICROPHONE UNAVAILABLE","requestingMicrophone":"REQUESTING MICROPHONE...","microphoneDenied":"MICROPHONE PERMISSION DENIED","tapVoiceToHear":"TAP ENABLE MIC TO HEAR THE OTHERS","talk":"TALK","talkingPlayer":"J{index} TALKING","voiceHintTalking":"V · TALKING","voiceHintTalk":"V · TALK","error":"Error","roomUnavailable":"Room unavailable.","roomFull":"Room full.","reconnectExpired":"The reconnection window has expired.","matchNotRecoverable":"The match can no longer be recovered.","hostClosed":"The host closed the room.","hostDisconnected":"The host lost connection.","soloHostClosed":"The match closes because only the host remains.","previousRoomReplaced":"The previous room was replaced by a new session.","activeRoomExists":"YOU ARE ALREADY IN AN ACTIVE ROOM.","testRoomLimitReached":"TEST ROOM LIMIT REACHED."},"it":{"orientationTitle":"RUOTA IL TELEFONO","orientationCopy":"Galaxy Combat si gioca in orizzontale.","languageLabel":"LINGUA / LANGUAGE","orientationInstallCopy":"PER GIOCARE MEGLIO, AGGIUNGI IL GIOCO ALLA SCHERMATA HOME.","addHomeScreen":"NECESSARIO: AGGIUNGI ALLA HOME","pwaInstalled":"GALAXY COMBAT INSTALLATO. ORA PUOI APRIRLO DALLA SCHERMATA HOME COME UN'APP.","pwaIosInstall":"SU IPHONE/IPAD: TOCCA CONDIVIDI E POI \"AGGIUNGI A HOME\". SI APRIRA A SCHERMO INTERO COME UN'APP.","pwaBrowserInstall":"APRI IL MENU DEL BROWSER E SCEGLI \"INSTALLA APP\" O \"AGGIUNGI A HOME\". POI SI APRIRA COME UN'APP.","yourName":"IL TUO NOME","defaultPlayer":"GIOCATORE","playerNameAria":"Nome del giocatore","connectingWait":"Connessione al server... attendi un momento.","connectingShort":"Connessione al server...","modesAria":"Modalita di gioco","modeCpu":"CONTRO LA CPU","cpuDifficultyAria":"Difficolta CPU","easy":"FACILE","medium":"MEDIO","hard":"DIFFICILE","play":"GIOCA","modeOnline":"ONLINE · 2-4 GIOCATORI","createGame":"CREA PARTITA","modeJoin":"ENTRA IN UNA STANZA","join":"ENTRA","roomTypeTitle":"TIPO DI PARTITA","roomTypeCopy":"PUBBLICA appare nella lista. PRIVATA si apre solo con il suo codice.","publicRoom":"PUBBLICA","privateRoom":"PRIVATA","cancel":"ANNULLA","publicGames":"PARTITE PUBBLICHE","searchingGames":"Ricerca partite...","orEnterCode":"PARTITA PRIVATA","codePlaceholder":"CODICE","roomCodeAria":"Codice stanza","close":"CHIUDI","voiceChatAria":"Chat vocale","activateVoice":"ATTIVA MICRO","voiceActive":"MICRO ATTIVO","voiceEnabled":"VOCE ATTIVATA","voiceDisabled":"VOCE DISATTIVATA","rotateControl":"GIRA","orArrows":"o frecce","accelerate":"ACCELERA","fire":"SPARA","mobileGuide":"Meta sinistra: gira · meta destra: tocco rapido spara · tieni premuto accelera.","mobileTouchGuide":"TOCCO: SPARA · TIENI: ACCELERA","room":"STANZA","roomChat":"CHAT DELLA STANZA","noMessages":"Nessun messaggio","messagePlaceholder":"SCRIVI UN MESSAGGIO...","messageAria":"Messaggio per la stanza","send":"INVIA","start":"INIZIA","fillCpuHard":"RIEMPI CON CPU","removeCpuFill":"RIMUOVI CPU","leaveRoom":"ESCI DALLA STANZA","lobbyHelp":"Gli altri aprono questo stesso indirizzo e inseriscono il codice.","victory":"VITTORIA","sessionRanking":"CLASSIFICA SESSIONE","gameWon":"PARTITA VINTA","gamesWon":"PARTITE VINTE","rematch":"RIGIOCA","mainMenu":"MENU PRINCIPALE","escExit":"ESC: esci","holdToTalk":"Tieni premuto per parlare","exit":"ESCI","exitAria":"Esci dalla partita e torna al menu principale","sensorUnsupported":"Questo browser non dispone di un sensore di orientamento.","motionPermissionDenied":"Permesso di movimento negato","motionError":"Impossibile attivare i controlli a inclinazione: {detail}","permissionUnavailable":"permesso non disponibile","connectingServer":"Connessione al server{dots} attendi un momento.","serverStarting":"Il server si sta avviando{dots} Puo richiedere fino a un minuto ({secs}s).","serverConfigMissing":"Il server di gioco non e configurato in config.js","serverReady":"Server connesso · pronto per giocare","reconnecting":"RICONNESSIONE...","reconnectingGame":"Riconnessione alla partita...","resumeFailed":"Impossibile recuperare la partita.","noPublicRooms":"NESSUNA PARTITA PUBBLICA DISPONIBILE","inProgress":"IN CORSO","roomPrefix":"STANZA","winnerName":"VINCE {name}","winnerIndex":"VINCE J{index}","restarting":"RIAVVIO...","penalty":"PENALITA -1","brutal":"BRUTAL","goodShot":"BELLA","pickupAmmo1":"+1 PROIETTILE","pickupAmmo6":"+6 PROIETTILI","pickupCadence":"CADENZA MIGLIORATA","pickupAim":"MISSILE GUIDATO","pickupFlare":"BENGALA","pickupShockwave":"ONDA D URTO","pickupSpeed":"VELOCITA","pickupShield":"SCUDO","pickupGhost":"FANTASMA","incomingMissile":"MISSILE IN ARRIVO","ufoIdentifiedNotice":"OGGETTO VOLANTE NON IDENTIFICATO","leader":"LEADER \"{name}\"","ghost":"FANTASMA","fireControl":"SPARA","thrustControl":"ACCELERA","meteorShower":"PIOGGIA DI METEORITI","microphoneUnavailable":"MICROFONO NON DISPONIBILE","requestingMicrophone":"RICHIESTA MICROFONO...","microphoneDenied":"PERMESSO MICROFONO NEGATO","tapVoiceToHear":"TOCCA ATTIVA MICRO PER SENTIRE GLI ALTRI","talk":"PARLA","talkingPlayer":"J{index} STA PARLANDO","voiceHintTalking":"V · PARLANDO","voiceHintTalk":"V · PARLA","error":"Errore","roomUnavailable":"Stanza non disponibile.","roomFull":"Stanza piena.","reconnectExpired":"Il tempo per la riconnessione e scaduto.","matchNotRecoverable":"La partita non puo piu essere recuperata.","hostClosed":"L'host ha chiuso la stanza.","hostDisconnected":"L'host ha perso la connessione.","soloHostClosed":"La partita si chiude perché resta solo l'host.","previousRoomReplaced":"La stanza precedente e stata sostituita da una nuova sessione.","activeRoomExists":"SEI GIÀ IN UNA STANZA ATTIVA.","testRoomLimitReached":"LIMITE DI STANZE DI PROVA RAGGIUNTO."},"fr":{"orientationTitle":"TOURNE LE TELEPHONE","orientationCopy":"Galaxy Combat se joue en mode paysage.","languageLabel":"LANGUE / LANGUAGE","orientationInstallCopy":"POUR MIEUX JOUER, AJOUTE LE JEU A TON ECRAN D'ACCUEIL.","addHomeScreen":"NECESSAIRE : AJOUTER A L'ECRAN D'ACCUEIL","pwaInstalled":"GALAXY COMBAT EST INSTALLE. TU PEUX MAINTENANT L'OUVRIR DEPUIS TON ECRAN D'ACCUEIL COMME UNE APP.","pwaIosInstall":"SUR IPHONE/IPAD : APPUIE SUR PARTAGER PUIS \"AJOUTER A L'ECRAN D'ACCUEIL\". LE JEU S'OUVRIRA EN PLEIN ECRAN.","pwaBrowserInstall":"OUVRE LE MENU DU NAVIGATEUR ET CHOISIS \"INSTALLER L'APP\" OU \"AJOUTER A L'ECRAN D'ACCUEIL\".","yourName":"TON NOM","defaultPlayer":"JOUEUR","playerNameAria":"Nom du joueur","connectingWait":"Connexion au serveur... patiente un instant.","connectingShort":"Connexion au serveur...","modesAria":"Modes de jeu","modeCpu":"CONTRE LE CPU","cpuDifficultyAria":"Difficulte CPU","easy":"FACILE","medium":"MOYEN","hard":"DIFFICILE","play":"JOUER","modeOnline":"EN LIGNE · 2-4 JOUEURS","createGame":"CREER UNE PARTIE","modeJoin":"REJOINDRE UNE SALLE","join":"REJOINDRE","roomTypeTitle":"TYPE DE PARTIE","roomTypeCopy":"PUBLIQUE apparait dans la liste. PRIVEE ne peut etre ouverte qu'avec son code.","publicRoom":"PUBLIQUE","privateRoom":"PRIVEE","cancel":"ANNULER","publicGames":"PARTIES PUBLIQUES","searchingGames":"Recherche de parties...","orEnterCode":"PARTIE PRIVEE","codePlaceholder":"CODE","roomCodeAria":"Code de la salle","close":"FERMER","voiceChatAria":"Chat vocal","activateVoice":"ACTIVER MICRO","voiceActive":"MICRO ACTIF","voiceEnabled":"VOIX ACTIVEE","voiceDisabled":"VOIX DESACTIVEE","rotateControl":"TOURNER","orArrows":"ou fleches","accelerate":"ACCELERER","fire":"TIRER","mobileGuide":"Moitié gauche : tourner · moitié droite : touche rapide tire · maintenir accelere.","mobileTouchGuide":"TOUCHE : TIRER · MAINTENIR : ACCELERER","room":"SALLE","roomChat":"CHAT DE LA SALLE","noMessages":"Aucun message","messagePlaceholder":"ECRIS UN MESSAGE...","messageAria":"Message pour la salle","send":"ENVOYER","start":"DEMARRER","fillCpuHard":"COMPLETER AVEC CPU","removeCpuFill":"RETIRER CPU","leaveRoom":"QUITTER LA SALLE","lobbyHelp":"Les autres ouvrent cette meme adresse et saisissent le code.","victory":"VICTOIRE","sessionRanking":"CLASSEMENT DE LA SESSION","gameWon":"PARTIE GAGNEE","gamesWon":"PARTIES GAGNEES","rematch":"REJOUER","mainMenu":"MENU PRINCIPAL","escExit":"ESC : quitter","holdToTalk":"Maintenir pour parler","exit":"QUITTER","exitAria":"Quitter la partie et revenir au menu principal","sensorUnsupported":"Ce navigateur ne fournit pas de capteur d'orientation.","motionPermissionDenied":"Autorisation de mouvement refusee","motionError":"Impossible d'activer les controles par inclinaison : {detail}","permissionUnavailable":"autorisation indisponible","connectingServer":"Connexion au serveur{dots} patiente un instant.","serverStarting":"Le serveur demarre{dots} Cela peut prendre jusqu'a une minute ({secs}s).","serverConfigMissing":"Le serveur de jeu n'est pas configure dans config.js","serverReady":"Serveur connecte · pret a jouer","reconnecting":"RECONNEXION...","reconnectingGame":"Reconnexion a la partie...","resumeFailed":"La partie n'a pas pu etre recuperee.","noPublicRooms":"AUCUNE PARTIE PUBLIQUE DISPONIBLE","inProgress":"EN COURS","roomPrefix":"SALLE","winnerName":"{name} GAGNE","winnerIndex":"J{index} GAGNE","restarting":"REDEMARRAGE...","penalty":"PENALITE -1","brutal":"BRUTAL","goodShot":"BIEN","pickupAmmo1":"+1 BALLE","pickupAmmo6":"+6 BALLES","pickupCadence":"CADENCE AMELIOREE","pickupAim":"MISSILE GUIDE","pickupFlare":"LEURRE","pickupShockwave":"ONDE DE CHOC","pickupSpeed":"VITESSE","pickupShield":"BOUCLIER","pickupGhost":"FANTOME","incomingMissile":"MISSILE EN APPROCHE","ufoIdentifiedNotice":"OBJET VOLANT NON IDENTIFIE","leader":"EN TETE \"{name}\"","ghost":"FANTOME","fireControl":"TIRER","thrustControl":"ACCELERER","meteorShower":"PLUIE DE METEORITES","microphoneUnavailable":"MICRO INDISPONIBLE","requestingMicrophone":"DEMANDE DU MICRO...","microphoneDenied":"AUTORISATION MICRO REFUSEE","tapVoiceToHear":"TOUCHE ACTIVER MICRO POUR ENTENDRE LES AUTRES","talk":"PARLER","talkingPlayer":"J{index} PARLE","voiceHintTalking":"V · PARLE","voiceHintTalk":"V · PARLER","error":"Erreur","roomUnavailable":"Salle indisponible.","roomFull":"Salle pleine.","reconnectExpired":"Le delai de reconnexion a expire.","matchNotRecoverable":"La partie ne peut plus etre recuperee.","hostClosed":"L'hote a ferme la salle.","hostDisconnected":"L'hote a perdu la connexion.","soloHostClosed":"La partie se ferme car il ne reste que l'hote.","previousRoomReplaced":"La salle precedente a ete remplacee par une nouvelle session.","activeRoomExists":"TU ES DEJÀ DANS UNE SALLE ACTIVE.","testRoomLimitReached":"LIMITE DE SALLES DE TEST ATTEINTE."},"de":{"orientationTitle":"DREHE DEIN HANDY","orientationCopy":"Galaxy Combat wird im Querformat gespielt.","languageLabel":"SPRACHE / LANGUAGE","orientationInstallCopy":"FUER DAS BESTE SPIELERLEBNIS FUEGE DAS SPIEL ZUM STARTBILDSCHIRM HINZU.","addHomeScreen":"ERFORDERLICH: ZUM STARTBILDSCHIRM","pwaInstalled":"GALAXY COMBAT IST INSTALLIERT. DU KANNST ES JETZT WIE EINE APP VOM STARTBILDSCHIRM OEFFNEN.","pwaIosInstall":"AUF IPHONE/IPAD: TIPPE AUF TEILEN UND DANN AUF \"ZUM STARTBILDSCHIRM\". ES OEFFNET SICH WIE EINE APP IM VOLLBILD.","pwaBrowserInstall":"OEFFNE DAS BROWSER-MENUE UND WAEHLE \"APP INSTALLIEREN\" ODER \"ZUM STARTBILDSCHIRM\".","yourName":"DEIN NAME","defaultPlayer":"SPIELER","playerNameAria":"Spielername","connectingWait":"Verbindung zum Server... bitte kurz warten.","connectingShort":"Verbindung zum Server...","modesAria":"Spielmodi","modeCpu":"GEGEN CPU","cpuDifficultyAria":"CPU-Schwierigkeit","easy":"EINFACH","medium":"MITTEL","hard":"SCHWER","play":"SPIELEN","modeOnline":"ONLINE · 2-4 SPIELER","createGame":"SPIEL ERSTELLEN","modeJoin":"RAUM BEITRETEN","join":"BEITRETEN","roomTypeTitle":"SPIELTYP","roomTypeCopy":"OEFFENTLICH erscheint in der Liste. PRIVAT kann nur mit dem Code geoeffnet werden.","publicRoom":"OEFFENTLICH","privateRoom":"PRIVAT","cancel":"ABBRECHEN","publicGames":"OEFFENTLICHE SPIELE","searchingGames":"Suche nach Spielen...","orEnterCode":"PRIVATES SPIEL","codePlaceholder":"CODE","roomCodeAria":"Raumcode","close":"SCHLIESSEN","voiceChatAria":"Sprachchat","activateVoice":"MIKRO AKTIVIEREN","voiceActive":"MIKRO AN","voiceEnabled":"SPRACHE AKTIVIERT","voiceDisabled":"SPRACHE AUS","rotateControl":"DREHEN","orArrows":"oder Pfeiltasten","accelerate":"BESCHLEUNIGEN","fire":"FEUERN","mobileGuide":"Linke Hälfte: drehen · rechte Hälfte: kurz tippen feuert · halten beschleunigt.","mobileTouchGuide":"TIPPEN: FEUERN · HALTEN: BESCHLEUNIGEN","room":"RAUM","roomChat":"RAUMCHAT","noMessages":"Keine Nachrichten","messagePlaceholder":"NACHRICHT SCHREIBEN...","messageAria":"Nachricht an den Raum","send":"SENDEN","start":"STARTEN","fillCpuHard":"MIT CPU AUFFUELLEN","removeCpuFill":"CPU ENTFERNEN","leaveRoom":"RAUM VERLASSEN","lobbyHelp":"Die anderen oeffnen dieselbe Adresse und geben den Code ein.","victory":"SIEG","sessionRanking":"SITZUNGS-RANGLISTE","gameWon":"GEWONNENE PARTIE","gamesWon":"GEWONNENE PARTIEN","rematch":"NOCHMAL SPIELEN","mainMenu":"HAUPTMENUE","escExit":"ESC: verlassen","holdToTalk":"Gedrueckt halten zum Sprechen","exit":"VERLASSEN","exitAria":"Spiel verlassen und zum Hauptmenue zurueckkehren","sensorUnsupported":"Dieser Browser bietet keinen Orientierungssensor.","motionPermissionDenied":"Bewegungsberechtigung verweigert","motionError":"Neigungssteuerung konnte nicht aktiviert werden: {detail}","permissionUnavailable":"Berechtigung nicht verfuegbar","connectingServer":"Verbindung zum Server{dots} bitte kurz warten.","serverStarting":"Der Server startet{dots} Das kann bis zu einer Minute dauern ({secs}s).","serverConfigMissing":"Der Spielserver ist in config.js nicht konfiguriert","serverReady":"Server verbunden · spielbereit","reconnecting":"VERBINDUNG WIRD WIEDERHERGESTELLT...","reconnectingGame":"Verbindung zum Spiel wird wiederhergestellt...","resumeFailed":"Das Spiel konnte nicht wiederhergestellt werden.","noPublicRooms":"KEINE OEFFENTLICHEN SPIELE VERFUEGBAR","inProgress":"LAEUFT","roomPrefix":"RAUM","winnerName":"{name} GEWINNT","winnerIndex":"J{index} GEWINNT","restarting":"NEUSTART...","penalty":"STRAFE -1","brutal":"BRUTAL","goodShot":"GUT","pickupAmmo1":"+1 KUGEL","pickupAmmo6":"+6 KUGELN","pickupCadence":"FEUERRATE ERHOEHT","pickupAim":"LENKRAKETE","pickupFlare":"LEUCHTKOERPER","pickupShockwave":"SCHOCKWELLE","pickupSpeed":"GESCHWINDIGKEIT","pickupShield":"SCHILD","pickupGhost":"GEIST","incomingMissile":"RAKETE IM ANFLUG","ufoIdentifiedNotice":"UNIDENTIFIZIERTES FLUGOBJEKT","leader":"FUEHREND \"{name}\"","ghost":"GEIST","fireControl":"FEUER","thrustControl":"SCHUB","meteorShower":"METEORITENSCHAUER","microphoneUnavailable":"MIKROFON NICHT VERFUEGBAR","requestingMicrophone":"MIKROFON WIRD ANGEFORDERT...","microphoneDenied":"MIKROFONBERECHTIGUNG VERWEIGERT","tapVoiceToHear":"TIPPE AUF MIKRO AKTIVIEREN, UM DIE ANDEREN ZU HOEREN","talk":"SPRECHEN","talkingPlayer":"J{index} SPRICHT","voiceHintTalking":"V · SPRICHT","voiceHintTalk":"V · SPRECHEN","error":"Fehler","roomUnavailable":"Raum nicht verfuegbar.","roomFull":"Raum ist voll.","reconnectExpired":"Das Zeitfenster fuer die Wiederverbindung ist abgelaufen.","matchNotRecoverable":"Das Spiel kann nicht mehr wiederhergestellt werden.","hostClosed":"Der Host hat den Raum geschlossen.","hostDisconnected":"Der Host hat die Verbindung verloren.","soloHostClosed":"Das Spiel wird geschlossen, weil nur noch der Host übrig ist.","previousRoomReplaced":"Der vorherige Raum wurde durch eine neue Sitzung ersetzt.","activeRoomExists":"DU BIST BEREITS IN EINEM AKTIVEN RAUM.","testRoomLimitReached":"LIMIT FUER TESTRAEUME ERREICHT."},"zh":{"orientationTitle":"请旋转手机","orientationCopy":"Galaxy Combat 适合横屏游玩。","languageLabel":"语言","orientationInstallCopy":"为了获得更好的游戏体验，请将游戏添加到主屏幕。","addHomeScreen":"需要添加到主屏幕","pwaInstalled":"GALAXY COMBAT 已安装。现在可以像应用一样从主屏幕打开。","pwaIosInstall":"在 IPHONE/IPAD 上：点按“分享”，然后选择“添加到主屏幕”。游戏将像应用一样全屏打开。","pwaBrowserInstall":"打开浏览器菜单，选择“安装应用”或“添加到主屏幕”。之后可像应用一样打开。","yourName":"你的名字","defaultPlayer":"玩家","playerNameAria":"玩家名称","connectingWait":"正在连接服务器……请稍候。","connectingShort":"正在连接服务器……","modesAria":"游戏模式","modeCpu":"对战电脑","cpuDifficultyAria":"电脑难度","easy":"简单","medium":"中等","hard":"困难","play":"开始游戏","modeOnline":"在线 · 2-4 名玩家","createGame":"创建房间","modeJoin":"加入房间","join":"加入","roomTypeTitle":"房间类型","roomTypeCopy":"公开房间会显示在列表中。私人房间只能使用房间代码进入。","publicRoom":"公开","privateRoom":"私人","cancel":"取消","publicGames":"公开房间","searchingGames":"正在搜索房间……","orEnterCode":"私人房间","codePlaceholder":"输入代码","roomCodeAria":"房间代码","close":"关闭","voiceChatAria":"语音聊天","activateVoice":"开启麦克风","voiceActive":"麦克风已开启","voiceEnabled":"语音已开启","voiceDisabled":"语音已关闭","rotateControl":"转向","orArrows":"或方向键","accelerate":"加速","fire":"射击","mobileGuide":"左半屏：转向 · 右半屏：轻点射击 · 按住加速。","mobileTouchGuide":"轻点：射击 · 按住：加速","room":"房间","roomChat":"房间聊天","noMessages":"暂无消息","messagePlaceholder":"输入消息……","messageAria":"发送到房间的消息","send":"发送","start":"开始","fillCpuHard":"用电脑玩家补满","removeCpuFill":"移除电脑玩家","leaveRoom":"离开房间","lobbyHelp":"其他玩家打开相同地址并输入房间代码。","victory":"胜利","sessionRanking":"本局排名","gameWon":"获胜局数","gamesWon":"获胜局数","rematch":"再来一局","mainMenu":"主菜单","escExit":"ESC：退出","holdToTalk":"按住说话","exit":"退出","exitAria":"离开比赛并返回主菜单","sensorUnsupported":"此浏览器不支持方向传感器。","motionPermissionDenied":"动作传感器权限被拒绝","motionError":"无法启用倾斜控制：{detail}","permissionUnavailable":"权限不可用","connectingServer":"正在连接服务器{dots} 请稍候。","serverStarting":"服务器正在启动{dots} 最长可能需要一分钟（{secs}秒）。","serverConfigMissing":"config.js 中未配置游戏服务器","serverReady":"服务器已连接 · 可以开始游戏","reconnecting":"正在重新连接……","reconnectingGame":"正在重新连接比赛……","resumeFailed":"无法恢复比赛。","noPublicRooms":"暂无可用的公开房间","inProgress":"进行中","roomPrefix":"房间","winnerName":"{name} 获胜","winnerIndex":"玩家{index} 获胜","restarting":"正在重新开始……","penalty":"惩罚 -1","brutal":"精彩绝杀","goodShot":"好球","pickupAmmo1":"+1 发子弹","pickupAmmo6":"+6 发子弹","pickupCadence":"射速提升","pickupAim":"制导导弹","pickupFlare":"干扰弹","pickupShockwave":"冲击波","pickupSpeed":"速度","pickupShield":"护盾","pickupGhost":"隐身","incomingMissile":"导弹来袭","ufoIdentifiedNotice":"发现不明飞行物","leader":"领先者“{name}”","ghost":"隐身","fireControl":"射击","thrustControl":"加速","meteorShower":"流星雨","microphoneUnavailable":"麦克风不可用","requestingMicrophone":"正在请求麦克风权限……","microphoneDenied":"麦克风权限被拒绝","tapVoiceToHear":"点按“开启麦克风”以听到其他玩家","talk":"说话","talkingPlayer":"玩家{index} 正在说话","voiceHintTalking":"V · 正在说话","voiceHintTalk":"V · 说话","error":"错误","roomUnavailable":"房间不可用。","roomFull":"房间已满。","reconnectExpired":"重新连接时间已过。","matchNotRecoverable":"比赛无法继续恢复。","hostClosed":"房主已关闭房间。","hostDisconnected":"房主连接中断。","soloHostClosed":"由于只剩房主，比赛已关闭。","previousRoomReplaced":"之前的房间已被新会话替换。","activeRoomExists":"你已经在一个活动房间中。","testRoomLimitReached":"测试房间数量已达到上限。"}};
+  Object.assign(dictionaries.es,{"devourerDefeat":"EL DEVORADOR TE HA VENCIDO · SIN VIDAS"});
+  Object.assign(dictionaries.en,{"devourerDefeat":"THE DEVOURER DEFEATED YOU · NO LIVES LEFT"});
+  Object.assign(dictionaries.it,{"devourerDefeat":"IL DIVORATORE TI HA SCONFITTO · VITE ESAURITE"});
+  Object.assign(dictionaries.fr,{"devourerDefeat":"LE DEVOREUR VOUS A VAINCU · PLUS DE VIES"});
+  Object.assign(dictionaries.de,{"devourerDefeat":"DER VERSCHLINGER HAT GEWONNEN · KEINE LEBEN"});
+  Object.assign(dictionaries.zh,{"devourerDefeat":"吞噬者获胜 · 生命耗尽"});
+  Object.assign(dictionaries.es,{"devourerIncoming":"EL DEVORADOR","devourerJoint":"DESTRUYE LA UNION ILUMINADA","devourerSegments":"SEGMENTOS DESTRUIDOS: {count}/{total}","devourerCharge":"CARGA INMINENTE · APARTATE","devourerVolley":"MANDIBULAS ABIERTAS · ESQUIVA LA RAFAGA","devourerOpen":"REACTOR EXPUESTO · ATACA","devourerClosed":"CABEZA ACORAZADA · ESPERA LA APERTURA","devourerHealth":"REACTOR: {hp}/{total}"});
+  Object.assign(dictionaries.en,{"devourerIncoming":"THE DEVOURER","devourerJoint":"DESTROY THE GLOWING JOINT","devourerSegments":"SEGMENTS DESTROYED: {count}/{total}","devourerCharge":"CHARGE INCOMING · MOVE ASIDE","devourerVolley":"JAWS OPEN · DODGE THE VOLLEY","devourerOpen":"REACTOR EXPOSED · ATTACK","devourerClosed":"ARMORED HEAD · WAIT FOR AN OPENING","devourerHealth":"REACTOR: {hp}/{total}"});
+  Object.assign(dictionaries.it,{"devourerIncoming":"IL DIVORATORE","devourerJoint":"DISTRUGGI IL GIUNTO LUMINOSO","devourerSegments":"SEGMENTI DISTRUTTI: {count}/{total}","devourerCharge":"CARICA IMMINENTE · SPOSTATI","devourerVolley":"FAUCI APERTE · SCHIVA LA RAFFICA","devourerOpen":"REATTORE ESPOSTO · ATTACCA","devourerClosed":"TESTA CORAZZATA · ATTENDI","devourerHealth":"REATTORE: {hp}/{total}"});
+  Object.assign(dictionaries.fr,{"devourerIncoming":"LE DEVOREUR","devourerJoint":"DETRUISEZ LE JOINT LUMINEUX","devourerSegments":"SEGMENTS DETRUITS : {count}/{total}","devourerCharge":"CHARGE IMMINENTE · ECARTEZ-VOUS","devourerVolley":"MACHOIRES OUVERTES · ESQUIVEZ","devourerOpen":"REACTEUR EXPOSE · ATTAQUEZ","devourerClosed":"TETE BLINDEE · ATTENDEZ","devourerHealth":"REACTEUR : {hp}/{total}"});
+  Object.assign(dictionaries.de,{"devourerIncoming":"DER VERSCHLINGER","devourerJoint":"ZERSTORE DAS LEUCHTENDE GELENK","devourerSegments":"SEGMENTE ZERSTORT: {count}/{total}","devourerCharge":"ANGRIFF · AUSWEICHEN","devourerVolley":"KIEFER OFFEN · SALVE AUSWEICHEN","devourerOpen":"REAKTOR OFFEN · ANGREIFEN","devourerClosed":"KOPF GEPANZERT · WARTEN","devourerHealth":"REAKTOR: {hp}/{total}"});
+  Object.assign(dictionaries.zh,{"devourerIncoming":"吞噬者","devourerJoint":"攻击发光的连接处","devourerSegments":"已摧毁节段：{count}/{total}","devourerCharge":"冲锋将至 · 躲开","devourerVolley":"巨口张开 · 躲避齐射","devourerOpen":"反应堆暴露 · 攻击","devourerClosed":"头部装甲保护 · 等待时机","devourerHealth":"反应堆：{hp}/{total}"});
   Object.assign(dictionaries.es,{"stormBossIncoming":"EL NUCLEO DE LA TORMENTA","stormBossSatellites":"SATELITES DESTRUIDOS: {count}/{total}","stormBossDodge":"CARGANDO · ESQUIVA LA RAFAGA","stormBossOpen":"NUCLEO EXPUESTO · ATACA","stormBossEnraged":"NUCLEO INESTABLE · ATACA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VIDAS: {lives}/{total}"});
   Object.assign(dictionaries.en,{"stormBossIncoming":"THE STORM CORE","stormBossSatellites":"SATELLITES DESTROYED: {count}/{total}","stormBossDodge":"CHARGING · DODGE THE VOLLEY","stormBossOpen":"CORE EXPOSED · ATTACK","stormBossEnraged":"UNSTABLE CORE · ATTACK","stormBossHealth":"CORE: {hp}/{total}","stormBossLives":"LIVES: {lives}/{total}"});
   Object.assign(dictionaries.it,{"stormBossIncoming":"IL NUCLEO DELLA TEMPESTA","stormBossSatellites":"SATELLITI DISTRUTTI: {count}/{total}","stormBossDodge":"CARICA · SCHIVA LA RAFFICA","stormBossOpen":"NUCLEO ESPOSTO · ATTACCA","stormBossEnraged":"NUCLEO INSTABILE · ATTACCA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VITE: {lives}/{total}"});
@@ -1354,6 +1390,7 @@ window.GALAXY_CONFIG = {
     },
     {
       id:4,nameKey:'campaignWorld4',
+      boss:{type:'devourer',segments:5,segmentHp:3,headHp:8},
       background:{file:'assets/sprites/fondo04.jpg',mobileKey:'bg04',stars:false},
       ufos:3,
       hazards:{
@@ -5095,12 +5132,135 @@ window.GALAXY_CONFIG = {
 })();
 
 ;
+// devourer-core.js
+'use strict';
+// Phase-four authority. The renderer consumes these poses, never runs combat.
+(() => {
+  const HEAD_RADIUS=68,SEGMENT_RADIUS=39,JOINT_RADIUS=23,SPACING=96;
+  const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2});
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+  const remaining=b=>b.segments.reduce((n,p)=>n+(p.hp>0?1:0),0);
+  function weakSlot(body){for(let i=body.segments.length-1;i>=0;i--)if(body.segments[i].hp>0)return i;return -1;}
+  const vulnerable=b=>weakSlot(b)<0&&['volley-warning','volley','recover'].includes(b.attack);
+  function create(id,config={}){
+    const count=clamp(Math.round(config.segments||5),1,5),hp=config.headHp||8,segmentHp=config.segmentHp||3;
+    const body={id,x:1660,y:260,px:1660,py:260,vx:0,vy:0,angle:Math.PI,age:0,hp,maxHp:hp,
+      attack:'patrol',until:4,cycle:0,nextVolley:0,volleys:0,warning:null,charge:null,
+      segments:Array.from({length:count},(_,slot)=>({slot,hp:segmentHp,maxHp:segmentHp,x:1660+(slot+1)*SPACING+60,y:260,px:0,py:260,angle:Math.PI,joint:{x:0,y:260,px:0,py:260}}))};
+    let lead=body;
+    for(const p of body.segments){p.px=p.x;p.joint.x=p.joint.px=(p.x+lead.x)/2;lead=p;}
+    return body;
+  }
+  function follow(body){
+    let lead=body;
+    for(const p of body.segments){
+      if(p.hp<=0)continue;
+      p.px=p.x;p.py=p.y;p.joint.px=p.joint.x;p.joint.py=p.joint.y;
+      const dx=lead.x-p.x,dy=lead.y-p.y,length=Math.hypot(dx,dy)||1;
+      const spacing=lead===body?SPACING+60:SPACING;
+      p.x=lead.x-dx/length*spacing;p.y=lead.y-dy/length*spacing;p.angle=Math.atan2(dy,dx);
+      p.joint.x=(p.x+lead.x)/2;p.joint.y=(p.y+lead.y)/2;lead=p;
+    }
+  }
+  function step(body,dt,target,uid){
+    if(!body||body.hp<=0||!(dt>0))return [];
+    body.age+=dt;body.px=body.x;body.py=body.y;
+    const count=remaining(body),speed=142+(body.segments.length-count)*19+(count===0?30:0),shots=[];
+    const active=target&&!target.dead&&!(target.spawnFx>0);
+    if(!active){body.warning=null;body.charge=null;body.attack='patrol';body.until=body.age+2;}
+    if(active&&body.age+1e-8>=body.until){
+      if(body.attack==='patrol'){
+        const volley=body.cycle++%2===0;
+        body.attack=volley?'volley-warning':'charge-warning';body.until=body.age+(volley?1.15:1.35);
+        body.warning={x:target.x,y:target.y,locked:false};
+      }else if(body.attack==='volley-warning'){
+        body.attack='volley';body.volleys=0;body.nextVolley=body.age;body.until=body.age+.75;
+      }else if(body.attack==='charge-warning'){
+        const angle=Math.atan2(body.warning.y-body.y,body.warning.x-body.x),distance=Math.min(780,Math.hypot(body.warning.x-body.x,body.warning.y-body.y)+180);
+        const ex=clamp(body.x+Math.cos(angle)*distance,100,1820),ey=clamp(body.y+Math.sin(angle)*distance,120,960);
+        body.charge={x:body.x,y:body.y,ex,ey,start:body.age,duration:1.05};body.attack='charge';body.until=body.age+1.05;body.warning=null;
+      }else if(body.attack==='volley'||body.attack==='charge'){
+        body.attack='recover';body.until=body.age+(count?1.8:2.4);body.warning=null;body.charge=null;
+      }else{body.attack='patrol';body.until=body.age+(count?3.6:2.4);}
+    }
+    if(body.warning){
+      // The final quarter-second fixes the charge destination so it can be dodged.
+      if(body.attack!=='charge-warning'||body.until-body.age>.25){
+        const lead=body.attack==='charge-warning'?.2:0;
+        body.warning.x=clamp(target.x+(Number(target.vx)||0)*lead,70,1850);
+        body.warning.y=clamp(target.y+(Number(target.vy)||0)*lead,90,990);
+      }else body.warning.locked=true;
+    }
+    if(body.attack==='charge'&&body.charge){
+      const c=body.charge,t=clamp((body.age-c.start)/c.duration,0,1),ease=t*t*(3-2*t);
+      body.x=c.x+(c.ex-c.x)*ease;body.y=c.y+(c.ey-c.y)*ease;
+    }else{
+      const tx=960+580*Math.sin(body.age*.23),ty=540+290*Math.sin(body.age*.39+.7);
+      let desired=Math.atan2(ty-body.y,tx-body.x);
+      if(body.attack==='volley-warning'||body.attack==='volley')desired=Math.atan2(target.y-body.y,target.x-body.x);
+      if(body.attack==='charge-warning')desired=Math.atan2(body.warning.y-body.y,body.warning.x-body.x);
+      const turn=clamp(angleDelta(desired,body.angle),-2.2*dt,2.2*dt);body.angle+=turn;
+      const factor=body.attack==='patrol'?1:body.attack==='recover'?.55:.22;
+      body.x=clamp(body.x+Math.cos(body.angle)*speed*factor*dt,92,1828);
+      body.y=clamp(body.y+Math.sin(body.angle)*speed*factor*dt,112,968);
+    }
+    body.vx=(body.x-body.px)/dt;body.vy=(body.y-body.py)/dt;
+    if(body.attack==='charge'&&Math.hypot(body.vx,body.vy)>1)body.angle=Math.atan2(body.vy,body.vx);
+    follow(body);
+    if(active&&body.attack==='volley'&&body.volleys<3&&body.age+1e-8>=body.nextVolley){
+      const aim=body.angle,n=count?5:7;
+      for(let i=0;i<n;i++){
+        const angle=aim+(i-(n-1)/2)*.14,dx=Math.cos(angle),dy=Math.sin(angle);
+        const x=body.x+Math.cos(body.angle)*76,y=body.y+Math.sin(body.angle)*76;
+        shots.push({id:uid(),owner:-4,devourer:true,x,y,px:x,py:y,vx:dx*340,vy:dy*340,age:0,travel:0,guided:false});
+      }
+      body.volleys++;body.nextVolley=body.age+.25;
+    }
+    return shots;
+  }
+  function circleHit(s,p,r){
+    const ax=s.px-(p.px??p.x),ay=s.py-(p.py??p.y),dx=s.x-s.px-(p.x-(p.px??p.x)),dy=s.y-s.py-(p.y-(p.py??p.y));
+    const c=ax*ax+ay*ay-r*r;if(c<=0)return 0;
+    const a=dx*dx+dy*dy;if(a<1e-12)return null;
+    const b=2*(ax*dx+ay*dy),disc=b*b-4*a*c;if(disc<0)return null;
+    const t=(-b-Math.sqrt(disc))/(2*a);return t>=0&&t<=1?t:null;
+  }
+  function firstHit(body,segment,radius=0,{hullOnly=false}={}){
+    let best=null;
+    const consider=(part,r,slot,armored=false)=>{
+      const t=circleHit(segment,part,r+radius);
+      const exposedTie=best&&t===best.t&&!armored&&slot===weakSlot(body)&&(best.armored||best.slot<0&&!vulnerable(body));
+      if(t!==null&&(!best||t<best.t||exposedTie))best={slot,armored,t,part,r,x:segment.px+(segment.x-segment.px)*t,y:segment.py+(segment.y-segment.py)*t};
+    };
+    consider(body,HEAD_RADIUS,-1);
+    for(const p of body.segments)if(p.hp>0){consider(p,SEGMENT_RADIUS,p.slot,true);if(!hullOnly)consider(p.joint,JOINT_RADIUS,p.slot);}
+    return best;
+  }
+  function damage(body,hit,weapon){
+    const amount=DAMAGE[weapon];if(!amount||body.hp<=0)return null;
+    if(hit.armored||hit.slot>=0&&hit.slot!==weakSlot(body)||hit.slot<0&&!vulnerable(body))return {shielded:true};
+    const part=hit.slot<0?body:body.segments[hit.slot];if(!part||part.hp<=0)return null;
+    part.hp=Math.max(0,part.hp-amount);
+    return {shielded:false,destroyed:part.hp===0,won:body.hp===0};
+  }
+  function snapshot(body){
+    if(!body)return null;
+    return {id:body.id,x:body.x,y:body.y,angle:body.angle,age:body.age,hp:body.hp,maxHp:body.maxHp,attack:body.attack,
+      weakSlot:weakSlot(body),remaining:remaining(body),vulnerable:vulnerable(body),warning:body.warning?{...body.warning}:null,
+      segments:body.segments.map(p=>({slot:p.slot,x:p.x,y:p.y,angle:p.angle,hp:p.hp,maxHp:p.maxHp,joint:{x:p.joint.x,y:p.joint.y}}))};
+  }
+  window.GalaxyDevourer=Object.freeze({create,step,firstHit,damage,snapshot,weakSlot,remaining,vulnerable,HEAD_RADIUS,SEGMENT_RADIUS,JOINT_RADIUS,SPACING,DAMAGE});
+})();
+
+;
 // local-cpu.js
 'use strict';
 (() => {
   const PHYSICS_CORE=window.GalaxyPhysicsCore;
   const MOTHERSHIP=window.GalaxyMothership;
   const STORM=window.GalaxyStormCore;
+  const DEVOURER=window.GalaxyDevourer;
   if(!PHYSICS_CORE)throw new Error('GalaxyPhysicsCore no cargado');
   const W=1920,H=1080,TICK_HZ=60,DT=1/TICK_HZ,STEP_MS=1000/TICK_HZ;
   const DRAG_PER_TICK=Math.pow(0.35,DT);
@@ -5260,6 +5420,7 @@ window.GALAXY_CONFIG = {
       this.meteors=[];
       this.giant=null;
       this.mothership=null;
+      this.devourer=null;
       this.ufo=null;
       // V21.61: la campaña CPU puede tener hasta tres OVNIs simultáneos.
       // this.ufo conserva el principal para no tocar la física compartida;
@@ -6190,7 +6351,7 @@ window.GALAXY_CONFIG = {
       this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
       const human=this.makePlayer(0,name,false);
-      this.mothership=null;this.stormCore=null;this.bossEncounter=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;
       this.applyTrainingHardLoadout(human,false);
       this.placeAtSpawn(human);
       this.players.push(human);
@@ -6219,7 +6380,7 @@ window.GALAXY_CONFIG = {
     startTraining(brain=null){
       this.trainingMode=true;
       this.bossEncounter=null;
-      this.mothership=null;this.stormCore=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;
       this.learningEnabled=true;
       this.campaignLevel=1;
       this.difficulty='dificil';
@@ -6261,7 +6422,7 @@ window.GALAXY_CONFIG = {
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
       return true;
     }
-    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.bossEncounter=null;}
+    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;}
     setControl(turn,thrust,fire,actions={}){
       const p=this.players[0];
       if(!p)return false;
@@ -6357,7 +6518,7 @@ window.GALAXY_CONFIG = {
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
-      this.mothership=null;this.stormCore=null;this.bossEncounter=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;
       for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;
@@ -6593,7 +6754,7 @@ window.GALAXY_CONFIG = {
       if(victim.cpu)victim.flarePending=null;
       if(!victim.cpu)this.humanMeteorDecision=null;
       // V22.46: toda muerte resta una baja, sin bajar de cero.
-      const stormLife=!!(this.bossEncounter?.type==='storm-core'&&!victim.cpu);
+      const stormLife=!!(['storm-core','devourer'].includes(this.bossEncounter?.type)&&!victim.cpu);
       if(!this.bossEncounter||stormLife)victim.kills=Math.max(0,victim.kills-1);
 
       // V21.33: la embestida con escudo conserva su efecto de colision/baja,
@@ -7622,12 +7783,13 @@ window.GALAXY_CONFIG = {
         // Al caducar el input tambien se descartan sus pulsos pendientes.
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
-      this.updateMothership(dt);this.updateStormCore(dt);
-      if(this.bossEncounter?.type!=='storm-core')this.updateAsteroids(dt);
-      this.resolveMothershipContacts();this.resolveStormContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateMothership(dt);this.updateStormCore(dt);this.updateDevourer(dt);
+      if(!['storm-core','devourer'].includes(this.bossEncounter?.type))this.updateAsteroids(dt);
+      this.resolveMothershipContacts();this.resolveStormContacts();this.resolveDevourerContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.absorbDevourerFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);this.absorbDevourerShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
     needsMothershipBoss(){return !!(!this.trainingMode&&MOTHERSHIP&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='mothership');}
     needsUfoBoss(){return !!(!this.trainingMode&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='ufo-wave');}
+    needsDevourerBoss(){return !!(!this.trainingMode&&DEVOURER&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='devourer');}
     needsStormBoss(){return !!(!this.trainingMode&&STORM&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='storm-core');}
     retireBossRivals(){
       for(const p of this.players)if(p.cpu){p.dead=true;p.pendingSpawn=null;p.thrust=false;p.vx=p.vy=0;this.controls.delete(p.index);}
@@ -7635,6 +7797,11 @@ window.GALAXY_CONFIG = {
     }
     beginCampaignBoss(winner){
       if(winner.cpu||this.bossEncounter||this.trainingMode)return false;
+      if(this.needsDevourerBoss()){
+        const config=CAMPAIGN.getLevel(this.campaignLevel).boss;
+        this.bossEncounter={type:'devourer',phase:'entering',hp:config.headHp,maxHp:config.headHp,nextAt:this.fxClock+1.5,cleared:false};
+        this.retireBossRivals();return true;
+      }
       if(this.needsStormBoss()){
         const config=CAMPAIGN.getLevel(this.campaignLevel).boss;
         this.bossEncounter={type:'storm-core',phase:'entering',hp:config.coreHp,maxHp:config.coreHp,nextAt:this.fxClock+1.5,cleared:false};
@@ -7655,9 +7822,16 @@ window.GALAXY_CONFIG = {
       const boss=this.bossEncounter;if(!boss||this.finished)return;
       if(!boss.cleared){
         this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;this.giant=null;this.meteors.length=0;this.showerLeft=0;this.ufo=null;this.ufoExtras.length=0;this.ufoWaveRemaining=0;this.ufoWaveNext=0;this.nextUfo=999999;boss.cleared=true;
-        if(boss.type==='storm-core')this.asteroids.length=0;
+        if(['storm-core','devourer'].includes(boss.type))this.asteroids.length=0;
       }
       const human=this.players.find(p=>!p.cpu);
+      if(boss.type==='devourer'){
+        if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
+          this.devourer=DEVOURER.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
+          this.asteroids.length=0;human.protection=Math.max(human.protection,2);
+        }
+        return;
+      }
       if(boss.type==='storm-core'){
         if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
           this.stormCore=STORM.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
@@ -7682,12 +7856,20 @@ window.GALAXY_CONFIG = {
     }
     finishCampaignBoss(won){
       const boss=this.bossEncounter;if(!boss||this.finished)return;
-      boss.phase=won?'won':'failed';this.mothership=null;this.stormCore=null;
-      if(boss.type==='storm-core'){this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;}
+      boss.phase=won?'won':'failed';this.mothership=null;this.stormCore=null;this.devourer=null;
+      if(['storm-core','devourer'].includes(boss.type)){this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;}
       this.finished=true;this.winner=won?0:-1;
       this.flushLearning();this.emit({t:'victory',winner:this.winner});
     }
     bossCombatTargets(player){
+      if(!player.cpu&&this.devourer&&this.bossEncounter?.phase==='fighting'){
+        const body=this.devourer,slot=DEVOURER.weakSlot(body);
+        if(slot<0&&!DEVOURER.vulnerable(body))return [];
+        const part=slot<0?body:body.segments[slot].joint;
+        const target=this.devourerTarget||(this.devourerTarget={dead:false,camo:0});
+        Object.assign(target,{index:slot<0?4:slot+5,x:part.x,y:part.y,vx:body.vx,vy:body.vy});
+        const roster=this.devourerTargets||(this.devourerTargets=[target]);return roster;
+      }
       if(!player.cpu&&this.stormCore&&this.bossEncounter?.phase==='fighting'){
         const body=this.stormCore,pool=this.stormTargets||(this.stormTargets=Array.from({length:4},(_,i)=>({index:i+4,dead:false,camo:0}))),roster=this.stormTargetRoster||(this.stormTargetRoster=[]);roster.length=0;
         if(STORM.vulnerable(body)){Object.assign(pool[0],{x:body.x,y:body.y,vx:body.vx,vy:body.vy});roster.push(pool[0]);}
@@ -7710,6 +7892,11 @@ window.GALAXY_CONFIG = {
         if(!b.guided||b.decoyed||b.flareTarget>=0)continue;
         let target=null;
         if(boss.type==='storm-core'&&this.stormCore){const part=b.target===4?this.stormCore:this.stormCore.satellites[b.target-5];if(part?.hp>0)target=part;}
+        else if(boss.type==='devourer'&&this.devourer){
+          const slot=DEVOURER.weakSlot(this.devourer);
+          if(b.target===4&&slot<0&&DEVOURER.vulnerable(this.devourer))target=this.devourer;
+          else if(b.target===slot+5&&slot>=0)target=this.devourer.segments[slot].joint;
+        }
         else if(boss.type==='mothership'&&b.target===4)target=this.mothership;
         else if(boss.type==='ufo-wave'){
           if(this.ufo?.bossOrdinal===b.target-3)target=this.ufo;
@@ -7718,6 +7905,51 @@ window.GALAXY_CONFIG = {
         if(!target)continue;
         const dx=target.x-b.x,dy=target.y-b.y,distance=Math.hypot(dx,dy),speed=Math.hypot(b.vx,b.vy)||1;if(distance<=1)continue;
         const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
+      }
+    }
+    updateDevourer(dt){
+      const body=this.devourer;if(!body)return;
+      const shots=DEVOURER.step(body,dt,this.players.find(p=>!p.cpu),uid);
+      const active=this.bullets.reduce((n,b)=>n+(b.devourer?1:0),0);
+      if(shots.length&&active<48){this.bullets.push(...shots.slice(0,48-active));this.emit({t:'sound',kind:'laser'});}
+    }
+    resolveDevourerContacts(){
+      const body=this.devourer;if(!body)return;
+      for(const p of this.players){
+        if(p.cpu||p.dead||p.spawnFx>0)continue;
+        const wrapped=Math.abs(p.x-(p.px??p.x))>W*.5||Math.abs(p.y-(p.py??p.y))>H*.5;
+        const hit=DEVOURER.firstHit(body,{px:wrapped?p.x:(p.px??p.x),py:wrapped?p.y:(p.py??p.y),x:p.x,y:p.y},shipCollisionRadius(p),{hullOnly:true});
+        if(!hit)continue;
+        if(p.protection>0||p.shield>0){
+          const dx=p.x-hit.part.x,dy=p.y-hit.part.y,length=Math.hypot(dx,dy),nx=length>1e-6?dx/length:1,ny=length>1e-6?dy/length:0,r=hit.r+shipCollisionRadius(p)+2;
+          p.x=hit.part.x+nx*r;p.y=hit.part.y+ny*r;p.vx=nx*110;p.vy=ny*110;this.emitShipImpact(p,hit.part,false);
+        }else this.destroyShip(p,null);
+      }
+    }
+    damageDevourer(body,hit,weapon,owner){
+      if(!body||this.devourer!==body||this.finished)return;
+      const result=DEVOURER.damage(body,hit,weapon);if(!result)return;
+      this.bossEncounter.hp=body.hp;
+      if(result.shielded){this.emitRocketDisintegrateAt(hit.x,hit.y,owner);return;}
+      this.emitExplosionAt(hit.x,hit.y,owner);this.emit({t:'sound',kind:'impact'});
+      if(result.destroyed&&hit.slot>=0){const part=body.segments[hit.slot];this.emitExplosionAt(part.x,part.y,owner);}
+      if(result.won){for(const dx of [-60,0,60])this.emitExplosionAt(body.x+dx,body.y,owner);this.finishCampaignBoss(true);}
+    }
+    absorbDevourerShots(dt){
+      const body=this.devourer;if(!body)return;
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const b=this.bullets[i];if(!(Number(b.owner)>=0))continue;
+        const hit=DEVOURER.firstHit(body,{px:b.x,py:b.y,x:b.x+b.vx*dt,y:b.y+b.vy*dt},b.guided?MISSILE_HIT_RADIUS:BULLET_RADIUS);
+        if(!hit)continue;
+        this.bullets.splice(i,1);this.damageDevourer(body,hit,b.guided?'missile':'bullet',b.owner);if(!this.devourer)break;
+      }
+    }
+    absorbDevourerFlares(){
+      const body=this.devourer;if(!body)return;
+      for(let i=this.flares.length-1;i>=0;i--){
+        const f=this.flares[i],hit=DEVOURER.firstHit(body,{px:f.px??f.x,py:f.py??f.y,x:f.x,y:f.y},FLARE_RADIUS);
+        if(!hit)continue;
+        this.flares.splice(i,1);this.damageDevourer(body,hit,'flare',f.owner);if(!this.devourer)break;
       }
     }
     updateStormCore(dt){
@@ -8773,8 +9005,9 @@ window.GALAXY_CONFIG = {
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
+        devourer:DEVOURER?.snapshot(this.devourer)||null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,
@@ -8785,7 +9018,6 @@ window.GALAXY_CONFIG = {
   }
   window.GalaxyLocalCpu=GalaxyLocalCpu;
 })();
-
 
 ;
 // host-physics.js
@@ -16309,7 +16541,7 @@ window.GALAXY_CONFIG = {
       return;
     }
     stopLocalCpu();
-    localCampaignLevel=3;localCampaignAwaitingContinue=false;localCampaignComplete=false;localCampaignGameOver=false;
+    localCampaignLevel=document.documentElement.dataset.practiceLevel==='4'?4:3;localCampaignAwaitingContinue=false;localCampaignComplete=false;localCampaignGameOver=false;
     // Aislar el modo CPU de cualquier sesion/red anterior. Un snapshot o evento
     // WebSocket retrasado no debe poder sustituir el estado LOCAL ni provocar
     // un reload/retorno al menu durante la partida.
@@ -16335,8 +16567,8 @@ window.GALAXY_CONFIG = {
       localCampaignLevel
     );
     const pilot=localCpu.players.find(player=>!player.cpu);
-    pilot.kills=5;pilot.bullets=25;pilot.guidedAmmo=3;pilot.guided=true;pilot.flare=3;
-    if(!localCpu.beginCampaignBoss(pilot))throw new Error('No se pudo iniciar el nucleo de prueba');
+    pilot.kills=5;pilot.bullets=localCampaignLevel===4?40:25;pilot.guidedAmmo=3;pilot.guided=true;pilot.flare=3;
+    if(!localCpu.beginCampaignBoss(pilot))throw new Error('No se pudo iniciar el jefe de prueba');
     localCpuActive=true;
     handle({t:'created',code:'LOCAL',index:0,cpu:true,playerToken:''},cpu);
     handle({t:'start'},cpu);
@@ -16676,7 +16908,7 @@ window.GALAXY_CONFIG = {
         const oldBoss=state?.boss,boss=m.boss;
         if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
           playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
-          playNoticeText=boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
+          playNoticeText=boss.type==='devourer'?tr('devourerIncoming'):boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
           huntFxUntil=0;leaderAnnouncement=null;
         }
       }
@@ -17415,7 +17647,7 @@ window.GALAXY_CONFIG = {
     localCampaignGameOver=false;
 
     if(localCampaign&&state?.boss?.phase==='failed'){
-      victoryText.textContent=tr(state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
+      victoryText.textContent=tr(state.boss.type==='devourer'?'devourerDefeat':state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
       if(restartBtn){restartBtn.classList.remove('hidden');restartBtn.disabled=false;restartBtn.textContent=tr('restartCampaign');}
     }else if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
       victoryText.textContent=tr('campaignChampion');
@@ -18968,6 +19200,7 @@ window.GALAXY_CONFIG = {
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();
       if(roomCode==='LOCAL'&&localCpu?.needsStormBoss())await window.Galaxy3D.prepareStorm();
+      if(roomCode==='LOCAL'&&localCpu?.needsDevourerBoss())await window.Galaxy3D.prepareDevourer();
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
       await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
@@ -19523,6 +19756,18 @@ window.GALAXY_CONFIG = {
     ctx.restore();
   }
 
+  function drawDevourerProgress(boss){
+    if(boss?.type!=='devourer'||boss.phase!=='fighting')return;
+    const warning=boss.attack==='charge-warning'||boss.attack==='volley-warning';
+    const key=boss.attack==='charge-warning'?'devourerCharge':boss.attack==='volley-warning'||boss.attack==='volley'?'devourerVolley':boss.vulnerable?'devourerOpen':boss.segments>0?'devourerJoint':'devourerClosed';
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.92)';ctx.fillStyle=warning?'#ff9d58':'#ffe6ba';
+    ctx.font=isMobile?'32px Flashback,Arial':'27px Flashback,Arial';
+    const title=tr(key);ctx.strokeText(title,W/2,130);ctx.fillText(title,W/2,130);
+    ctx.font=isMobile?'27px Flashback,Arial':'23px Flashback,Arial';
+    const status=tr(boss.segments>0?'devourerSegments':'devourerHealth',{count:boss.total-boss.segments,total:boss.segments>0?boss.total:boss.maxHp,hp:boss.hp});
+    ctx.strokeText(status,W/2,174);ctx.fillText(status,W/2,174);
+    const lives=tr('stormBossLives',{lives:boss.lives,total:boss.maxLives});ctx.fillStyle=boss.lives<=2?'#ff7777':'#d9f4ff';ctx.strokeText(lives,W/2,214);ctx.fillText(lives,W/2,214);ctx.restore();
+  }
   function drawStormBossProgress(boss){
     if(boss?.type!=='storm-core'||boss.phase!=='fighting')return;
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';
@@ -19731,6 +19976,7 @@ window.GALAXY_CONFIG = {
 
     if(localCpuActive&&renderState.mothership)scene3D.mothership(renderState.mothership);
     if(localCpuActive&&renderState.stormCore)scene3D.storm(renderState.stormCore);
+    if(localCpuActive&&renderState.devourer)scene3D.devourer(renderState.devourer);
     for(const a of renderState.asteroids){
       const old=previousLookup.asteroids.get(a.id);
       const x=old?lerp(old.x,a.x,blend):a.x;
@@ -19836,7 +20082,7 @@ window.GALAXY_CONFIG = {
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
-    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);}
+    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);drawDevourerProgress(renderState.boss);}
     drawLocalRespawnCountdown(now);
     drawLocalEntryCountdown(now);
     if(perfStats){
