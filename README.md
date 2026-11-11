@@ -1,3 +1,5 @@
+V24.51: cada union naranja iluminada de EL DEVORADOR se destruye con una bala. La cabeza y los segmentos recorren una misma curva ondulada, separados por distancia recorrida. Las cargas aceleran sobre esa trayectoria, con destino anunciado y sin pliegues ni cruces del cuerpo. Se conservan el reactor de la cabeza, las vidas y el avance a fase 5.
+
 V24.50: EL DEVORADOR, jefe lowpoly de la fase 4. Cinco segmentos con uniones vulnerables, barridos, rafagas desde las mandibulas y cargas anunciadas con un breve bloqueo de destino para poder esquivarlas. Al perder el cuerpo expone el reactor de la cabeza; cinco vidas, daño persistente y viaje automatico a la fase 5 al vencerlo. Prueba directa: docs/prueba-devorador.html. Modelo GLB de unos 42 KB, 1652 triangulos por enemigo completo y geometria compartida.
 
 V24.49: los fondos de las rondas online se encadenan suavemente durante 0,6 segundos, una vez preparada la siguiente escena. Se conserva el fondo anterior durante la carga, sin cambiar la cuenta atras ni la sincronizacion. Los mensajes repetidos no reinician el efecto y los estados antiguos no restauran fondos anteriores.
