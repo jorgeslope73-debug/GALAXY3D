@@ -1,3 +1,5 @@
+V24.49: los fondos de las rondas online se encadenan suavemente durante 0,6 segundos, una vez preparada la siguiente escena. Se conserva el fondo anterior durante la carga, sin cambiar la cuenta atras ni la sincronizacion. Los mensajes repetidos no reinician el efecto y los estados antiguos no restauran fondos anteriores.
+
 V24.48: sobre la base V24.47, la nodriza de portada balancea lateralmente entre 55 y 85 grados, con un ciclo suave de unos 22 segundos. Muestra mas cubierta durante cada pasada, conservando su trayectoria curva y el barrido de los canones.
 
 V24.38: incorpora la animación DISPARO del núcleo. Los seis cañones apuntan con velocidad angular limitada al punto anunciado; el retroceso empieza justo antes del disparo y se recupera después. Las balas nacen en las bocas reales deformadas del GLB, incluida su altura. Física y presentación comparten la calibración de los cañones y el tiempo de la animación. Se mantienen las ráfagas de cinco/siete balas.

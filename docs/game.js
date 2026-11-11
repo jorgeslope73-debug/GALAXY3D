@@ -1065,6 +1065,39 @@
   }
   const voice=typeof window.GalaxyVoice==='function'?new window.GalaxyVoice({send:o=>send(o),isMobile}):null;
   let backgroundCache=null,backgroundCacheW=0,backgroundCacheH=0;
+  let onlineBackgroundTransition=null;
+  function beginOnlineBackgroundTransition(){
+    // Capture only the backdrop. Ships, HUD and the shared countdown stay live.
+    const cfg=MATCH_BACKGROUNDS[currentMatchBackground]||MATCH_BACKGROUNDS[0];
+    const previous=images[cfg.mobileKey];
+    if(!imageReady(previous))return;
+    const snapshot=document.createElement('canvas');
+    snapshot.width=canvas.width;snapshot.height=canvas.height;
+    const g=snapshot.getContext('2d',{alpha:false});
+    if(!g)return;
+    g.drawImage(previous,0,0,snapshot.width,snapshot.height);
+    // A rapid next round continues from the currently visible blend.
+    if(onlineBackgroundTransition){
+      g.globalAlpha=onlineBackgroundTransition.alpha;
+      g.drawImage(onlineBackgroundTransition.canvas,0,0,snapshot.width,snapshot.height);
+    }
+    const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    onlineBackgroundTransition={canvas:snapshot,started:null,alpha:1,duration:reduced?300:600};
+  }
+  function drawOnlineBackgroundTransition(now){
+    const blend=onlineBackgroundTransition;
+    if(!blend)return;
+    if(roomCode==='LOCAL'||!roomCode){onlineBackgroundTransition=null;return;}
+    // Keep the previous world while this device prepares the next one. This
+    // never waits, sends packets or changes the authoritative ready/go gate.
+    if(blend.started===null&&!onlineStartPending)blend.started=now;
+    const t=blend.started===null?0:clamp((now-blend.started)/blend.duration,0,1);
+    blend.alpha=1-t*t*(3-2*t);
+    if(t>=1){onlineBackgroundTransition=null;return;}
+    ctx.save();ctx.globalAlpha=blend.alpha;
+    ctx.drawImage(blend.canvas,0,0,W,H);
+    ctx.restore();
+  }
   function activeMobileBackground(){
     const cfg=MATCH_BACKGROUNDS[currentMatchBackground]||MATCH_BACKGROUNDS[0];
     const candidate=images[cfg.mobileKey];
@@ -1107,6 +1140,7 @@
     // todos conservan el mismo candidato y activeMobileBackground() usa fondo.jpg
     // solo de forma temporal hasta que el JPG correspondiente termina de cargar.
     const candidate=(safeRound-1)%MATCH_BACKGROUNDS.length;
+    if(roomCode!=='LOCAL'&&currentMatchBackgroundRound>0&&safeRound>currentMatchBackgroundRound&&candidate!==currentMatchBackground)beginOnlineBackgroundTransition();
     currentMatchBackgroundRound=safeRound;
     matchBackgroundCursor=candidate;
     applyMatchBackground(candidate);
@@ -4032,9 +4066,6 @@
       if(roomCode!=='LOCAL'&&Number.isInteger(incomingRound)&&previousRound>0&&incomingRound>previousRound&&m.started&&!m.finished){
         handle({t:'restarted',rankRound:incomingRound});
       }
-      if(Number.isInteger(incomingRound)&&incomingRound>0&&currentMatchBackgroundRound!==incomingRound){
-        selectMatchBackgroundForRound(incomingRound);
-      }
       if(Number.isInteger(incomingRound)&&Number.isInteger(incomingSeq)){
         const stale=lastAcceptedStateRound>=0&&(
           incomingRound<lastAcceptedStateRound||
@@ -4042,6 +4073,9 @@
         );
         if(stale)return;
         lastAcceptedStateRound=incomingRound;lastAcceptedStateSeq=incomingSeq;
+      }
+      if(Number.isInteger(incomingRound)&&incomingRound>0&&currentMatchBackgroundRound!==incomingRound){
+        selectMatchBackgroundForRound(incomingRound);
       }
       const now=performance.now();
       const delayedVisuals=typeof networkPlayback!=='undefined'&&networkPlayback&&(!isHost||activeHostClient())&&!localCpuActive;
@@ -4992,6 +5026,7 @@
     invalidatePendingResumeRequests();
     resetVictoryJoystickControls();
     cancelInterstellarTravel();
+    onlineBackgroundTransition=null;
     resetGameFeelVisuals();
     resetOnlineStartCountdown();
     onlineSessionWins.clear();
@@ -7010,6 +7045,7 @@
     if(!useStaticPcBackground&&!backgroundCache&&!drawImageSafely(activeMobileBackground(),0,0,W,H)){
       ctx.fillStyle='#020714';ctx.fillRect(0,0,W,H);
     }
+    drawOnlineBackgroundTransition(now);
     if((MATCH_BACKGROUNDS[currentMatchBackground]||MATCH_BACKGROUNDS[0]).stars)drawDecorativeStars(now);
     if(onlineStartPending||!state){drawOnlineStartAnnouncement(now);return;}
     const playback=!localCpuActive&&(!isHost||activeHostClient())&&networkPlayback?networkPlayback.sample(now):null;

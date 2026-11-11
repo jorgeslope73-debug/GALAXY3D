@@ -244,7 +244,7 @@ function playableClientFixture(){
     onlineStartTimer:null,ONLINE_READY_MS:1200,ONLINE_ENTRY_MS:3000,ONLINE_GO_MS:700,warmOnlineStartCaches:noop,
     matchStartGate:null,startReadyRetryTimer:null,localEntryVisual:null,gameAudioEnabled:false,webMusicLoadPromise:null,
     requestAnimationFrame:fn=>{queueMicrotask(()=>fn(performance.now()));return 1;},updateCanvasResolution:noop,canvas:{width:1280,height:720},
-    inputActionHeld:{rocket:false,flare:false,shock:false},currentMatchBackgroundRound:1,
+    inputActionHeld:{rocket:false,flare:false,shock:false},currentMatchBackgroundRound:1,onlineBackgroundTransition:null,
     invisibleHudUntil:[0,0,0,0],nearWinActive:new Set(),shockwaveFx:[],lastLocalKillAt:0,netDebug:false,
     consumeGameFeelFx:noop,detectLocalMissileEvasion:noop,updatePickupVisualBirths:noop,updateLeaderAnnouncement:noop,
     maybeScheduleVictory:noop,selectMatchBackgroundForRound:noop,selectLocalCampaignBackground:noop,
@@ -321,7 +321,9 @@ async function checkBackendMembershipFlow(){
   const server=serverFixture(),host=playableClientFixture(),guest=playableClientFixture();
   const receiveWire=(socket,message)=>server.receive(socket,message,{raw:true});
   const drain=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
+  host.ctx.onlineBackgroundTransition={canvas:{},alpha:.5};
   host.ctx.returnToMainMenu(false);
+  assert.equal(host.ctx.onlineBackgroundTransition,null,'leaving clears a pending online phase blend');
   await guest.ctx.startLocalCpu();await drain();
   const retiredCpu=guest.ctx.localCpu;
   guest.ctx.returnToMainMenu();

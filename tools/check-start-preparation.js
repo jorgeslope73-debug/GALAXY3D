@@ -42,6 +42,46 @@ for(const index of [0,1]){
   view.matchStartGate.phase='go';view.matchStartGate.goAt=4000;const previous=text.length;view.drawLocalEntryCountdown(4280);assert.equal(text.length,previous);
 }
 const build=fs.readFileSync('docs/build-version.js','utf8'),index=fs.readFileSync('docs/index.html','utf8');
+// Run the real online background selector/compositor on both rendering paths.
+for(const mobile of [false,true])for(const reduced of [false,true]){
+  const draws=[],snapshots=[];
+  const backgrounds=Array.from({length:5},(_,i)=>({file:'world'+i+'.jpg',mobileKey:'bg'+i}));
+  const images=Object.fromEntries(backgrounds.map((b,i)=>[b.mobileKey,{id:i,complete:true}]));
+  const c=vm.createContext({MATCH_BACKGROUNDS:backgrounds,images,roomCode:'ROOM',onlineStartPending:true,
+    currentMatchBackground:0,currentMatchBackgroundRound:0,matchBackgroundCursor:0,
+    useStaticPcBackground:!mobile,canvas:{width:1280,height:720,style:{}},W:1920,H:1080,
+    backgroundCache:null,backgroundCacheW:0,backgroundCacheH:0,rebuildBackgroundCache(){},
+    clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),imageReady:im=>!!im?.complete,
+    ctx:{save(){},restore(){},drawImage(im,...args){draws.push({im,args,alpha:this.globalAlpha});}},
+    window:{matchMedia:()=>({matches:reduced})},document:{createElement(){
+      const calls=[],g={drawImage(im){calls.push({im,alpha:this.globalAlpha??1});}};
+      const layer={calls,getContext:()=>g};snapshots.push(layer);return layer;
+    }}
+  });
+  vm.runInContext('let onlineBackgroundTransition=null;'+extract('beginOnlineBackgroundTransition')+extract('drawOnlineBackgroundTransition')+extract('applyMatchBackground')+extract('selectMatchBackgroundForRound'),c);
+  c.selectMatchBackgroundForRound(1);assert.equal(snapshots.length,0,'first entry does not cover the lobby');
+  c.selectMatchBackgroundForRound(2);assert.equal(snapshots.length,1);assert.equal(c.currentMatchBackground,1);
+  c.drawOnlineBackgroundTransition(0);c.drawOnlineBackgroundTransition(8000);
+  assert.equal(draws.at(-1).alpha,1,'a slow local/peer preparation keeps the previous background visible');
+  c.selectMatchBackgroundForRound(2);assert.equal(snapshots.length,1,'duplicate starts/snapshots do not restart the blend');
+  c.onlineStartPending=false;c.drawOnlineBackgroundTransition(9000);
+  const duration=reduced?300:600;c.drawOnlineBackgroundTransition(9000+duration/2);
+  assert.equal(draws.at(-1).alpha,.5,'old and new backgrounds blend at half opacity');
+  c.selectMatchBackgroundForRound(3);assert.equal(snapshots[1].calls[1].alpha,.5,'an interrupted fade captures its visible mixture');
+  c.drawOnlineBackgroundTransition(10000);c.drawOnlineBackgroundTransition(10000+duration);
+  const count=draws.length;c.drawOnlineBackgroundTransition(20000);assert.equal(draws.length,count,'no background copy remains after the fade');
+  c.selectMatchBackgroundForRound(4);c.roomCode='';c.drawOnlineBackgroundTransition(21000);
+  assert.equal(vm.runInContext('onlineBackgroundTransition',c),null,'leaving discards the previous online background');
+  c.roomCode='LOCAL';c.selectMatchBackgroundForRound(5);assert.equal(snapshots.length,3,'CPU travel keeps its own transition');
+}
+{
+  const a=source.indexOf('      const incomingEpoch=Number(m.hostEpoch)'),b=source.indexOf('      const now=performance.now();',a);
+  const selected=[],c=vm.createContext({lastAcceptedStateEpoch:2,lastAcceptedStateRound:3,lastAcceptedStateSeq:10,state:{round:3},roomCode:'ROOM',currentMatchBackgroundRound:3,
+    handle(){assert.fail('stale snapshots cannot restart a round');},selectMatchBackgroundForRound:r=>selected.push(r)});
+  vm.runInContext('function receive(m){'+source.slice(a,b)+'}',c);
+  for(const [epoch,round,seq]of [[2,2,999],[2,3,9],[1,4,1]])c.receive({hostEpoch:epoch,round,seq});
+  assert.deepEqual(selected,[],'out-of-order snapshots cannot restore an old background');
+}
 assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));assert.ok(index.indexOf('src="startup-preparation.js')<index.indexOf('src="game.js'));
 (async()=>{
   // Exercise the real travel/fade lifecycle, including slow preparation and exit races.
