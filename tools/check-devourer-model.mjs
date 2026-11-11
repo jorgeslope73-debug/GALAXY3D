@@ -7,15 +7,24 @@ import {prepareDevourerTemplate,createDevourerFactory,DEVOURER_RADII} from '../d
 const bytes=fs.readFileSync('docs/assets/models/devorador.glb'),length=bytes.readUInt32LE(12),json=JSON.parse(bytes.subarray(20,20+length));
 assert.equal(bytes.readUInt32LE(8),bytes.length);assert.ok(bytes.length<150000);
 assert.ok(json.buffers.every(b=>!b.uri));assert.equal(json.images?.length||0,0);assert.equal(json.cameras?.length||0,0);assert.equal(json.animations?.length||0,0);
-assert.ok(!json.nodes.some(n=>n.name==='Cube'||n.name.startsWith('PREVIEW_')),'export excludes Blender defaults and staging objects');
 const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 const templates=Object.fromEntries(['head','segment','joint'].map(kind=>[kind,prepareDevourerTemplate(T,gltf.scene,kind)]));
 const context=vm.createContext({window:{}});vm.runInContext(fs.readFileSync('docs/devourer-core.js','utf8'),context);const S=context.window.GalaxyDevourer;
 assert.equal(DEVOURER_RADII.head,S.HEAD_RADIUS);assert.equal(DEVOURER_RADII.segment,S.SEGMENT_RADIUS);assert.equal(DEVOURER_RADII.joint,S.JOINT_RADIUS);
 for(const [kind,template]of Object.entries(templates)){
+  assert.equal(template.getObjectByName('Cube'),undefined,'default Blender objects are not part of the runtime templates');
+  assert.ok(!template.children[0].children[0].position.length(),'the authoring preview position does not move the gameplay template');
+  template.traverse(o=>assert.ok(!o.name.startsWith('PREVIEW_'),'preview instances are excluded from gameplay'));
   template.updateMatrixWorld(true);const v=new T.Vector3();let r=0;
   template.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);r=Math.max(r,Math.hypot(v.x,v.y));}});
   assert.ok(Math.abs(r-DEVOURER_RADII[kind])<1e-5,'closed GLB envelope matches the authority radius');
+}
+// Different Blender staging positions/rest poses must produce the same gameplay envelope.
+for(const kind of ['head','segment','joint']){
+  const authored=gltf.scene.clone(true),node=authored.getObjectByName('DEVOURER_'+kind.toUpperCase());node.position.set(100,20,-50);
+  for(let i=0;i<3;i++)node.getObjectByName('JAW_'+i)?.rotation.set(0,.6,0);
+  const normal=prepareDevourerTemplate(T,authored,kind);
+  assert.ok(Math.abs(normal.scale.x-templates[kind].scale.x)<1e-8,'preview placement and jaw rest rotation do not change the gameplay scale');
 }
 let triangles=0,draws=0;
 for(const reducedMotion of [false,true]){

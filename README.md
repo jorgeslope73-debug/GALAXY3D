@@ -1,3 +1,5 @@
+V24.52: compatibilidad del devorador con exportaciones completas de Blender. La carga selecciona la escena del jefe, descarta las posiciones de presentacion de las tres piezas y normaliza las mandibulas antes de medir su escala. Se conserva el GLB subido por el usuario. Incluye las uniones de una bala y el recorrido ondulado sin cruces de V24.51.
+
 V24.51: cada union naranja iluminada de EL DEVORADOR se destruye con una bala. La cabeza y los segmentos recorren una misma curva ondulada, separados por distancia recorrida. Las cargas aceleran sobre esa trayectoria, con destino anunciado y sin pliegues ni cruces del cuerpo. Se conservan el reactor de la cabeza, las vidas y el avance a fase 5.
 
 V24.50: EL DEVORADOR, jefe lowpoly de la fase 4. Cinco segmentos con uniones vulnerables, barridos, rafagas desde las mandibulas y cargas anunciadas con un breve bloqueo de destino para poder esquivarlas. Al perder el cuerpo expone el reactor de la cabeza; cinco vidas, daño persistente y viaje automatico a la fase 5 al vencerlo. Prueba directa: docs/prueba-devorador.html. Modelo GLB de unos 42 KB, 1652 triangulos por enemigo completo y geometria compartida.
