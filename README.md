@@ -1,3 +1,5 @@
+V24.50: EL DEVORADOR, jefe lowpoly de la fase 4. Cinco segmentos con uniones vulnerables, barridos, rafagas desde las mandibulas y cargas anunciadas con un breve bloqueo de destino para poder esquivarlas. Al perder el cuerpo expone el reactor de la cabeza; cinco vidas, daño persistente y viaje automatico a la fase 5 al vencerlo. Prueba directa: docs/prueba-devorador.html. Modelo GLB de unos 42 KB, 1652 triangulos por enemigo completo y geometria compartida.
+
 V24.49: los fondos de las rondas online se encadenan suavemente durante 0,6 segundos, una vez preparada la siguiente escena. Se conserva el fondo anterior durante la carga, sin cambiar la cuenta atras ni la sincronizacion. Los mensajes repetidos no reinician el efecto y los estados antiguos no restauran fondos anteriores.
 
 V24.48: sobre la base V24.47, la nodriza de portada balancea lateralmente entre 55 y 85 grados, con un ciclo suave de unos 22 segundos. Muestra mas cubierta durante cada pasada, conservando su trayectoria curva y el barrido de los canones.

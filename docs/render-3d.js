@@ -39,6 +39,11 @@
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
       try{return await world.prepareMothership();}catch(error){fallback(error);throw error;}
     },
+    async prepareDevourer(){
+      const loaded=await assetsReady;
+      if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
+      try{return await world.prepareDevourer();}catch(error){fallback(error);throw error;}
+    },
     async prepareStorm(){
       const loaded=await assetsReady;
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
@@ -94,7 +99,7 @@
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,menuMothershipFlight=null,menuMothershipAssets=null,menuMothershipFailed=false,winnerStage=null;
-    let createStorm=null;
+    let createStorm=null,createDevourer=null;
     let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,createImportedMothershipHealth=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
@@ -305,6 +310,15 @@
       throw error;
     }));
     // Campaign-only GLBs are fetched once during phase-three PREPARADOS, never on online startup.
+    let devourerLoad=null;
+    function prepareDevourer(){
+      if(!devourerLoad)devourerLoad=Promise.all([import('./devourer-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
+        const templates=await assets.loadDevourerTemplates(T);
+        createDevourer=assets.createDevourerFactory(T,{templates,environment:reflections.texture,reducedMotion});
+        document.documentElement.dataset.galaxyDevourer='devorador-glb';return true;
+      }).catch(error=>{devourerLoad=null;throw error;});
+      return devourerLoad;
+    }
     let stormLoad=null;
     function prepareStorm(){
       if(!stormLoad)stormLoad=Promise.all([import('./storm-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
@@ -335,6 +349,7 @@
         root.add(createImportedUfo());
         return {root};
       }
+      if(kind==='devourer')return createDevourer();
       if(kind==='storm-core')return createStorm();
       if(kind==='mothership'){
         const visual=createImportedMothership(),exhaust=createImportedMothershipExhaust({mobile}),health=createImportedMothershipHealth(visual);
@@ -538,6 +553,10 @@
         record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
         record.torus.rotation.set(.2,0,now*.0005);
       },
+      devourer(body){
+        if(!body||!createDevourer)return;
+        const record=take('devourer',body.id);place(record.root,body.x,body.y,0);record.update(body);
+      },
       storm(body){
         if(!body||!createStorm)return;
         const record=take('storm-core',body.id);place(record.root,body.x,body.y,0);record.update(body);
@@ -665,6 +684,10 @@
         api.ufo('warm-ufo',960,420,pass*30);
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*280,y:540+Math.sin(i*2.1)*280,hp:pass<2?2:0,maxHp:2}))});
+        if(typeof createDevourer==='function'){
+          const body=window.GalaxyDevourer.create('warm-devourer');body.x=960;body.y=540;
+          const pose=window.GalaxyDevourer.snapshot(body);pose.vulnerable=pass===2;pose.attack=pass%2?'charge-warning':'patrol';pose.warning={x:500,y:400};api.devourer(pose);
+        }
         api.menuUfo({x:960,y:230,bank:0,pitch:-.98,angle:pass*30});
         boltMesh.count=bolts;updateEffects();
         // The bundled Three.js compileAsync reads currentProgram before the
@@ -680,7 +703,7 @@
     api.preparing=false;
     api.prepareMatch=(width,height)=>{
       width=Math.max(256,Math.min(mobile?1280:1920,Math.round(Number(width)||W)));
-      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'');
+      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'')+(createDevourer?':devourer':'');
       preparationQueue=preparationQueue.then(async()=>{
         if(preparedViewport===key&&surface.width===width)return {width,height,programs:renderer.info.programs?.length||0};
         api.preparing=true;
@@ -691,6 +714,7 @@
     };
     api.prepareMothership=prepareMothership;
     api.prepareStorm=prepareStorm;
+    api.prepareDevourer=prepareDevourer;
     api.ready=Promise.all(modelLoads).then(async()=>{
       api.preparing=true;
       try{await warmScene(256,144);}finally{api.preparing=false;}
@@ -699,7 +723,7 @@
     });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
-    window.addEventListener('beforeunload',()=>{createStorm?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
+    window.addEventListener('beforeunload',()=>{createStorm?.dispose();createDevourer?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
     return api;
   }
 })();

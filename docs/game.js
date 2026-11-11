@@ -4083,7 +4083,7 @@
         const oldBoss=state?.boss,boss=m.boss;
         if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
           playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
-          playNoticeText=boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
+          playNoticeText=boss.type==='devourer'?tr('devourerIncoming'):boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
           huntFxUntil=0;leaderAnnouncement=null;
         }
       }
@@ -4822,7 +4822,7 @@
     localCampaignGameOver=false;
 
     if(localCampaign&&state?.boss?.phase==='failed'){
-      victoryText.textContent=tr(state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
+      victoryText.textContent=tr(state.boss.type==='devourer'?'devourerDefeat':state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
       if(restartBtn){restartBtn.classList.remove('hidden');restartBtn.disabled=false;restartBtn.textContent=tr('restartCampaign');}
     }else if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
       victoryText.textContent=tr('campaignChampion');
@@ -6375,6 +6375,7 @@
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();
       if(roomCode==='LOCAL'&&localCpu?.needsStormBoss())await window.Galaxy3D.prepareStorm();
+      if(roomCode==='LOCAL'&&localCpu?.needsDevourerBoss())await window.Galaxy3D.prepareDevourer();
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
       await window.Galaxy3D.prepareMatch(canvas.width,canvas.height);
@@ -6930,6 +6931,18 @@
     ctx.restore();
   }
 
+  function drawDevourerProgress(boss){
+    if(boss?.type!=='devourer'||boss.phase!=='fighting')return;
+    const warning=boss.attack==='charge-warning'||boss.attack==='volley-warning';
+    const key=boss.attack==='charge-warning'?'devourerCharge':boss.attack==='volley-warning'||boss.attack==='volley'?'devourerVolley':boss.vulnerable?'devourerOpen':boss.segments>0?'devourerJoint':'devourerClosed';
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.92)';ctx.fillStyle=warning?'#ff9d58':'#ffe6ba';
+    ctx.font=isMobile?'32px Flashback,Arial':'27px Flashback,Arial';
+    const title=tr(key);ctx.strokeText(title,W/2,130);ctx.fillText(title,W/2,130);
+    ctx.font=isMobile?'27px Flashback,Arial':'23px Flashback,Arial';
+    const status=tr(boss.segments>0?'devourerSegments':'devourerHealth',{count:boss.total-boss.segments,total:boss.segments>0?boss.total:boss.maxHp,hp:boss.hp});
+    ctx.strokeText(status,W/2,174);ctx.fillText(status,W/2,174);
+    const lives=tr('stormBossLives',{lives:boss.lives,total:boss.maxLives});ctx.fillStyle=boss.lives<=2?'#ff7777':'#d9f4ff';ctx.strokeText(lives,W/2,214);ctx.fillText(lives,W/2,214);ctx.restore();
+  }
   function drawStormBossProgress(boss){
     if(boss?.type!=='storm-core'||boss.phase!=='fighting')return;
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.9)';
@@ -7138,6 +7151,7 @@
 
     if(localCpuActive&&renderState.mothership)scene3D.mothership(renderState.mothership);
     if(localCpuActive&&renderState.stormCore)scene3D.storm(renderState.stormCore);
+    if(localCpuActive&&renderState.devourer)scene3D.devourer(renderState.devourer);
     for(const a of renderState.asteroids){
       const old=previousLookup.asteroids.get(a.id);
       const x=old?lerp(old.x,a.x,blend):a.x;
@@ -7243,7 +7257,7 @@
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
-    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);}
+    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);drawDevourerProgress(renderState.boss);}
     drawLocalRespawnCountdown(now);
     drawLocalEntryCountdown(now);
     if(perfStats){

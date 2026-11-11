@@ -3,6 +3,7 @@
   const PHYSICS_CORE=window.GalaxyPhysicsCore;
   const MOTHERSHIP=window.GalaxyMothership;
   const STORM=window.GalaxyStormCore;
+  const DEVOURER=window.GalaxyDevourer;
   if(!PHYSICS_CORE)throw new Error('GalaxyPhysicsCore no cargado');
   const W=1920,H=1080,TICK_HZ=60,DT=1/TICK_HZ,STEP_MS=1000/TICK_HZ;
   const DRAG_PER_TICK=Math.pow(0.35,DT);
@@ -162,6 +163,7 @@
       this.meteors=[];
       this.giant=null;
       this.mothership=null;
+      this.devourer=null;
       this.ufo=null;
       // V21.61: la campaña CPU puede tener hasta tres OVNIs simultáneos.
       // this.ufo conserva el principal para no tocar la física compartida;
@@ -1092,7 +1094,7 @@
       this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
       const human=this.makePlayer(0,name,false);
-      this.mothership=null;this.stormCore=null;this.bossEncounter=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;
       this.applyTrainingHardLoadout(human,false);
       this.placeAtSpawn(human);
       this.players.push(human);
@@ -1121,7 +1123,7 @@
     startTraining(brain=null){
       this.trainingMode=true;
       this.bossEncounter=null;
-      this.mothership=null;this.stormCore=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;
       this.learningEnabled=true;
       this.campaignLevel=1;
       this.difficulty='dificil';
@@ -1163,7 +1165,7 @@
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
       return true;
     }
-    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.bossEncounter=null;}
+    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;}
     setControl(turn,thrust,fire,actions={}){
       const p=this.players[0];
       if(!p)return false;
@@ -1259,7 +1261,7 @@
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
-      this.mothership=null;this.stormCore=null;this.bossEncounter=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;
       for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;
@@ -1495,7 +1497,7 @@
       if(victim.cpu)victim.flarePending=null;
       if(!victim.cpu)this.humanMeteorDecision=null;
       // V22.46: toda muerte resta una baja, sin bajar de cero.
-      const stormLife=!!(this.bossEncounter?.type==='storm-core'&&!victim.cpu);
+      const stormLife=!!(['storm-core','devourer'].includes(this.bossEncounter?.type)&&!victim.cpu);
       if(!this.bossEncounter||stormLife)victim.kills=Math.max(0,victim.kills-1);
 
       // V21.33: la embestida con escudo conserva su efecto de colision/baja,
@@ -2524,12 +2526,13 @@
         // Al caducar el input tambien se descartan sus pulsos pendientes.
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
-      this.updateMothership(dt);this.updateStormCore(dt);
-      if(this.bossEncounter?.type!=='storm-core')this.updateAsteroids(dt);
-      this.resolveMothershipContacts();this.resolveStormContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateMothership(dt);this.updateStormCore(dt);this.updateDevourer(dt);
+      if(!['storm-core','devourer'].includes(this.bossEncounter?.type))this.updateAsteroids(dt);
+      this.resolveMothershipContacts();this.resolveStormContacts();this.resolveDevourerContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.absorbDevourerFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);this.absorbDevourerShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
     needsMothershipBoss(){return !!(!this.trainingMode&&MOTHERSHIP&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='mothership');}
     needsUfoBoss(){return !!(!this.trainingMode&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='ufo-wave');}
+    needsDevourerBoss(){return !!(!this.trainingMode&&DEVOURER&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='devourer');}
     needsStormBoss(){return !!(!this.trainingMode&&STORM&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='storm-core');}
     retireBossRivals(){
       for(const p of this.players)if(p.cpu){p.dead=true;p.pendingSpawn=null;p.thrust=false;p.vx=p.vy=0;this.controls.delete(p.index);}
@@ -2537,6 +2540,11 @@
     }
     beginCampaignBoss(winner){
       if(winner.cpu||this.bossEncounter||this.trainingMode)return false;
+      if(this.needsDevourerBoss()){
+        const config=CAMPAIGN.getLevel(this.campaignLevel).boss;
+        this.bossEncounter={type:'devourer',phase:'entering',hp:config.headHp,maxHp:config.headHp,nextAt:this.fxClock+1.5,cleared:false};
+        this.retireBossRivals();return true;
+      }
       if(this.needsStormBoss()){
         const config=CAMPAIGN.getLevel(this.campaignLevel).boss;
         this.bossEncounter={type:'storm-core',phase:'entering',hp:config.coreHp,maxHp:config.coreHp,nextAt:this.fxClock+1.5,cleared:false};
@@ -2557,9 +2565,16 @@
       const boss=this.bossEncounter;if(!boss||this.finished)return;
       if(!boss.cleared){
         this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;this.giant=null;this.meteors.length=0;this.showerLeft=0;this.ufo=null;this.ufoExtras.length=0;this.ufoWaveRemaining=0;this.ufoWaveNext=0;this.nextUfo=999999;boss.cleared=true;
-        if(boss.type==='storm-core')this.asteroids.length=0;
+        if(['storm-core','devourer'].includes(boss.type))this.asteroids.length=0;
       }
       const human=this.players.find(p=>!p.cpu);
+      if(boss.type==='devourer'){
+        if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
+          this.devourer=DEVOURER.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
+          this.asteroids.length=0;human.protection=Math.max(human.protection,2);
+        }
+        return;
+      }
       if(boss.type==='storm-core'){
         if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
           this.stormCore=STORM.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
@@ -2584,12 +2599,20 @@
     }
     finishCampaignBoss(won){
       const boss=this.bossEncounter;if(!boss||this.finished)return;
-      boss.phase=won?'won':'failed';this.mothership=null;this.stormCore=null;
-      if(boss.type==='storm-core'){this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;}
+      boss.phase=won?'won':'failed';this.mothership=null;this.stormCore=null;this.devourer=null;
+      if(['storm-core','devourer'].includes(boss.type)){this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;}
       this.finished=true;this.winner=won?0:-1;
       this.flushLearning();this.emit({t:'victory',winner:this.winner});
     }
     bossCombatTargets(player){
+      if(!player.cpu&&this.devourer&&this.bossEncounter?.phase==='fighting'){
+        const body=this.devourer,slot=DEVOURER.weakSlot(body);
+        if(slot<0&&!DEVOURER.vulnerable(body))return [];
+        const part=slot<0?body:body.segments[slot].joint;
+        const target=this.devourerTarget||(this.devourerTarget={dead:false,camo:0});
+        Object.assign(target,{index:slot<0?4:slot+5,x:part.x,y:part.y,vx:body.vx,vy:body.vy});
+        const roster=this.devourerTargets||(this.devourerTargets=[target]);return roster;
+      }
       if(!player.cpu&&this.stormCore&&this.bossEncounter?.phase==='fighting'){
         const body=this.stormCore,pool=this.stormTargets||(this.stormTargets=Array.from({length:4},(_,i)=>({index:i+4,dead:false,camo:0}))),roster=this.stormTargetRoster||(this.stormTargetRoster=[]);roster.length=0;
         if(STORM.vulnerable(body)){Object.assign(pool[0],{x:body.x,y:body.y,vx:body.vx,vy:body.vy});roster.push(pool[0]);}
@@ -2612,6 +2635,11 @@
         if(!b.guided||b.decoyed||b.flareTarget>=0)continue;
         let target=null;
         if(boss.type==='storm-core'&&this.stormCore){const part=b.target===4?this.stormCore:this.stormCore.satellites[b.target-5];if(part?.hp>0)target=part;}
+        else if(boss.type==='devourer'&&this.devourer){
+          const slot=DEVOURER.weakSlot(this.devourer);
+          if(b.target===4&&slot<0&&DEVOURER.vulnerable(this.devourer))target=this.devourer;
+          else if(b.target===slot+5&&slot>=0)target=this.devourer.segments[slot].joint;
+        }
         else if(boss.type==='mothership'&&b.target===4)target=this.mothership;
         else if(boss.type==='ufo-wave'){
           if(this.ufo?.bossOrdinal===b.target-3)target=this.ufo;
@@ -2620,6 +2648,51 @@
         if(!target)continue;
         const dx=target.x-b.x,dy=target.y-b.y,distance=Math.hypot(dx,dy),speed=Math.hypot(b.vx,b.vy)||1;if(distance<=1)continue;
         const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
+      }
+    }
+    updateDevourer(dt){
+      const body=this.devourer;if(!body)return;
+      const shots=DEVOURER.step(body,dt,this.players.find(p=>!p.cpu),uid);
+      const active=this.bullets.reduce((n,b)=>n+(b.devourer?1:0),0);
+      if(shots.length&&active<48){this.bullets.push(...shots.slice(0,48-active));this.emit({t:'sound',kind:'laser'});}
+    }
+    resolveDevourerContacts(){
+      const body=this.devourer;if(!body)return;
+      for(const p of this.players){
+        if(p.cpu||p.dead||p.spawnFx>0)continue;
+        const wrapped=Math.abs(p.x-(p.px??p.x))>W*.5||Math.abs(p.y-(p.py??p.y))>H*.5;
+        const hit=DEVOURER.firstHit(body,{px:wrapped?p.x:(p.px??p.x),py:wrapped?p.y:(p.py??p.y),x:p.x,y:p.y},shipCollisionRadius(p),{hullOnly:true});
+        if(!hit)continue;
+        if(p.protection>0||p.shield>0){
+          const dx=p.x-hit.part.x,dy=p.y-hit.part.y,length=Math.hypot(dx,dy),nx=length>1e-6?dx/length:1,ny=length>1e-6?dy/length:0,r=hit.r+shipCollisionRadius(p)+2;
+          p.x=hit.part.x+nx*r;p.y=hit.part.y+ny*r;p.vx=nx*110;p.vy=ny*110;this.emitShipImpact(p,hit.part,false);
+        }else this.destroyShip(p,null);
+      }
+    }
+    damageDevourer(body,hit,weapon,owner){
+      if(!body||this.devourer!==body||this.finished)return;
+      const result=DEVOURER.damage(body,hit,weapon);if(!result)return;
+      this.bossEncounter.hp=body.hp;
+      if(result.shielded){this.emitRocketDisintegrateAt(hit.x,hit.y,owner);return;}
+      this.emitExplosionAt(hit.x,hit.y,owner);this.emit({t:'sound',kind:'impact'});
+      if(result.destroyed&&hit.slot>=0){const part=body.segments[hit.slot];this.emitExplosionAt(part.x,part.y,owner);}
+      if(result.won){for(const dx of [-60,0,60])this.emitExplosionAt(body.x+dx,body.y,owner);this.finishCampaignBoss(true);}
+    }
+    absorbDevourerShots(dt){
+      const body=this.devourer;if(!body)return;
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const b=this.bullets[i];if(!(Number(b.owner)>=0))continue;
+        const hit=DEVOURER.firstHit(body,{px:b.x,py:b.y,x:b.x+b.vx*dt,y:b.y+b.vy*dt},b.guided?MISSILE_HIT_RADIUS:BULLET_RADIUS);
+        if(!hit)continue;
+        this.bullets.splice(i,1);this.damageDevourer(body,hit,b.guided?'missile':'bullet',b.owner);if(!this.devourer)break;
+      }
+    }
+    absorbDevourerFlares(){
+      const body=this.devourer;if(!body)return;
+      for(let i=this.flares.length-1;i>=0;i--){
+        const f=this.flares[i],hit=DEVOURER.firstHit(body,{px:f.px??f.x,py:f.py??f.y,x:f.x,y:f.y},FLARE_RADIUS);
+        if(!hit)continue;
+        this.flares.splice(i,1);this.damageDevourer(body,hit,'flare',f.owner);if(!this.devourer)break;
       }
     }
     updateStormCore(dt){
@@ -3675,8 +3748,9 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
+        devourer:DEVOURER?.snapshot(this.devourer)||null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,
