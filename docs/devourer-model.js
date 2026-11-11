@@ -5,7 +5,12 @@ export const DEVOURER_RADII=Object.freeze({head:68,segment:39,joint:23});
 export function prepareDevourerTemplate(T,source,kind){
   const node=source.getObjectByName('DEVOURER_'+kind.toUpperCase());
   if(!node)throw new Error('Falta DEVOURER_'+kind.toUpperCase());
-  const root=new T.Group(),axis=new T.Group();axis.rotation.x=Math.PI/2;axis.add(node.clone(true));root.add(axis);
+  const root=new T.Group(),axis=new T.Group(),part=node.clone(true);
+  // Blender can export the complete preview scene. Gameplay owns each root's
+  // position and the jaw pose; keep the authored mesh/material edits underneath.
+  part.position.set(0,0,0);
+  for(let i=0;i<3;i++)part.getObjectByName('JAW_'+i)?.rotation.set(0,0,0);
+  axis.rotation.x=Math.PI/2;axis.add(part);root.add(axis);
   root.updateMatrixWorld(true);const v=new T.Vector3();let radius=0;
   root.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;
     for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);radius=Math.max(radius,Math.hypot(v.x,v.y));}
@@ -16,7 +21,8 @@ export function prepareDevourerTemplate(T,source,kind){
 export async function loadDevourerTemplates(T){
   const url=new URL('./assets/models/devorador.glb',import.meta.url);url.search=new URL(import.meta.url).search;
   const gltf=await new GLTFLoader().loadAsync(url.href),templates={};
-  for(const kind of ['head','segment','joint'])templates[kind]=prepareDevourerTemplate(T,gltf.scene,kind);
+  const source=gltf.scenes.find(scene=>scene.getObjectByName('DEVOURER_HEAD'))||gltf.scene;
+  for(const kind of ['head','segment','joint'])templates[kind]=prepareDevourerTemplate(T,source,kind);
   return templates;
 }
 export function createDevourerFactory(T,{templates,environment=null,reducedMotion=false}={}){
