@@ -61,7 +61,7 @@
     },
     {
       id:4,nameKey:'campaignWorld4',
-      boss:{type:'devourer',segments:5,segmentHp:3,headHp:8},
+      boss:{type:'devourer',segments:5,segmentHp:1,headHp:8},
       background:{file:'assets/sprites/fondo04.jpg',mobileKey:'bg04',stars:false},
       ufos:3,
       hazards:{

@@ -19,6 +19,7 @@ on:
       - 'docs/assets/models/devorador.glb'
       - 'tools/check-devourer-boss.js'
       - 'tools/check-devourer-model.mjs'
+      - 'tools/check-devourer-motion.js'
       - 'tools/build-devourer.py'
       - 'docs/physics-core.js'
       - 'docs/collision-profiles.js'
@@ -134,6 +135,7 @@ on:
       - 'docs/assets/models/devorador.glb'
       - 'tools/check-devourer-boss.js'
       - 'tools/check-devourer-model.mjs'
+      - 'tools/check-devourer-motion.js'
       - 'tools/build-devourer.py'
       - 'docs/physics-core.js'
       - 'docs/collision-profiles.js'
@@ -327,7 +329,7 @@ jobs:
       - name: Check level-three storm boss and authored GLBs
         run: node tools/check-storm-boss.js && node tools/check-storm-model.mjs && node tools/check-storm-fire.mjs
       - name: Check phase-four devourer combat and authored model
-        run: node tools/check-devourer-boss.js && node tools/check-devourer-model.mjs
+        run: node tools/check-devourer-boss.js && node tools/check-devourer-model.mjs && node tools/check-devourer-motion.js
       - name: Check level-two UFO wave identity, counts and progression
         run: node tools/check-ufo-boss.js
       - name: Check decorative menu UFO timing and clearance

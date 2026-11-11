@@ -1390,7 +1390,7 @@ window.GALAXY_CONFIG = {
     },
     {
       id:4,nameKey:'campaignWorld4',
-      boss:{type:'devourer',segments:5,segmentHp:3,headHp:8},
+      boss:{type:'devourer',segments:5,segmentHp:1,headHp:8},
       background:{file:'assets/sprites/fondo04.jpg',mobileKey:'bg04',stars:false},
       ufos:3,
       hazards:{
@@ -5143,13 +5143,26 @@ window.GALAXY_CONFIG = {
   const remaining=b=>b.segments.reduce((n,p)=>n+(p.hp>0?1:0),0);
   function weakSlot(body){for(let i=body.segments.length-1;i>=0;i--)if(body.segments[i].hp>0)return i;return -1;}
   const vulnerable=b=>weakSlot(b)<0&&['volley-warning','volley','recover'].includes(b.attack);
+  // One simple, wide, undulating loop. Every segment samples the same trail
+  // by travelled distance, so slowing, aiming and charging cannot fold the body.
+  const PATH_STEPS=1024,TAU=Math.PI*2,PATH=new Float64Array(PATH_STEPS+1);
+  const curve=t=>({x:960+650*Math.cos(t),y:540+300*Math.sin(t)+90*Math.sin(3*t),angle:Math.atan2(300*Math.cos(t)+270*Math.cos(3*t),-650*Math.sin(t))});
+  for(let i=1,previous=curve(0);i<=PATH_STEPS;i++){
+    const point=curve(i*TAU/PATH_STEPS);PATH[i]=PATH[i-1]+Math.hypot(point.x-previous.x,point.y-previous.y);previous=point;
+  }
+  function pathPose(distance){
+    const at=((distance%PATH[PATH_STEPS])+PATH[PATH_STEPS])%PATH[PATH_STEPS];let low=0,high=PATH_STEPS;
+    while(high-low>1){const mid=(low+high)>>1;if(PATH[mid]<=at)low=mid;else high=mid;}
+    return curve((low+(at-PATH[low])/(PATH[high]-PATH[low]))*TAU/PATH_STEPS);
+  }
   function create(id,config={}){
-    const count=clamp(Math.round(config.segments||5),1,5),hp=config.headHp||8,segmentHp=config.segmentHp||3;
-    const body={id,x:1660,y:260,px:1660,py:260,vx:0,vy:0,angle:Math.PI,age:0,hp,maxHp:hp,
+    const count=clamp(Math.round(config.segments||5),1,5),hp=config.headHp||8,segmentHp=config.segmentHp||1;
+    const pathDistance=PATH[PATH_STEPS]-280,pose=pathPose(pathDistance);
+    const body={id,x:pose.x,y:pose.y,px:pose.x,py:pose.y,vx:0,vy:0,angle:pose.angle,age:0,hp,maxHp:hp,pathDistance,pathSpeed:142,
       attack:'patrol',until:4,cycle:0,nextVolley:0,volleys:0,warning:null,charge:null,
-      segments:Array.from({length:count},(_,slot)=>({slot,hp:segmentHp,maxHp:segmentHp,x:1660+(slot+1)*SPACING+60,y:260,px:0,py:260,angle:Math.PI,joint:{x:0,y:260,px:0,py:260}}))};
-    let lead=body;
-    for(const p of body.segments){p.px=p.x;p.joint.x=p.joint.px=(p.x+lead.x)/2;lead=p;}
+      segments:Array.from({length:count},(_,slot)=>({slot,hp:segmentHp,maxHp:segmentHp,x:0,y:0,px:0,py:0,angle:0,joint:{x:0,y:0,px:0,py:0}}))};
+    follow(body);
+    for(const p of body.segments){p.px=p.x;p.py=p.y;p.joint.px=p.joint.x;p.joint.py=p.joint.y;}
     return body;
   }
   function follow(body){
@@ -5157,56 +5170,65 @@ window.GALAXY_CONFIG = {
     for(const p of body.segments){
       if(p.hp<=0)continue;
       p.px=p.x;p.py=p.y;p.joint.px=p.joint.x;p.joint.py=p.joint.y;
-      const dx=lead.x-p.x,dy=lead.y-p.y,length=Math.hypot(dx,dy)||1;
-      const spacing=lead===body?SPACING+60:SPACING;
-      p.x=lead.x-dx/length*spacing;p.y=lead.y-dy/length*spacing;p.angle=Math.atan2(dy,dx);
+      const point=pathPose(body.pathDistance-(p.slot+1)*SPACING-60);
+      p.x=point.x;p.y=point.y;p.angle=Math.atan2(lead.y-p.y,lead.x-p.x);
       p.joint.x=(p.x+lead.x)/2;p.joint.y=(p.y+lead.y)/2;lead=p;
     }
+  }
+  function chargeTarget(body,target){
+    const tx=target.x+(Number(target.vx)||0)*.2,ty=target.y+(Number(target.vy)||0)*.2;
+    let best=null,score=Infinity;
+    for(let distance=400;distance<=670;distance+=15){
+      const point=pathPose(body.pathDistance+distance),d=(point.x-tx)**2+(point.y-ty)**2;
+      if(d<score){score=d;best={x:point.x,y:point.y,destination:body.pathDistance+distance,locked:false};}
+    }
+    return best;
   }
   function step(body,dt,target,uid){
     if(!body||body.hp<=0||!(dt>0))return [];
     body.age+=dt;body.px=body.x;body.py=body.y;
-    const count=remaining(body),speed=142+(body.segments.length-count)*19+(count===0?30:0),shots=[];
+    const count=remaining(body),speed=142+(body.segments.length-count)*19+(count===0?30:0),shots=[];let movementDt=dt;
     const active=target&&!target.dead&&!(target.spawnFx>0);
     if(!active){body.warning=null;body.charge=null;body.attack='patrol';body.until=body.age+2;}
     if(active&&body.age+1e-8>=body.until){
       if(body.attack==='patrol'){
         const volley=body.cycle++%2===0;
         body.attack=volley?'volley-warning':'charge-warning';body.until=body.age+(volley?1.15:1.35);
-        body.warning={x:target.x,y:target.y,locked:false};
+        body.warning=volley?{x:target.x,y:target.y,locked:false}:chargeTarget(body,target);
       }else if(body.attack==='volley-warning'){
         body.attack='volley';body.volleys=0;body.nextVolley=body.age;body.until=body.age+.75;
       }else if(body.attack==='charge-warning'){
-        const angle=Math.atan2(body.warning.y-body.y,body.warning.x-body.x),distance=Math.min(780,Math.hypot(body.warning.x-body.x,body.warning.y-body.y)+180);
-        const ex=clamp(body.x+Math.cos(angle)*distance,100,1820),ey=clamp(body.y+Math.sin(angle)*distance,120,960);
-        body.charge={x:body.x,y:body.y,ex,ey,start:body.age,duration:1.05};body.attack='charge';body.until=body.age+1.05;body.warning=null;
+        const duration=1.35,start=body.age-dt,distance=body.warning.destination-body.pathDistance;
+        body.charge={start,duration,distance,from:body.pathDistance,entrySpeed:body.pathSpeed,exitSpeed:speed*.55};
+        body.attack='charge';body.until=start+duration;body.warning=null;
       }else if(body.attack==='volley'||body.attack==='charge'){
+        if(body.charge){
+          body.pathDistance=body.charge.from+body.charge.distance;body.pathSpeed=body.charge.exitSpeed;movementDt=Math.max(0,body.age-body.until);
+        }
         body.attack='recover';body.until=body.age+(count?1.8:2.4);body.warning=null;body.charge=null;
       }else{body.attack='patrol';body.until=body.age+(count?3.6:2.4);}
     }
     if(body.warning){
       // The final quarter-second fixes the charge destination so it can be dodged.
       if(body.attack!=='charge-warning'||body.until-body.age>.25){
-        const lead=body.attack==='charge-warning'?.2:0;
-        body.warning.x=clamp(target.x+(Number(target.vx)||0)*lead,70,1850);
-        body.warning.y=clamp(target.y+(Number(target.vy)||0)*lead,90,990);
+        if(body.attack==='charge-warning')body.warning=chargeTarget(body,target);
+        else{body.warning.x=target.x;body.warning.y=target.y;}
       }else body.warning.locked=true;
     }
     if(body.attack==='charge'&&body.charge){
-      const c=body.charge,t=clamp((body.age-c.start)/c.duration,0,1),ease=t*t*(3-2*t);
-      body.x=c.x+(c.ex-c.x)*ease;body.y=c.y+(c.ey-c.y)*ease;
+      const c=body.charge,t=clamp((body.age-c.start)/c.duration,0,1),t2=t*t,t3=t2*t;
+      body.pathDistance=c.from+(3*t2-2*t3)*c.distance+(t3-2*t2+t)*c.entrySpeed*c.duration+(t3-t2)*c.exitSpeed*c.duration;
+      body.pathSpeed=((6*t-6*t2)*c.distance+(3*t2-4*t+1)*c.entrySpeed*c.duration+(3*t2-2*t)*c.exitSpeed*c.duration)/c.duration;
     }else{
-      const tx=960+580*Math.sin(body.age*.23),ty=540+290*Math.sin(body.age*.39+.7);
-      let desired=Math.atan2(ty-body.y,tx-body.x);
-      if(body.attack==='volley-warning'||body.attack==='volley')desired=Math.atan2(target.y-body.y,target.x-body.x);
-      if(body.attack==='charge-warning')desired=Math.atan2(body.warning.y-body.y,body.warning.x-body.x);
-      const turn=clamp(angleDelta(desired,body.angle),-2.2*dt,2.2*dt);body.angle+=turn;
       const factor=body.attack==='patrol'?1:body.attack==='recover'?.55:.22;
-      body.x=clamp(body.x+Math.cos(body.angle)*speed*factor*dt,92,1828);
-      body.y=clamp(body.y+Math.sin(body.angle)*speed*factor*dt,112,968);
+      const goal=speed*factor,decay=Math.exp(-movementDt/.28);
+      body.pathDistance+=goal*movementDt+(body.pathSpeed-goal)*.28*(1-decay);body.pathSpeed=goal+(body.pathSpeed-goal)*decay;
     }
+    const pose=pathPose(body.pathDistance);body.x=pose.x;body.y=pose.y;
+    const aiming=active&&(body.attack==='volley-warning'||body.attack==='volley');
+    const desired=pose.angle+(aiming?clamp(angleDelta(Math.atan2(target.y-body.y,target.x-body.x),pose.angle),-1.05,1.05):0);
+    body.angle+=clamp(angleDelta(desired,body.angle),-2.2*dt,2.2*dt);
     body.vx=(body.x-body.px)/dt;body.vy=(body.y-body.py)/dt;
-    if(body.attack==='charge'&&Math.hypot(body.vx,body.vy)>1)body.angle=Math.atan2(body.vy,body.vx);
     follow(body);
     if(active&&body.attack==='volley'&&body.volleys<3&&body.age+1e-8>=body.nextVolley){
       const aim=body.angle,n=count?5:7;

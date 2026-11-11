@@ -29,11 +29,10 @@ for(const dt of [1/30,1/60,1/120]){
   assert.equal(S.weakSlot(b),4);const headHp=b.hp;
   shotAt(f,-1,'missile');assert.equal(b.hp,headHp,'armored head cannot be rushed');
   const saved=b.segments[0].hp;shotAt(f,0,'missile');assert.equal(b.segments[0].hp,saved,'only the illuminated connector is vulnerable');
-  shotAt(f,4,'missile',true);assert.equal(b.segments[4].hp,3,'armor is distinct from the glowing joint');
+  shotAt(f,4,'missile',true);assert.equal(b.segments[4].hp,1,'armor is distinct from the glowing joint');
   for(let slot=4;slot>=0;slot--){
     assert.equal(e.bossCombatTargets(e.players[0])[0].index,slot+5);
-    shotAt(f,slot,'bullet');assert.equal(b.segments[slot].hp,2);
-    shotAt(f,slot,'missile');assert.equal(b.segments[slot].hp,0);assert.equal(S.weakSlot(b),slot-1);
+    shotAt(f,slot,'bullet');assert.equal(b.segments[slot].hp,0,'one normal bullet destroys the illuminated orange joint');assert.equal(S.weakSlot(b),slot-1);
   }
   assert.equal(S.remaining(b),0);let uid=0;const target={x:300,y:500,vx:0,vy:0};
   for(let n=0;n<1200&&!S.vulnerable(b);n++)S.step(b,dt,target,()=>++uid);
@@ -84,8 +83,8 @@ for(const dt of [1/30,1/60,1/120]){
   e.bullets=[{id:1234,devourer:true,owner:-4,x:200,y:800,px:200,py:800,vx:6000,vy:0,age:0,travel:0,guided:false}];
   e.updateBullets(1/60);assert.equal(p.dead,true,'boss bullets cause real ship damage');assert.equal(p.kills,4);
   const joint=body.segments[4].joint;
-  e.flares=[{id:1235,owner:0,x:joint.x,y:joint.y,px:joint.x,py:joint.y,life:3}];e.absorbDevourerFlares();assert.equal(body.segments[4].hp,1,'flares can damage the exposed connector');
   const missile={guided:true,target:9,decoyed:false,flareTarget:-1,x:joint.x-300,y:joint.y-200,vx:400,vy:0};e.bullets=[missile];e.guideBossMissiles(1/60);assert.ok(missile.vy>0);assert.ok(Math.abs(Math.hypot(missile.vx,missile.vy)-400)<1e-6);
+  e.flares=[{id:1235,owner:0,x:joint.x,y:joint.y,px:joint.x,py:joint.y,life:3}];e.absorbDevourerFlares();assert.equal(body.segments[4].hp,0,'one flare also destroys the exposed connector');
 }
 for(const language of ['es','en','it','fr','de','zh']){
   const c=vm.createContext({window:{},localStorage:{getItem:()=>language},document:{querySelectorAll:()=>[],getElementById:()=>null,documentElement:{}}});
