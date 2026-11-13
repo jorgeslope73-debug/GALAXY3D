@@ -23,9 +23,15 @@ for(const fps of [30,60,120])for(const style of ['still','circling','reversing']
       const p=parts[i];assert.ok(p.x>=230&&p.x<=1690&&p.y>=190&&p.y<=890,'the whole boss stays inside the arena');
       assert.ok(Math.hypot(p.x-p.px,p.y-p.py)<850*dt,'changing attacks never teleports a segment');
       for(let j=i+1;j<parts.length;j++){
-        // Include an extra 18px around the open jaws, beyond the physical head radius.
-        const margin=Math.hypot(p.x-parts[j].x,p.y-parts[j].y)-(i===0?S.HEAD_RADIUS+18:S.SEGMENT_RADIUS)-S.SEGMENT_RADIUS;
+        // The connected neck is checked against the real GLB in the model test.
+        // Other pairs keep the conservative extra 18px around the open jaws.
+        const headRadius=i===0?S.HEAD_RADIUS+(j===1?0:18):S.SEGMENT_RADIUS;
+        const margin=Math.hypot(p.x-parts[j].x,p.y-parts[j].y)-headRadius-S.SEGMENT_RADIUS;
         clearance=Math.min(clearance,margin);assert.ok(margin>6,'no segment overlaps another segment or the open head');
+        if(i===0&&j===1){
+          assert.ok(Math.hypot(p.x-parts[j].x,p.y-parts[j].y)<=120.001,'the neck does not reopen its old 156px gap');
+          assert.ok(Math.abs(parts[j].joint.x-(p.x+(parts[j].x-p.x)*.65))<1e-8,'the neck joint stays attached at its calibrated position');
+        }
       }
       for(let j=i+2;j<parts.length-1;j++)assert.equal(crosses(parts[i],parts[i+1],parts[j],parts[j+1]),false,'the centerline never crosses itself');
     }

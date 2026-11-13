@@ -3737,6 +3737,13 @@
         id:u.id,x:round1(u.x),y:round1(u.y),vx:round1(u.vx),vy:round1(u.vy),
         hp:Math.max(0,Math.round(Number(u.hp)||0))
       }));
+      const devourer=DEVOURER?.snapshot(this.devourer)||null;
+      if(devourer?.warning){
+        // Contacts can push the pilot after the boss steps. Mark the final visible pose.
+        const pilot=this.players.find(p=>!p.cpu);
+        if(!pilot||pilot.dead||pilot.spawnFx>0)devourer.warning=null;
+        else{devourer.warning.targetX=round1(pilot.x);devourer.warning.targetY=round1(pilot.y);}
+      }
       return{
         t:'state',seq:++this.seq,code:'LOCAL',mode:'cpu',started:this.started,finished:this.finished,winner:this.winner,
         w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,simTime:round3(this.fxClock),
@@ -3750,7 +3757,7 @@
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
         boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
-        devourer:DEVOURER?.snapshot(this.devourer)||null,
+        devourer,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,

@@ -1,3 +1,5 @@
+V24.53: reduce la separacion entre la cabeza y el primer segmento de EL DEVORADOR, con la union naranja accesible y sin solapamientos al girar. El circulo de marcado sigue la posicion real de la nave, tambien al cruzar bordes o tras un empujon; el destino de la carga permanece en su curva segura. Prueba directa y juego principal sincronizados.
+
 V24.52: compatibilidad del devorador con exportaciones completas de Blender. La carga selecciona la escena del jefe, descarta las posiciones de presentacion de las tres piezas y normaliza las mandibulas antes de medir su escala. Se conserva el GLB subido por el usuario. Incluye las uniones de una bala y el recorrido ondulado sin cruces de V24.51.
 
 V24.51: cada union naranja iluminada de EL DEVORADOR se destruye con una bala. La cabeza y los segmentos recorren una misma curva ondulada, separados por distancia recorrida. Las cargas aceleran sobre esa trayectoria, con destino anunciado y sin pliegues ni cruces del cuerpo. Se conservan el reactor de la cabeza, las vidas y el avance a fase 5.

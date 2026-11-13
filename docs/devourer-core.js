@@ -1,7 +1,7 @@
 'use strict';
 // Phase-four authority. The renderer consumes these poses, never runs combat.
 (() => {
-  const HEAD_RADIUS=68,SEGMENT_RADIUS=39,JOINT_RADIUS=23,SPACING=96;
+  const HEAD_RADIUS=68,SEGMENT_RADIUS=39,JOINT_RADIUS=23,SPACING=96,NECK_SPACING=120;
   const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2});
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
@@ -35,9 +35,11 @@
     for(const p of body.segments){
       if(p.hp<=0)continue;
       p.px=p.x;p.py=p.y;p.joint.px=p.joint.x;p.joint.py=p.joint.y;
-      const point=pathPose(body.pathDistance-(p.slot+1)*SPACING-60);
+      const point=pathPose(body.pathDistance-NECK_SPACING-p.slot*SPACING);
       p.x=point.x;p.y=point.y;p.angle=Math.atan2(lead.y-p.y,lead.x-p.x);
-      p.joint.x=(p.x+lead.x)/2;p.joint.y=(p.y+lead.y)/2;lead=p;
+      // Place the shorter neck's orange weak point clear of the head armor.
+      const mix=lead===body?.65:.5;
+      p.joint.x=lead.x+(p.x-lead.x)*mix;p.joint.y=lead.y+(p.y-lead.y)*mix;lead=p;
     }
   }
   function chargeTarget(body,target){
@@ -79,6 +81,8 @@
         if(body.attack==='charge-warning')body.warning=chargeTarget(body,target);
         else{body.warning.x=target.x;body.warning.y=target.y;}
       }else body.warning.locked=true;
+      // The reticle marks the pilot; the charge destination stays on the safe trail.
+      body.warning.targetX=target.x;body.warning.targetY=target.y;
     }
     if(body.attack==='charge'&&body.charge){
       const c=body.charge,t=clamp((body.age-c.start)/c.duration,0,1),t2=t*t,t3=t2*t;
