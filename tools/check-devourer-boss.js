@@ -56,7 +56,7 @@ for(const dt of [1/30,1/60,1/120]){
   const f=fixture(),b=enter(f),{e,S}=f,p=e.players[0];let id=0,sawWarning=false,sawCharge=false,sawVolley=false,locked=null;
   for(let i=0;i<3600;i++){
     const old=b.attack,shots=S.step(b,1/60,{x:350+Math.sin(i*.01)*250,y:700,vx:70,vy:0},()=>++id);
-    if(b.attack==='charge-warning'){sawWarning=true;if(b.warning.locked){if(locked)assert.deepEqual({...b.warning},{...locked},'charge marker stays fixed for the last quarter-second');locked={...b.warning};}}
+    if(b.attack==='charge-warning'){sawWarning=true;if(b.warning.locked){const endpoint={x:b.warning.x,y:b.warning.y,destination:b.warning.destination};if(locked)assert.deepEqual(endpoint,locked,'charge destination stays fixed for the last quarter-second');locked=endpoint;}}
     if(b.attack==='charge'){assert.ok(sawWarning);sawCharge=true;}else if(old==='charge')locked=null;
     if(shots.length){sawVolley=true;assert.equal(old==='volley'||old==='volley-warning',true);assert.equal(shots.length,5);assert.ok(shots.every(s=>s.devourer&&s.owner===-4));}
     for(const part of [b,...b.segments]){assert.ok(Number.isFinite(part.x)&&Number.isFinite(part.y));assert.ok(Math.hypot(part.x-part.px,part.y-part.py)<30,'body movement has no screen-wide teleport');}
@@ -85,6 +85,35 @@ for(const dt of [1/30,1/60,1/120]){
   const joint=body.segments[4].joint;
   const missile={guided:true,target:9,decoyed:false,flareTarget:-1,x:joint.x-300,y:joint.y-200,vx:400,vy:0};e.bullets=[missile];e.guideBossMissiles(1/60);assert.ok(missile.vy>0);assert.ok(Math.abs(Math.hypot(missile.vx,missile.vy)-400)<1e-6);
   e.flares=[{id:1235,owner:0,x:joint.x,y:joint.y,px:joint.x,py:joint.y,life:3}];e.absorbDevourerFlares();assert.equal(body.segments[4].hp,0,'one flare also destroys the exposed connector');
+}
+// The lock freezes the safe charge endpoint, never the pilot's visible reticle.
+for(const dt of [1/30,1/60,1/120]){
+  const f=fixture(),body=enter(f,dt),{S,e}=f,p=e.players[0];let warnings=0,locked=null;
+  for(let i=0;i<Math.round(45/dt);i++){
+    const t=i*dt;
+    Object.assign(p,{x:t<5?300:((300+t*730)%1920),y:((700-t*310)%1080+1080)%1080,vx:730,vy:-310});
+    S.step(body,dt,p,()=>1);
+    if(body.warning){
+      assert.equal(body.warning.targetX,p.x);assert.equal(body.warning.targetY,p.y);
+      const snapshot=e.publicState(),pilot=snapshot.players[0],warning=snapshot.devourer.warning;
+      assert.equal(warning.targetX,pilot.x);assert.equal(warning.targetY,pilot.y);
+      warning.targetX=-999;assert.equal(body.warning.targetX,p.x,'reticle snapshots are independent');
+    }
+    if(body.attack==='charge-warning'){
+      warnings++;
+      if(body.warning.locked){
+        const endpoint=[body.warning.x,body.warning.y,body.warning.destination];
+        if(locked)assert.deepEqual(endpoint,locked,'moving/wrapping pilot cannot move a locked endpoint');locked=endpoint;
+      }
+    }else locked=null;
+  }
+  assert.ok(warnings>20);
+  body.attack='charge-warning';body.until=body.age+1;body.warning={x:900,y:200,targetX:1,targetY:1,destination:body.pathDistance+500};
+  p.x=345.678;p.y=789.123;const visible=e.publicState();
+  assert.equal(visible.devourer.warning.targetX,visible.players[0].x,'post-contact pilot pose is used');
+  p.dead=true;assert.equal(e.publicState().devourer.warning,null,'death hides the reticle immediately');
+  S.step(body,dt,p,()=>1);assert.equal(body.warning,null);
+  p.dead=false;p.spawnFx=1;S.step(body,dt,p,()=>1);assert.equal(body.warning,null,'spawning pilots are not marked');
 }
 for(const language of ['es','en','it','fr','de','zh']){
   const c=vm.createContext({window:{},localStorage:{getItem:()=>language},document:{querySelectorAll:()=>[],getElementById:()=>null,documentElement:{}}});

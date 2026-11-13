@@ -5136,7 +5136,7 @@ window.GALAXY_CONFIG = {
 'use strict';
 // Phase-four authority. The renderer consumes these poses, never runs combat.
 (() => {
-  const HEAD_RADIUS=68,SEGMENT_RADIUS=39,JOINT_RADIUS=23,SPACING=96;
+  const HEAD_RADIUS=68,SEGMENT_RADIUS=39,JOINT_RADIUS=23,SPACING=96,NECK_SPACING=120;
   const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2});
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
@@ -5170,9 +5170,11 @@ window.GALAXY_CONFIG = {
     for(const p of body.segments){
       if(p.hp<=0)continue;
       p.px=p.x;p.py=p.y;p.joint.px=p.joint.x;p.joint.py=p.joint.y;
-      const point=pathPose(body.pathDistance-(p.slot+1)*SPACING-60);
+      const point=pathPose(body.pathDistance-NECK_SPACING-p.slot*SPACING);
       p.x=point.x;p.y=point.y;p.angle=Math.atan2(lead.y-p.y,lead.x-p.x);
-      p.joint.x=(p.x+lead.x)/2;p.joint.y=(p.y+lead.y)/2;lead=p;
+      // Place the shorter neck's orange weak point clear of the head armor.
+      const mix=lead===body?.65:.5;
+      p.joint.x=lead.x+(p.x-lead.x)*mix;p.joint.y=lead.y+(p.y-lead.y)*mix;lead=p;
     }
   }
   function chargeTarget(body,target){
@@ -5214,6 +5216,8 @@ window.GALAXY_CONFIG = {
         if(body.attack==='charge-warning')body.warning=chargeTarget(body,target);
         else{body.warning.x=target.x;body.warning.y=target.y;}
       }else body.warning.locked=true;
+      // The reticle marks the pilot; the charge destination stays on the safe trail.
+      body.warning.targetX=target.x;body.warning.targetY=target.y;
     }
     if(body.attack==='charge'&&body.charge){
       const c=body.charge,t=clamp((body.age-c.start)/c.duration,0,1),t2=t*t,t3=t2*t;
@@ -9016,6 +9020,13 @@ window.GALAXY_CONFIG = {
         id:u.id,x:round1(u.x),y:round1(u.y),vx:round1(u.vx),vy:round1(u.vy),
         hp:Math.max(0,Math.round(Number(u.hp)||0))
       }));
+      const devourer=DEVOURER?.snapshot(this.devourer)||null;
+      if(devourer?.warning){
+        // Contacts can push the pilot after the boss steps. Mark the final visible pose.
+        const pilot=this.players.find(p=>!p.cpu);
+        if(!pilot||pilot.dead||pilot.spawnFx>0)devourer.warning=null;
+        else{devourer.warning.targetX=round1(pilot.x);devourer.warning.targetY=round1(pilot.y);}
+      }
       return{
         t:'state',seq:++this.seq,code:'LOCAL',mode:'cpu',started:this.started,finished:this.finished,winner:this.winner,
         w:W,h:H,scoreToWin:SCORE_TO_WIN,fxVersion:1,simTime:round3(this.fxClock),
@@ -9029,7 +9040,7 @@ window.GALAXY_CONFIG = {
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
         boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
-        devourer:DEVOURER?.snapshot(this.devourer)||null,
+        devourer,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,

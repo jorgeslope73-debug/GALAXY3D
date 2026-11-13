@@ -62,8 +62,8 @@ export function createDevourerFactory(T,{templates,environment=null,reducedMotio
         const pulse=weak&&!reducedMotion?1+.09*Math.sin(body.age*8):1;
         record.joint.scale.setScalar(templates.joint.scale.x*pulse);
       }
-      target.visible=body.attack==='charge-warning'&&!!body.warning;
-      if(target.visible){target.position.set(body.warning.x-body.x,body.y-body.warning.y,7);target.scale.setScalar(reducedMotion?1:1+.15*Math.sin(body.age*12));}
+      target.visible=body.attack==='charge-warning'&&Number.isFinite(body.warning?.targetX)&&Number.isFinite(body.warning?.targetY);
+      if(target.visible){target.position.set(body.warning.targetX-body.x,body.y-body.warning.targetY,7);target.scale.setScalar(reducedMotion?1:1+.15*Math.sin(body.age*12));}
     };
     return {root,update,jaws,segments,target};
   }
