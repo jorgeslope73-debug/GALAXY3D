@@ -13,18 +13,22 @@ let triangles=0,draws=0;
 gltf.scene.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});
 assert.ok(triangles<6500);assert.ok(draws<45);
 for(const reducedMotion of [false,true]){
- const factory=createVoidFactory(T,{template:gltf.scene,reducedMotion}),a=factory(),b=S.create(1);a.update(b);a.root.updateMatrixWorld(true);
- const closed=new T.Box3().setFromObject(a.outer),v=new T.Vector3();a.outer.getWorldPosition(v);
- b.outerGate=b.innerGate=1;b.inside=true;b.roofOpen=true;b.age=4;a.update(b);a.root.updateMatrixWorld(true);
- const opened=new T.Box3().setFromObject(a.outer);
- assert.ok(Math.abs(opened.max.z-closed.max.z+95)<.01,'gate retracts below the flight deck');
- assert.equal(a.roof.visible,false);assert.equal(a.shield.visible,false);
- // Real GLB wall vertices retain the authority footprint and aperture.
- for(const [name,radius,portal,half] of [['VOID_OUTER_WALL',410,Math.PI,20],['VOID_INNER_WALL',235,0,30]]){
-   const wall=a.root.getObjectByName(name);let maximum=0;wall.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);maximum=Math.max(maximum,Math.hypot(v.x,v.y));}});
-   assert.ok(Math.abs(maximum-(radius+12))<.01,'authored wall matches collision radius');
+ const factory=createVoidFactory(T,{template:gltf.scene,reducedMotion,combat:S}),a=factory(),b=S.create(1),v=new T.Vector3();
+ b.generators.forEach(g=>g.hp=0);b.outerGate=1;b.inside=true;b.roofOpen=true;
+ for(let frame=0;frame<8;frame++){
+  b.outerAngle=frame*.4;b.innerAngle=-frame*.7;b.pOuterAngle=b.outerAngle;b.pInnerAngle=b.innerAngle;a.update(b);a.root.updateMatrixWorld(true);
+  assert.equal(a.outer.visible,false);assert.equal(a.inner.visible,false);assert.equal(a.roof.visible,false);assert.equal(a.shield.visible,false);
+  for(const [group,radius,portal] of [[a.outerRing,S.OUTER,Math.PI+b.outerAngle],[a.innerRing,S.INNER,b.innerAngle]]){
+   let max=0;group.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);max=Math.max(max,Math.hypot(v.x,v.y));}});
+   assert.ok(Math.abs(max-(radius+S.WALL))<.01,'visible moving wall has the collision radius');
+   const ray=at=>new T.Raycaster(new T.Vector3(Math.cos(at)*radius,-Math.sin(at)*radius,100),new T.Vector3(0,0,-1),0,200).intersectObject(group,true);
+   assert.equal(ray(portal).length,0,'rotating opening has no invisible GLB shutter');assert.ok(ray(portal+Math.PI+.013).length>0,'the opposite solid wall is visible at '+frame+' radius '+radius);
+  }
+  for(let i=0;i<2;i++){a.turrets[i].getWorldPosition(v);assert.ok(Math.abs(v.x)<1e-6);assert.ok(Math.abs(v.y+(i?1:-1)*125)<1e-6,'visible gun and firing source agree');assert.ok(Math.hypot(v.x,v.y)<S.INNER-60,'guns leave the corridor clear');}
  }
- b.stage='escape';b.hp=0;a.update(b);assert.equal(a.core.visible,false);assert.equal(a.shield.visible,false);assert.equal(a.roof.visible,false);
+ b.stage='escape';b.hp=0;a.update(b);a.root.updateMatrixWorld(true);assert.equal(a.core.visible,false);assert.equal(a.shield.visible,false);assert.equal(a.roof.visible,false);
+ for(const arrow of [a.entryArrow,a.innerArrow]){const forward=new T.Vector3(1,0,0).transformDirection(arrow.matrixWorld),outward=new T.Vector3(arrow.position.x,arrow.position.y,0).normalize();assert.ok(forward.dot(outward)>.999,'both moving arrows point outward during escape');}
+ let visibleDraws=0;a.root.traverseVisible(o=>{if(o.isMesh)visibleDraws++;});assert.ok(visibleDraws<45,'moving walls stay batched');
  factory.dispose();
 }
-console.log('Void GLB OK: '+bytes.length+' bytes, '+triangles+' triangles, '+draws+' draws, exact wall radii and 95-unit retractable gates.');
+console.log('Void model OK: shared GLB, batched rotating walls, matching collision radii and visible gaps, recessed guns and no legacy shutters.');

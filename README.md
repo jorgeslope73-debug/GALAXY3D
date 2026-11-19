@@ -1,3 +1,5 @@
+V24.55: LA ESFERA DEL VACIO funciona como laberinto movil. Los huecos de 100 grados estan siempre abiertos; el anillo exterior gira a 6 grados/s y el interior a -9. La barrera de energia exterior depende de los generadores. Pasillo de 200 unidades, nucleo mas compacto y dos canones pequenos rebajados junto al reactor (R125), fuera del pasillo. Un solo disparo alterno cada 6,5 s, 200 unidades/s y 8 s de margen inicial. Las paredes visibles se construyen desde el perfil fisico comun; se conservan los barridos de bala y se resuelve tambien la pared que alcanza a una nave quieta. Las flechas siguen los huecos, incluidos los 18 s de huida. Sin cambios de red.
+
 ## V24.54 - LA ESFERA DEL VACIO
 
 La quinta fase contra la maquina termina en una estacion de doble casco: tres generadores (2 impactos cada uno), entrada exterior izquierda, corredor con defensas y puerta interior derecha periodica. El nucleo de 12 puntos solo recibe dano mientras el piloto esta dentro; al salir o morir recupera el escudo y conserva el dano. Misil=3, bengala=2, bala=1. Las cinco bajas son cinco vidas. Al destruir el nucleo hay que escapar por la entrada exterior en 18 segundos; morir o agotar el tiempo pierde la mision.
@@ -168,7 +170,7 @@ La documentación original se conserva a continuación. Algunas referencias de v
 
 # Galaxy Combat Web
 
-**Version actual: V24.54
+**Version actual: V24.55
 
 Galaxy Combat es un juego de combate espacial para navegador, gratuito y sin instalación obligatoria. Permite jugar contra CPU o en partidas online de hasta 4 jugadores.
 

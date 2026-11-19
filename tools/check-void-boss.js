@@ -14,7 +14,7 @@ function shoot(f,target,weapon='bullet',from=null){
  const vx=target.x-x,vy=target.y-y,l=Math.hypot(vx,vy)||1;
  e.bullets.push({id:99999,owner:0,x,y,vx:vx/l*24000,vy:vy/l*24000,guided:weapon==='missile',age:0,travel:0});e.absorbVoidShots(1/60);
 }
-function move(f,x,y){const {p,e}=f;p.px=p.x;p.py=p.y;p.x=x;p.y=y;p.vx=(x-p.px)*60;p.vy=(y-p.py)*60;e.resolveVoidContacts();}
+function move(f,x,y){f.e.voidSphere.outerAngle=f.e.voidSphere.pOuterAngle=f.e.voidSphere.innerAngle=f.e.voidSphere.pInnerAngle=0;const {p,e}=f;p.px=p.x;p.py=p.y;p.x=x;p.y=y;p.vx=(x-p.px)*60;p.vy=(y-p.py)*60;e.resolveVoidContacts();}
 function corridor(f,from,to){for(let i=1;i<=100;i++){const a=from+(to-from)*i/100;move(f,960+320*Math.cos(a),540+320*Math.sin(a));}}
 for(const dt of [1/30,1/60,1/120]){
  const f=fixture(),b=enter(f,dt),{e,S,p}=f;
@@ -25,15 +25,15 @@ for(const dt of [1/30,1/60,1/120]){
  for(const g of b.generators){shoot(f,g);assert.equal(g.hp,1);shoot(f,g);assert.equal(g.hp,0);}
  assert.equal(S.remaining(b),0);for(let i=0;i<90;i++)S.step(b,dt,p,()=>1);assert.equal(b.outerGate,1);
  // No shield shortcut even through both open doors.
- b.innerGate=1;shoot(f,b,'missile',{x:1120,y:540});assert.equal(b.hp,hp);assert.equal(b.inside,false);
+ b.outerAngle=b.pOuterAngle=b.innerAngle=b.pInnerAngle=0;b.innerGate=1;shoot(f,b,'missile',{x:1090,y:540});assert.equal(b.hp,hp);assert.equal(b.inside,false);
  move(f,640,540);assert.ok(Math.abs(p.x-640)<1);corridor(f,Math.PI,0);
- b.innerGate=0;b.age=4;S.step(b,dt,{x:1280,y:540},()=>1);assert.equal(b.innerGate,0,'a closed door does not open early merely because the pilot approaches');move(f,1120,540);assert.ok(p.x>1250,'closed inner gate blocks entry');assert.equal(b.inside,false);
- b.innerGate=1;move(f,1120,540);assert.equal(b.inside,true);assert.equal(b.everEntered,true);
+ Object.assign(p,{x:960,y:220,px:960,py:220});move(f,960,400);assert.ok(p.y<300,'solid inner arc blocks entry');assert.equal(b.inside,false);Object.assign(p,{x:1280,y:540,px:1280,py:540});
+ b.innerGate=1;move(f,1090,540);assert.equal(b.inside,true);assert.equal(b.everEntered,true);
  shoot(f,b,'missile',{x:p.x,y:p.y});assert.equal(b.hp,9);
- move(f,1280,540);assert.equal(b.inside,false);shoot(f,b,'missile',{x:1120,y:540});assert.equal(b.hp,9,'shield restores on leaving chamber');
- move(f,1120,540);p.protection=0;e.destroyShip(p);assert.equal(p.kills,4);assert.equal(b.hp,9);assert.equal(b.inside,false);assert.equal(p.pendingSpawn.x,180);
+ move(f,1280,540);assert.equal(b.inside,false);shoot(f,b,'missile',{x:1090,y:540});assert.equal(b.hp,9,'shield restores on leaving chamber');
+ move(f,1090,540);p.protection=0;e.destroyShip(p);assert.equal(p.kills,4);assert.equal(b.hp,9);assert.equal(b.inside,false);assert.equal(p.pendingSpawn.x,180);
  e.respawnPlayer(p);assert.equal(p.x,180);assert.equal(p.y,540);
- p.spawnFx=0;p.protection=1e5;b.innerGate=1;move(f,640,540);corridor(f,Math.PI,0);move(f,1120,540);assert.equal(b.inside,true);
+ p.spawnFx=0;p.protection=1e5;b.innerGate=1;move(f,640,540);corridor(f,Math.PI,0);move(f,1090,540);assert.equal(b.inside,true);
  for(let i=0;i<3;i++)shoot(f,b,'missile',{x:p.x,y:p.y});
  assert.equal(b.stage,'escape');assert.equal(e.finished,false,'core destruction is not victory');assert.equal(b.escapeLeft,18);
  move(f,1280,540);corridor(f,0,Math.PI);move(f,450,540);
@@ -45,7 +45,7 @@ for(const dt of [1/30,1/60,1/120]){
  // A protected overlap still cannot open the core from outside a closed wall.
  p.x=960;p.y=540;p.px=180;p.py=540;e.resolveVoidContacts();assert.equal(b.inside,false);
  for(const g of b.generators)g.hp=0;b.innerGate=1;b.outerGate=1;
- p.x=p.px=1120;p.y=p.py=540;e.resolveVoidContacts();b.hp=1;shoot(f,b,'bullet',{x:p.x,y:p.y});assert.equal(b.stage,'escape');
+ p.x=p.px=1090;p.y=p.py=540;e.resolveVoidContacts();b.hp=1;shoot(f,b,'bullet',{x:p.x,y:p.y});assert.equal(b.stage,'escape');
  b.escapeLeft=.001;e.update(1/60);assert.equal(e.winner,-1);assert.equal(e.bossEncounter.phase,'failed');
 }
 {

@@ -1,7 +1,8 @@
 'use strict';
 // Phase-five authority: geometry, gates and damage share one local simulation.
 (() => {
-  const OUTER=410,INNER=235,WALL=12,CORE=65,SHIELD=90,GENERATOR=24;
+  const OUTER=410,INNER=210,WALL=12,CORE=50,SHIELD=75,GENERATOR=24;
+  const OUTER_SPEED=6*Math.PI/180,INNER_SPEED=-9*Math.PI/180,OPENING=50*Math.PI/180;
   const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2}),TAU=Math.PI*2;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const angle=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
@@ -9,7 +10,8 @@
   function create(id,config={}){
     const hp=config.coreHp||12;
     return {id,x:960,y:540,age:0,hp,maxHp:hp,stage:'generators',inside:false,everEntered:false,
-      outerGate:0,innerGate:0,aims:[0,0],escapeLeft:0,escapeDuration:config.escapeSeconds||18,nextShot:3,
+      outerGate:0,innerGate:1,outerAngle:0,innerAngle:0,pOuterAngle:0,pInnerAngle:0,stepDt:0,
+      aims:[0,0],shotSlot:0,escapeLeft:0,escapeDuration:config.escapeSeconds||18,nextShot:8,
       generators:[Math.PI,-Math.PI/3,Math.PI/3].map((a,slot)=>({slot,x:960+470*Math.cos(a),y:540+470*Math.sin(a),hp:config.generatorHp||2,maxHp:config.generatorHp||2}))};
   }
   // Earliest swept circle versus a capsule. Tests the strip and both end caps,
@@ -33,32 +35,49 @@
     for(let i=0;i<steps;i++){const a=i*TAU/steps,b=(i+1)*TAU/steps,mid=(a+b)/2;segments.push({ax:Math.cos(a)*radius,ay:Math.sin(a)*radius,bx:Math.cos(b)*radius,by:Math.sin(b)*radius,gate:Math.abs(angle(mid,portal))<half});}
     return segments;
   }
-  const outer=ring(OUTER,72,Math.PI,20*Math.PI/180),inner=ring(INNER,48,0,30*Math.PI/180);
+  const outer=ring(OUTER,72,Math.PI,OPENING),inner=ring(INNER,72,0,OPENING);
   const walls=Object.freeze({outer,inner});
-  function firstHit(body,path,r=0,{hullOnly=false,enemy=false}={}){
+  function firstHit(body,path,r=0,{hullOnly=false,enemy=false,fromTime=0,toTime=1}={}){
     let hit=null;
     const take=(h,kind,slot=-1)=>{if(h&&(!hit||h.t<hit.t-1e-9))hit={...h,kind,slot};};
-    for(const [segments,open] of [[outer,body.outerGate>.98],[inner,body.innerGate>.98]])for(const s of segments){
-      if(s.gate&&open)continue;
-      take(capsule(path,body.x+s.ax,body.y+s.ay,body.x+s.bx,body.y+s.by,WALL+r),'wall');
+    // Sweep in each ring's own rotating frame. Subdivide angular motion, not
+    // ship speed: straight fast shots are already handled analytically.
+    for(const [segments,open,previous,current] of [[outer,body.outerGate>.98,body.pOuterAngle||0,body.outerAngle||0],[inner,true,body.pInnerAngle||0,body.innerAngle||0]]){
+      const turn=current-previous,count=Math.max(1,Math.ceil(Math.abs(turn)*(toTime-fromTime)/(.25*Math.PI/180)));
+      const px=path.px??path.x,py=path.py??path.y,dx=path.x-px,dy=path.y-py;
+      for(let i=0;i<count;i++){
+        const u=i/count,v=(i+1)/count,t0=fromTime+(toTime-fromTime)*u,t1=fromTime+(toTime-fromTime)*v,a0=previous+turn*t0,a1=previous+turn*t1;
+        const c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1),x0=px+dx*u-body.x,y0=py+dy*u-body.y,x1=px+dx*v-body.x,y1=py+dy*v-body.y;
+        const local={px:x0*c0+y0*s0,py:-x0*s0+y0*c0,x:x1*c1+y1*s1,y:-x1*s1+y1*c1};
+        for(const segment of segments){
+          if(segment.gate&&open)continue;
+          const h=capsule(local,segment.ax,segment.ay,segment.bx,segment.by,WALL+r);if(!h)continue;
+          const fraction=u+(v-u)*h.t,t=fromTime+(toTime-fromTime)*fraction,a=previous+turn*t,cs=Math.cos(a),sn=Math.sin(a);
+          const wx=h.x*cs-h.y*sn,wy=h.x*sn+h.y*cs;
+          const surfaceEnd=previous+turn*toTime,ce=Math.cos(surfaceEnd),se=Math.sin(surfaceEnd);
+          take({...h,t:fraction,x:body.x+wx,y:body.y+wy,nx:h.nx*cs-h.ny*sn,ny:h.nx*sn+h.ny*cs,
+            time:t,wallDx:h.x*ce-h.y*se-wx,wallDy:h.x*se+h.y*ce-wy,wallVx:body.stepDt?-turn*wy/body.stepDt:0,wallVy:body.stepDt?turn*wx/body.stepDt:0},'wall');
+        }
+      }
     }
     if(body.stage!=='escape'){
       if(!enemy)for(const g of body.generators)if(g.hp>0)take(capsule(path,g.x,g.y,g.x,g.y,GENERATOR+r),'generator',g.slot);
-      if(!enemy||hullOnly)take(capsule(path,body.x,body.y,body.x,body.y,(hullOnly?CORE:body.inside?CORE:SHIELD)+r),body.inside||hullOnly?'core':'shield');
+      take(capsule(path,body.x,body.y,body.x,body.y,(enemy||hullOnly?CORE:body.inside?CORE:SHIELD)+r),enemy?'wall':body.inside||hullOnly?'core':'shield');
     }
     return hit;
   }
   function resolveShip(body,p,r){
     // Wrapping the arena is a teleport, never a sweep through the station.
     const wrap=Math.abs(p.x-(p.px??p.x))>960||Math.abs(p.y-(p.py??p.y))>540;
-    let start={x:wrap?p.x:p.px??p.x,y:wrap?p.y:p.py??p.y},end={x:p.x,y:p.y},contacts=0,coreHit=false;
-    for(let i=0;i<4;i++){
-      const h=firstHit(body,{px:start.x,py:start.y,...end},r,{hullOnly:true});if(!h)break;
+    let start={x:wrap?p.x:p.px??p.x,y:wrap?p.y:p.py??p.y},end={x:p.x,y:p.y},contacts=0,coreHit=false,time=0;
+    for(let i=0;i<8;i++){
+      const h=firstHit(body,{px:start.x,py:start.y,...end},r,{hullOnly:true,fromTime:time});if(!h)break;
       contacts++;if(h.kind==='core')coreHit=true;
-      const left=1-h.t,dx=(end.x-start.x)*left,dy=(end.y-start.y)*left,inward=Math.min(0,dx*h.nx+dy*h.ny);
+      const left=1-h.t,dx=(end.x-start.x)*left,dy=(end.y-start.y)*left,inward=Math.min(0,(dx-(h.wallDx||0))*h.nx+(dy-(h.wallDy||0))*h.ny);
       start={x:h.x+h.nx*(h.depth+.15),y:h.y+h.ny*(h.depth+.15)};
       end={x:start.x+dx-h.nx*inward,y:start.y+dy-h.ny*inward};
-      const velocity=Math.min(0,p.vx*h.nx+p.vy*h.ny);p.vx-=velocity*h.nx;p.vy-=velocity*h.ny;
+      const velocity=Math.min(0,(p.vx-(h.wallVx||0))*h.nx+(p.vy-(h.wallVy||0))*h.ny);p.vx-=velocity*h.nx;p.vy-=velocity*h.ny;
+      time=h.time??(time+(1-time)*h.t);
     }
     p.x=end.x;p.y=end.y;return {contacts,coreHit};
   }
@@ -67,28 +86,22 @@
     if(body.inside)body.everEntered=true;
     if(body.stage!=='escape')body.stage=remaining(body)?'generators':body.inside?'core':'infiltrate';
   }
-  function atPortal(body,p,radius,portal,r){
-    if(!p||p.dead)return false;
-    const dx=p.x-body.x,dy=p.y-body.y;
-    return Math.abs(Math.hypot(dx,dy)-radius)<r+WALL+16&&Math.abs(angle(Math.atan2(dy,dx),portal))<(radius===OUTER?20:30)*Math.PI/180+.12;
-  }
   function step(body,dt,p,uid){
     body.age+=dt;
-    if(body.stage==='escape'){body.escapeLeft=Math.max(0,body.escapeLeft-dt);body.outerGate=body.innerGate=1;return [];}
-    const unlocked=remaining(body)===0,cycle=(body.age%6),hold=body.innerGate>.98&&atPortal(body,p,INNER,0,70),goal=unlocked&&(cycle<3.6||hold)?1:0;
-    if(p&&!p.dead)for(let i=0;i<2;i++)body.aims[i]=Math.atan2(p.y-(body.y+(i?1:-1)*315),p.x-body.x);
-    body.outerGate=unlocked?Math.min(1,body.outerGate+dt*2):0;
-    body.innerGate=clamp(body.innerGate+(goal?1:-1)*dt*2,0,1);
-    // Never close a moving gate onto a pilot already traversing its throat.
-    if(unlocked&&hold)body.innerGate=1;
+    body.pOuterAngle=body.outerAngle;body.pInnerAngle=body.innerAngle;body.stepDt=dt;
+    body.outerAngle+=OUTER_SPEED*dt;body.innerAngle+=INNER_SPEED*dt;
+    body.outerGate=remaining(body)===0?1:0;body.innerGate=1;
+    if(body.stage==='escape'){body.escapeLeft=Math.max(0,body.escapeLeft-dt);return [];}
+    if(p&&!p.dead)for(let i=0;i<2;i++)body.aims[i]=Math.atan2(p.y-(body.y+(i?1:-1)*125),p.x-body.x);
     const shots=[];
     if(!p||p.dead||p.spawnFx>0||body.age<body.nextShot)return shots;
-    body.nextShot=body.age+2.6;
-    const sources=remaining(body)?body.generators.filter(g=>g.hp>0):[-1,1].map(sign=>({x:body.x,y:body.y+sign*315}));
+    body.nextShot=body.age+6.5;
+    // One recessed gun at a time; generators are objectives, never gun muzzles.
+    const sources=[{x:body.x,y:body.y+(body.shotSlot++%2?1:-1)*125}];
     for(const source of sources){
-      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*32,y:source.y+ny*32};
-      if(firstHit(body,{px:muzzle.x,py:muzzle.y,x:p.x,y:p.y},4,{enemy:true}))continue;
-      shots.push({id:uid(),owner:-5,voidShot:true,x:muzzle.x,y:muzzle.y,px:muzzle.x,py:muzzle.y,vx:nx*245,vy:ny*245,age:0,travel:0,guided:false});
+      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*20,y:source.y+ny*20};
+      if(firstHit(body,{px:muzzle.x,py:muzzle.y,x:p.x,y:p.y},4,{enemy:true,fromTime:1,toTime:1}))continue;
+      shots.push({id:uid(),owner:-5,voidShot:true,x:muzzle.x,y:muzzle.y,px:muzzle.x,py:muzzle.y,vx:nx*200,vy:ny*200,age:0,travel:0,guided:false});
     }
     return shots;
   }
@@ -105,5 +118,5 @@
   }
   const escaped=(body,p,r=35)=>body.stage==='escape'&&body.escapeLeft>0&&!!p&&!p.dead&&Math.hypot(p.x-body.x,p.y-body.y)>OUTER+WALL+r+8;
   function snapshot(body){return body?{...body,aims:body.aims.slice(),generators:body.generators.map(g=>({...g})),remaining:remaining(body)}:null;}
-  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,capsule});
+  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,OUTER_SPEED,INNER_SPEED,OPENING,capsule});
 })();

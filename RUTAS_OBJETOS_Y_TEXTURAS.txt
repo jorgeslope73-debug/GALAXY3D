@@ -398,3 +398,5 @@ Constructor editable: tools/build-void-station.py
 Combate y paredes: docs/void-core.js
 Presentacion: docs/void-model.js
 Prueba directa aislada: docs/prueba-esfera.html
+
+V24.55: el GLB conserva casco, reactor, techo, generadores y canones. Sus arcos antiguos se ocultan. Los anillos abiertos de partida y sus postes se dibujan en docs/void-model.js desde el perfil de docs/void-core.js; giro y colisiones comparten ese perfil. Sin nuevas texturas ni objetos descargados.
