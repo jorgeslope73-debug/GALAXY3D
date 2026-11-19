@@ -390,3 +390,11 @@ V24.00 - Nave del campeon online:
 - docs/winner-preview.js: giro 360 local mientras se muestra la pantalla final.
 - docs/render-3d.js: escena de exposicion con el mismo renderizador y modelo del juego.
 - Modelo y pinturas: docs/assets/models/nave.glb y las cuatro pinturas activas de ship-model.js.
+
+FASE 5 - LA ESFERA DEL VACIO (V24.54)
+Modelo: docs/assets/models/esfera-vacio.glb
+Texturas: ninguna externa; 6 materiales PBR integrados.
+Constructor editable: tools/build-void-station.py
+Combate y paredes: docs/void-core.js
+Presentacion: docs/void-model.js
+Prueba directa aislada: docs/prueba-esfera.html

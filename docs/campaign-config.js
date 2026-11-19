@@ -79,6 +79,7 @@
     },
     {
       id:5,nameKey:'campaignWorld5',
+      boss:{type:'void-sphere',generatorHp:2,coreHp:12,escapeSeconds:18},
       background:{file:'assets/sprites/fondo05.jpg',mobileKey:'bg05',stars:false},
       ufos:3,
       hazards:{

@@ -47,6 +47,11 @@ window.GALAXY_CONFIG = {
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
       try{return await world.prepareMothership();}catch(error){fallback(error);throw error;}
     },
+    async prepareVoid(){
+      const loaded=await assetsReady;
+      if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
+      try{return await world.prepareVoid();}catch(error){fallback(error);throw error;}
+    },
     async prepareDevourer(){
       const loaded=await assetsReady;
       if(!loaded?.ok||!world||world.lost)throw new Error('Graficos 3D no disponibles');
@@ -107,7 +112,7 @@ window.GALAXY_CONFIG = {
     const records=new Map(),spares=new Map();
     let createImportedShip=null,setImportedShipAmmo=null,stepImportedShipInertia=null,createImportedRocket=null,createImportedMeteor=null,createImportedUfo=null,setImportedUfoPose=null;
     let menuActors=null,menuFlight=null,menuMothershipFlight=null,menuMothershipAssets=null,menuMothershipFailed=false,winnerStage=null;
-    let createStorm=null,createDevourer=null;
+    let createStorm=null,createDevourer=null,createVoid=null;
     let createImportedMothership=null,setImportedMothershipPose=null,createImportedMothershipExhaust=null,createImportedMothershipHealth=null,mothershipLoad=null;
     document.documentElement.dataset.galaxyShip='loading';
     document.documentElement.dataset.galaxyRock='loading';
@@ -318,6 +323,15 @@ window.GALAXY_CONFIG = {
       throw error;
     }));
     // Campaign-only GLBs are fetched once during phase-three PREPARADOS, never on online startup.
+    let voidLoad=null;
+    function prepareVoid(){
+      if(!voidLoad)voidLoad=Promise.all([import('./void-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
+        const template=await assets.loadVoidTemplate(T);
+        createVoid=assets.createVoidFactory(T,{template,environment:reflections.texture,reducedMotion});
+        document.documentElement.dataset.galaxyVoid='esfera-vacio-glb';return true;
+      }).catch(error=>{voidLoad=null;throw error;});
+      return voidLoad;
+    }
     let devourerLoad=null;
     function prepareDevourer(){
       if(!devourerLoad)devourerLoad=Promise.all([import('./devourer-model.js?v='+encodeURIComponent(assetVersion)),reflectionsReady]).then(async ([assets,reflections])=>{
@@ -357,6 +371,7 @@ window.GALAXY_CONFIG = {
         root.add(createImportedUfo());
         return {root};
       }
+      if(kind==='void-sphere')return createVoid();
       if(kind==='devourer')return createDevourer();
       if(kind==='storm-core')return createStorm();
       if(kind==='mothership'){
@@ -561,6 +576,10 @@ window.GALAXY_CONFIG = {
         record.material.color.setHex(({ammo1:0x7aff9c,ammo3:0x7aff9c,cadence:0xffbb69,speed:0x69d7ff,mira:0xff7ba1,flare:0xffb36a,camo:0xc4a2ff})[type]||0x8adfff);
         record.torus.rotation.set(.2,0,now*.0005);
       },
+      voidSphere(body){
+        if(!body||!createVoid)return;
+        const record=take('void-sphere',body.id);place(record.root,body.x,body.y,0);record.update(body);
+      },
       devourer(body){
         if(!body||!createDevourer)return;
         const record=take('devourer',body.id);place(record.root,body.x,body.y,0);record.update(body);
@@ -692,6 +711,9 @@ window.GALAXY_CONFIG = {
         api.ufo('warm-ufo',960,420,pass*30);
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*280,y:540+Math.sin(i*2.1)*280,hp:pass<2?2:0,maxHp:2}))});
+        if(typeof createVoid==='function'){
+          const body=window.GalaxyVoidCore.create('warm-void');body.outerGate=body.innerGate=pass%2;body.inside=pass===2;body.roofOpen=pass===2;api.voidSphere(body);
+        }
         if(typeof createDevourer==='function'){
           const body=window.GalaxyDevourer.create('warm-devourer');body.x=960;body.y=540;
           const pose=window.GalaxyDevourer.snapshot(body);pose.vulnerable=pass===2;pose.attack=pass%2?'charge-warning':'patrol';pose.warning={x:500,y:400};api.devourer(pose);
@@ -711,7 +733,7 @@ window.GALAXY_CONFIG = {
     api.preparing=false;
     api.prepareMatch=(width,height)=>{
       width=Math.max(256,Math.min(mobile?1280:1920,Math.round(Number(width)||W)));
-      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'')+(createDevourer?':devourer':'');
+      height=Math.round(width*H/W);const key=width+'x'+height+(createImportedMothership?':mothership':'')+(createStorm?':storm':'')+(createDevourer?':devourer':'')+(createVoid?':void':'');
       preparationQueue=preparationQueue.then(async()=>{
         if(preparedViewport===key&&surface.width===width)return {width,height,programs:renderer.info.programs?.length||0};
         api.preparing=true;
@@ -722,7 +744,7 @@ window.GALAXY_CONFIG = {
     };
     api.prepareMothership=prepareMothership;
     api.prepareStorm=prepareStorm;
-    api.prepareDevourer=prepareDevourer;
+    api.prepareDevourer=prepareDevourer;api.prepareVoid=prepareVoid;
     api.ready=Promise.all(modelLoads).then(async()=>{
       api.preparing=true;
       try{await warmScene(256,144);}finally{api.preparing=false;}
@@ -731,7 +753,7 @@ window.GALAXY_CONFIG = {
     });
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();api.lost=true;updateUI();window.dispatchEvent(new Event('galaxy3d-error'));});
     surface.addEventListener('webglcontextrestored',()=>{api.lost=false;updateUI();if(assetsComplete&&!failed)window.dispatchEvent(new Event('galaxy3d-ready'));});
-    window.addEventListener('beforeunload',()=>{createStorm?.dispose();createDevourer?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
+    window.addEventListener('beforeunload',()=>{createStorm?.dispose();createDevourer?.dispose();createVoid?.dispose();projectileLighting?.dispose();renderer.dispose();},{once:true});
     return api;
   }
 })();
@@ -987,6 +1009,12 @@ window.GALAXY_CONFIG = {
   Object.assign(dictionaries.fr,{"devourerIncoming":"LE DEVOREUR","devourerJoint":"DETRUISEZ LE JOINT LUMINEUX","devourerSegments":"SEGMENTS DETRUITS : {count}/{total}","devourerCharge":"CHARGE IMMINENTE · ECARTEZ-VOUS","devourerVolley":"MACHOIRES OUVERTES · ESQUIVEZ","devourerOpen":"REACTEUR EXPOSE · ATTAQUEZ","devourerClosed":"TETE BLINDEE · ATTENDEZ","devourerHealth":"REACTEUR : {hp}/{total}"});
   Object.assign(dictionaries.de,{"devourerIncoming":"DER VERSCHLINGER","devourerJoint":"ZERSTORE DAS LEUCHTENDE GELENK","devourerSegments":"SEGMENTE ZERSTORT: {count}/{total}","devourerCharge":"ANGRIFF · AUSWEICHEN","devourerVolley":"KIEFER OFFEN · SALVE AUSWEICHEN","devourerOpen":"REAKTOR OFFEN · ANGREIFEN","devourerClosed":"KOPF GEPANZERT · WARTEN","devourerHealth":"REAKTOR: {hp}/{total}"});
   Object.assign(dictionaries.zh,{"devourerIncoming":"吞噬者","devourerJoint":"攻击发光的连接处","devourerSegments":"已摧毁节段：{count}/{total}","devourerCharge":"冲锋将至 · 躲开","devourerVolley":"巨口张开 · 躲避齐射","devourerOpen":"反应堆暴露 · 攻击","devourerClosed":"头部装甲保护 · 等待时机","devourerHealth":"反应堆：{hp}/{total}"});
+  Object.assign(dictionaries.es,{"voidIncoming":"LA ESFERA DEL VACIO","voidGenerators":"GENERADORES: {count}/{total} · DESTRUYE LOS NARANJAS","voidWait":"ENTRA POR LA IZQUIERDA · BUSCA LA PUERTA INTERIOR","voidEnter":"PUERTA INTERIOR ABIERTA · ENTRA POR LA DERECHA","voidCore":"NUCLEO VULNERABLE · DISPARA DESDE DENTRO","voidEscape":"ESCAPA POR LA IZQUIERDA · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VIDAS: {lives}","voidDefeat":"MISION FALLIDA · LA ESFERA DEL VACIO"});
+  Object.assign(dictionaries.en,{"voidIncoming":"THE VOID SPHERE","voidGenerators":"GENERATORS: {count}/{total} · DESTROY THE ORANGE ONES","voidWait":"ENTER FROM THE LEFT · FIND THE INNER GATE","voidEnter":"INNER GATE OPEN · ENTER FROM THE RIGHT","voidCore":"CORE EXPOSED · FIRE FROM INSIDE","voidEscape":"ESCAPE TO THE LEFT · {seconds} S","voidStatus":"CORE: {hp}/{total} · LIVES: {lives}","voidDefeat":"MISSION FAILED · THE VOID SPHERE"});
+  Object.assign(dictionaries.it,{"voidIncoming":"LA SFERA DEL VUOTO","voidGenerators":"GENERATORI: {count}/{total} · DISTRUGGI QUELLI ARANCIONI","voidWait":"ENTRA DA SINISTRA · TROVA LA PORTA INTERNA","voidEnter":"PORTA INTERNA APERTA · ENTRA DA DESTRA","voidCore":"NUCLEO ESPOSTO · SPARA DA DENTRO","voidEscape":"FUGGI A SINISTRA · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VITE: {lives}","voidDefeat":"MISSIONE FALLITA · LA SFERA DEL VUOTO"});
+  Object.assign(dictionaries.fr,{"voidIncoming":"LA SPHERE DU VIDE","voidGenerators":"GENERATEURS : {count}/{total} · DETRUISEZ LES ORANGES","voidWait":"ENTREZ A GAUCHE · TROUVEZ LA PORTE INTERIEURE","voidEnter":"PORTE INTERIEURE OUVERTE · ENTREZ A DROITE","voidCore":"NOYAU EXPOSE · TIREZ DEPUIS LA CHAMBRE","voidEscape":"SORTEZ A GAUCHE · {seconds} S","voidStatus":"NOYAU : {hp}/{total} · VIES : {lives}","voidDefeat":"MISSION ECHOUEE · LA SPHERE DU VIDE"});
+  Object.assign(dictionaries.de,{"voidIncoming":"DIE LEERE SPHARE","voidGenerators":"GENERATOREN: {count}/{total} · ORANGE ZIELE ZERSTOREN","voidWait":"LINKS EINTRETEN · INNERES TOR FINDEN","voidEnter":"INNERES TOR OFFEN · RECHTS EINTRETEN","voidCore":"KERN OFFEN · VON INNEN SCHIESSEN","voidEscape":"NACH LINKS FLIEHEN · {seconds} S","voidStatus":"KERN: {hp}/{total} · LEBEN: {lives}","voidDefeat":"MISSION GESCHEITERT · DIE LEERE SPHARE"});
+  Object.assign(dictionaries.zh,{"voidIncoming":"虚空之球","voidGenerators":"发电机：{count}/{total} · 摧毁橙色目标","voidWait":"从左侧进入 · 寻找内门","voidEnter":"内门开启 · 从右侧进入","voidCore":"核心暴露 · 在内部射击","voidEscape":"从左侧逃离 · {seconds} 秒","voidStatus":"核心：{hp}/{total} · 生命：{lives}","voidDefeat":"任务失败 · 虚空之球"});
   Object.assign(dictionaries.es,{"stormBossIncoming":"EL NUCLEO DE LA TORMENTA","stormBossSatellites":"SATELITES DESTRUIDOS: {count}/{total}","stormBossDodge":"CARGANDO · ESQUIVA LA RAFAGA","stormBossOpen":"NUCLEO EXPUESTO · ATACA","stormBossEnraged":"NUCLEO INESTABLE · ATACA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VIDAS: {lives}/{total}"});
   Object.assign(dictionaries.en,{"stormBossIncoming":"THE STORM CORE","stormBossSatellites":"SATELLITES DESTROYED: {count}/{total}","stormBossDodge":"CHARGING · DODGE THE VOLLEY","stormBossOpen":"CORE EXPOSED · ATTACK","stormBossEnraged":"UNSTABLE CORE · ATTACK","stormBossHealth":"CORE: {hp}/{total}","stormBossLives":"LIVES: {lives}/{total}"});
   Object.assign(dictionaries.it,{"stormBossIncoming":"IL NUCLEO DELLA TEMPESTA","stormBossSatellites":"SATELLITI DISTRUTTI: {count}/{total}","stormBossDodge":"CARICA · SCHIVA LA RAFFICA","stormBossOpen":"NUCLEO ESPOSTO · ATTACCA","stormBossEnraged":"NUCLEO INSTABILE · ATTACCA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VITE: {lives}/{total}"});
@@ -1408,6 +1436,7 @@ window.GALAXY_CONFIG = {
     },
     {
       id:5,nameKey:'campaignWorld5',
+      boss:{type:'void-sphere',generatorHp:2,coreHp:12,escapeSeconds:18},
       background:{file:'assets/sprites/fondo05.jpg',mobileKey:'bg05',stars:false},
       ufos:3,
       hazards:{
@@ -1727,6 +1756,9 @@ window.GALAXY_CONFIG = {
     }
   };
 
+
+  const VOID_GUIDE={"es":"HORIZONTE FINAL: LA ESFERA DEL VACIO. DESTRUYE LOS TRES GENERADORES NARANJAS (2 BALAS CADA UNO). ENTRA POR LA IZQUIERDA Y RECORRE EL PASILLO HASTA LA PUERTA INTERIOR DE LA DERECHA, QUE SE ABRE POR INTERVALOS. EL NUCLEO SOLO RECIBE DANO SI TU NAVE ESTA DENTRO DE LA CAMARA: 12 BALAS, 4 MISILES O UNA COMBINACION (MISIL=3, BENGALA=2). AL SALIR O MORIR SU ESCUDO VUELVE; EL DANO SE CONSERVA. TIENES CINCO VIDAS. TRAS DESTRUIRLO, DISPONES DE 18 SEGUNDOS PARA SALIR POR LA PUERTA EXTERIOR IZQUIERDA. MORIR O AGOTAR EL TIEMPO DURANTE LA HUIDA ES MISION FALLIDA.","en":"FINAL HORIZON: THE VOID SPHERE. DESTROY THREE ORANGE GENERATORS (2 BULLETS EACH). ENTER LEFT, FOLLOW THE CORRIDOR TO THE TIMED INNER GATE ON THE RIGHT. THE CORE TAKES DAMAGE ONLY WHILE YOU ARE INSIDE ITS CHAMBER: 12 HEALTH, MISSILE=3, FLARE=2. LEAVING OR DYING RESTORES ITS SHIELD; DAMAGE PERSISTS. FIVE LIVES. DESTROY THE CORE, THEN ESCAPE THROUGH THE LEFT OUTER GATE WITHIN 18 SECONDS. DEATH OR TIMEOUT DURING ESCAPE FAILS THE MISSION.","it":"SFERA DEL VUOTO: DISTRUGGI 3 GENERATORI (2 COLPI), ENTRA A SINISTRA E TROVA LA PORTA INTERNA A DESTRA. IL NUCLEO SUBISCE DANNI SOLO CON LA NAVE DENTRO: 12 VITA, MISSILE=3, BENGALA=2. CINQUE VITE; I DANNI RESTANO. DOPO LA DISTRUZIONE FUGGI A SINISTRA ENTRO 18 SECONDI. MORTE O TEMPO SCADUTO: MISSIONE FALLITA.","fr":"SPHERE DU VIDE : DETRUISEZ 3 GENERATEURS (2 TIRS), ENTREZ A GAUCHE ET TROUVEZ LA PORTE INTERIEURE A DROITE. LE NOYAU SUBIT DES DEGATS SEULEMENT SI VOUS ETES DANS LA CHAMBRE : 12 VIE, MISSILE=3, LEURRE=2. CINQ VIES ; DEGATS CONSERVES. APRES DESTRUCTION, SORTEZ A GAUCHE EN 18 SECONDES. MORT OU DELAI DEPASSE : MISSION ECHOUEE.","de":"LEERE SPHARE: 3 GENERATOREN ZERSTOREN (2 SCHUSSE), LINKS HINEIN UND ZUM INNEREN TOR RECHTS FLIEGEN. KERN NUR VON INNEN VERWUNDBAR: 12 LEBEN, RAKETE=3, LEUCHTFACKEL=2. FUNF LEBEN; SCHADEN BLEIBT. NACH ZERSTORUNG IN 18 SEKUNDEN LINKS FLIEHEN. TOD ODER ZEIT ABGELAUFEN: MISSION GESCHEITERT.","zh":"虚空之球：摧毁3座橙色发电机，每座2发子弹。从左门进入，沿环形通道找到右侧定时内门。只有飞船进入核心室才能造成伤害。核心12点生命，导弹3点，诱饵弹2点。离开或死亡会恢复护盾，但伤害保留。共有5条命。摧毁后18秒内从左侧外门逃出，死亡或超时则任务失败。"};
+  for(const [lang,text] of Object.entries(VOID_GUIDE))DATA[lang]?.sections.find(section=>section.id==='objective')?.body.push(text);
 
   const STORM_GUIDE={"es":"Al final de Tormenta Cósmica, destruye los tres satélites que protegen el núcleo. Cada uno resiste dos balas; el núcleo tiene seis puntos de vida. Las líneas ámbar anuncian los disparos: esquívalos y ataca el núcleo mientras está expuesto. Los misiles y las bengalas conservan su daño habitual. Las reapariciones conservan el daño que hayas causado al jefe. Las cinco bajas conseguidas antes del jefe son tus vidas: cada muerte resta una. Si llegas a cero, pierdes la campaña.","en":"At the end of Cosmic Storm, destroy the three satellites protecting the core. Each takes two bullets; the core has six health points. Amber lines warn of incoming fire: dodge, then attack while the core is exposed. Missiles and flares retain their usual damage. Damage dealt to the boss persists through respawns. The five kills earned before the boss are your lives: each death removes one. At zero, the campaign is lost.","it":"Alla fine di Tempesta Cosmica, distruggi i tre satelliti che proteggono il nucleo. Ognuno resiste a due proiettili; il nucleo ha sei punti vita. Le linee ambra anticipano gli spari: schivali e attacca quando il nucleo è esposto. Missili e bengala mantengono i danni abituali. I danni al boss restano dopo la ricomparsa. Le cinque eliminazioni prima del boss sono le tue vite: ogni morte ne toglie una. A zero perdi la campagna.","fr":"À la fin de Tempête cosmique, détruisez les trois satellites protégeant le noyau. Chacun résiste à deux balles ; le noyau a six points de vie. Les lignes ambrées annoncent les tirs : esquivez puis attaquez le noyau exposé. Missiles et leurres gardent leurs dégâts habituels. Les dégâts au boss persistent après une réapparition. Les cinq éliminations avant le boss sont vos vies : chaque mort en retire une. À zéro, la campagne est perdue.","de":"Zerstöre am Ende von Kosmischer Sturm die drei Satelliten um den Kern. Jeder hält zwei Kugeln aus; der Kern hat sechs Lebenspunkte. Bernsteinfarbene Linien kündigen Schüsse an: Weiche aus und greife den offenen Kern an. Raketen und Leuchtfackeln behalten ihren üblichen Schaden. Schaden am Boss bleibt nach dem Wiedereinstieg erhalten. Die fünf Abschüsse vor dem Boss sind deine Leben: Jeder Tod kostet eines. Bei null ist die Kampagne verloren.","zh":"在宇宙风暴的最后，摧毁保护核心的三颗卫星。每颗需要两发子弹，核心有六点生命值。琥珀色线条会预告射击方向：先躲避，再趁核心暴露时攻击。导弹和诱饵弹保持原有伤害。重生后，对首领造成的伤害会保留。 首领战前获得的五次击杀就是你的生命。每次死亡扣除一点，降到零时战役失败。"};
   for(const [lang,text] of Object.entries(STORM_GUIDE))DATA[lang]?.sections.find(section=>section.id==='objective')?.body.push(text);
@@ -5280,6 +5312,118 @@ window.GALAXY_CONFIG = {
 })();
 
 ;
+// void-core.js
+'use strict';
+// Phase-five authority: geometry, gates and damage share one local simulation.
+(() => {
+  const OUTER=410,INNER=235,WALL=12,CORE=65,SHIELD=90,GENERATOR=24;
+  const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2}),TAU=Math.PI*2;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const angle=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+  const remaining=b=>b.generators.filter(g=>g.hp>0).length;
+  function create(id,config={}){
+    const hp=config.coreHp||12;
+    return {id,x:960,y:540,age:0,hp,maxHp:hp,stage:'generators',inside:false,everEntered:false,
+      outerGate:0,innerGate:0,aims:[0,0],escapeLeft:0,escapeDuration:config.escapeSeconds||18,nextShot:3,
+      generators:[Math.PI,-Math.PI/3,Math.PI/3].map((a,slot)=>({slot,x:960+470*Math.cos(a),y:540+470*Math.sin(a),hp:config.generatorHp||2,maxHp:config.generatorHp||2}))};
+  }
+  // Earliest swept circle versus a capsule. Tests the strip and both end caps,
+  // including initial overlaps; fast missiles cannot skip a thin wall.
+  function capsule(path,ax,ay,bx,by,r){
+    const px=path.px??path.x,py=path.py??path.y,dx=path.x-px,dy=path.y-py;
+    if(Math.max(px,path.x)<Math.min(ax,bx)-r||Math.min(px,path.x)>Math.max(ax,bx)+r||Math.max(py,path.y)<Math.min(ay,by)-r||Math.min(py,path.y)>Math.max(ay,by)+r)return null;
+    const sx=bx-ax,sy=by-ay,len=Math.hypot(sx,sy),ux=len?sx/len:1,uy=len?sy/len:0;
+    const q=clamp((px-ax)*ux+(py-ay)*uy,0,len),cx=ax+q*ux,cy=ay+q*uy,d0=Math.hypot(px-cx,py-cy);
+    if(d0<r-1e-7){const nx=d0>1e-7?(px-cx)/d0:-uy,ny=d0>1e-7?(py-cy)/d0:ux;return {t:0,x:px,y:py,nx,ny,depth:r-d0};}
+    let best=null;
+    const accept=(t,nx,ny)=>{if(t>=-1e-9&&t<=1+1e-9&&dx*nx+dy*ny< -1e-9&&(!best||t<best.t))best={t:clamp(t,0,1),x:px+dx*t,y:py+dy*t,nx,ny,depth:0};};
+    const v=dx*(-uy)+dy*ux,offset=(px-ax)*(-uy)+(py-ay)*ux;
+    if(Math.abs(v)>1e-9)for(const sign of [-1,1]){const t=(sign*r-offset)/v,k=(px+dx*t-ax)*ux+(py+dy*t-ay)*uy;if(k>=0&&k<=len)accept(t,-uy*sign,ux*sign);}
+    const a=dx*dx+dy*dy;
+    if(a>1e-12)for(const [x,y] of [[ax,ay],[bx,by]]){const ox=px-x,oy=py-y,b=ox*dx+oy*dy,c=ox*ox+oy*oy-r*r,disc=b*b-a*c;if(disc<0)continue;const t=(-b-Math.sqrt(disc))/a,nx=(px+dx*t-x)/r,ny=(py+dy*t-y)/r;accept(t,nx,ny);}
+    return best;
+  }
+  function ring(radius,steps,portal,half){
+    const segments=[];
+    for(let i=0;i<steps;i++){const a=i*TAU/steps,b=(i+1)*TAU/steps,mid=(a+b)/2;segments.push({ax:Math.cos(a)*radius,ay:Math.sin(a)*radius,bx:Math.cos(b)*radius,by:Math.sin(b)*radius,gate:Math.abs(angle(mid,portal))<half});}
+    return segments;
+  }
+  const outer=ring(OUTER,72,Math.PI,20*Math.PI/180),inner=ring(INNER,48,0,30*Math.PI/180);
+  const walls=Object.freeze({outer,inner});
+  function firstHit(body,path,r=0,{hullOnly=false,enemy=false}={}){
+    let hit=null;
+    const take=(h,kind,slot=-1)=>{if(h&&(!hit||h.t<hit.t-1e-9))hit={...h,kind,slot};};
+    for(const [segments,open] of [[outer,body.outerGate>.98],[inner,body.innerGate>.98]])for(const s of segments){
+      if(s.gate&&open)continue;
+      take(capsule(path,body.x+s.ax,body.y+s.ay,body.x+s.bx,body.y+s.by,WALL+r),'wall');
+    }
+    if(body.stage!=='escape'){
+      if(!enemy)for(const g of body.generators)if(g.hp>0)take(capsule(path,g.x,g.y,g.x,g.y,GENERATOR+r),'generator',g.slot);
+      if(!enemy||hullOnly)take(capsule(path,body.x,body.y,body.x,body.y,(hullOnly?CORE:body.inside?CORE:SHIELD)+r),body.inside||hullOnly?'core':'shield');
+    }
+    return hit;
+  }
+  function resolveShip(body,p,r){
+    // Wrapping the arena is a teleport, never a sweep through the station.
+    const wrap=Math.abs(p.x-(p.px??p.x))>960||Math.abs(p.y-(p.py??p.y))>540;
+    let start={x:wrap?p.x:p.px??p.x,y:wrap?p.y:p.py??p.y},end={x:p.x,y:p.y},contacts=0,coreHit=false;
+    for(let i=0;i<4;i++){
+      const h=firstHit(body,{px:start.x,py:start.y,...end},r,{hullOnly:true});if(!h)break;
+      contacts++;if(h.kind==='core')coreHit=true;
+      const left=1-h.t,dx=(end.x-start.x)*left,dy=(end.y-start.y)*left,inward=Math.min(0,dx*h.nx+dy*h.ny);
+      start={x:h.x+h.nx*(h.depth+.15),y:h.y+h.ny*(h.depth+.15)};
+      end={x:start.x+dx-h.nx*inward,y:start.y+dy-h.ny*inward};
+      const velocity=Math.min(0,p.vx*h.nx+p.vy*h.ny);p.vx-=velocity*h.nx;p.vy-=velocity*h.ny;
+    }
+    p.x=end.x;p.y=end.y;return {contacts,coreHit};
+  }
+  function syncPresence(body,p,r=35){
+    body.inside=!!(p&&!p.dead&&!(p.spawnFx>0)&&Math.hypot(p.x-body.x,p.y-body.y)<INNER-WALL-r);
+    if(body.inside)body.everEntered=true;
+    if(body.stage!=='escape')body.stage=remaining(body)?'generators':body.inside?'core':'infiltrate';
+  }
+  function atPortal(body,p,radius,portal,r){
+    if(!p||p.dead)return false;
+    const dx=p.x-body.x,dy=p.y-body.y;
+    return Math.abs(Math.hypot(dx,dy)-radius)<r+WALL+16&&Math.abs(angle(Math.atan2(dy,dx),portal))<(radius===OUTER?20:30)*Math.PI/180+.12;
+  }
+  function step(body,dt,p,uid){
+    body.age+=dt;
+    if(body.stage==='escape'){body.escapeLeft=Math.max(0,body.escapeLeft-dt);body.outerGate=body.innerGate=1;return [];}
+    const unlocked=remaining(body)===0,cycle=(body.age%6),hold=body.innerGate>.98&&atPortal(body,p,INNER,0,70),goal=unlocked&&(cycle<3.6||hold)?1:0;
+    if(p&&!p.dead)for(let i=0;i<2;i++)body.aims[i]=Math.atan2(p.y-(body.y+(i?1:-1)*315),p.x-body.x);
+    body.outerGate=unlocked?Math.min(1,body.outerGate+dt*2):0;
+    body.innerGate=clamp(body.innerGate+(goal?1:-1)*dt*2,0,1);
+    // Never close a moving gate onto a pilot already traversing its throat.
+    if(unlocked&&hold)body.innerGate=1;
+    const shots=[];
+    if(!p||p.dead||p.spawnFx>0||body.age<body.nextShot)return shots;
+    body.nextShot=body.age+2.6;
+    const sources=remaining(body)?body.generators.filter(g=>g.hp>0):[-1,1].map(sign=>({x:body.x,y:body.y+sign*315}));
+    for(const source of sources){
+      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*32,y:source.y+ny*32};
+      if(firstHit(body,{px:muzzle.x,py:muzzle.y,x:p.x,y:p.y},4,{enemy:true}))continue;
+      shots.push({id:uid(),owner:-5,voidShot:true,x:muzzle.x,y:muzzle.y,px:muzzle.x,py:muzzle.y,vx:nx*245,vy:ny*245,age:0,travel:0,guided:false});
+    }
+    return shots;
+  }
+  function damage(body,hit,weapon){
+    const amount=DAMAGE[weapon];if(!amount||!hit||body.stage==='escape')return {shielded:true};
+    if(hit.kind==='generator'){
+      const part=body.generators[hit.slot];if(!part||part.hp<=0)return {shielded:true};
+      part.hp=Math.max(0,part.hp-amount);return {destroyed:part.hp===0};
+    }
+    if(hit.kind!=='core'||!body.inside)return {shielded:true};
+    body.hp=Math.max(0,body.hp-amount);
+    if(body.hp===0){body.stage='escape';body.escapeLeft=body.escapeDuration;body.outerGate=body.innerGate=1;return {escape:true};}
+    return {damaged:true};
+  }
+  const escaped=(body,p,r=35)=>body.stage==='escape'&&body.escapeLeft>0&&!!p&&!p.dead&&Math.hypot(p.x-body.x,p.y-body.y)>OUTER+WALL+r+8;
+  function snapshot(body){return body?{...body,aims:body.aims.slice(),generators:body.generators.map(g=>({...g})),remaining:remaining(body)}:null;}
+  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,capsule});
+})();
+
+;
 // local-cpu.js
 'use strict';
 (() => {
@@ -5287,6 +5431,7 @@ window.GALAXY_CONFIG = {
   const MOTHERSHIP=window.GalaxyMothership;
   const STORM=window.GalaxyStormCore;
   const DEVOURER=window.GalaxyDevourer;
+  const VOID=window.GalaxyVoidCore;
   if(!PHYSICS_CORE)throw new Error('GalaxyPhysicsCore no cargado');
   const W=1920,H=1080,TICK_HZ=60,DT=1/TICK_HZ,STEP_MS=1000/TICK_HZ;
   const DRAG_PER_TICK=Math.pow(0.35,DT);
@@ -5446,7 +5591,7 @@ window.GALAXY_CONFIG = {
       this.meteors=[];
       this.giant=null;
       this.mothership=null;
-      this.devourer=null;
+      this.devourer=null;this.voidSphere=null;
       this.ufo=null;
       // V21.61: la campaña CPU puede tener hasta tres OVNIs simultáneos.
       // this.ufo conserva el principal para no tocar la física compartida;
@@ -6377,7 +6522,7 @@ window.GALAXY_CONFIG = {
       this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
       const human=this.makePlayer(0,name,false);
-      this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.voidSphere=null;this.bossEncounter=null;
       this.applyTrainingHardLoadout(human,false);
       this.placeAtSpawn(human);
       this.players.push(human);
@@ -6406,7 +6551,7 @@ window.GALAXY_CONFIG = {
     startTraining(brain=null){
       this.trainingMode=true;
       this.bossEncounter=null;
-      this.mothership=null;this.stormCore=null;this.devourer=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.voidSphere=null;
       this.learningEnabled=true;
       this.campaignLevel=1;
       this.difficulty='dificil';
@@ -6448,7 +6593,7 @@ window.GALAXY_CONFIG = {
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
       return true;
     }
-    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;}
+    stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.devourer=null;this.voidSphere=null;this.bossEncounter=null;}
     setControl(turn,thrust,fire,actions={}){
       const p=this.players[0];
       if(!p)return false;
@@ -6479,7 +6624,7 @@ window.GALAXY_CONFIG = {
       if(msg.t==='input-action'||msg.t==='fallback-input-action'){this.applyInputAction(msg.kind,msg.actionId);return true;}
       if(msg.t==='restart'){
         const level=Number.isFinite(Number(msg.level))?clamp(Math.round(Number(msg.level)||1),1,CAMPAIGN_LEVELS):this.campaignLevel;
-        const completed=this.finished&&this.winner===0&&(!(this.needsMothershipBoss()||this.needsUfoBoss()||this.needsStormBoss())||this.bossEncounter?.phase==='won');
+        const completed=this.finished&&this.winner===0&&(!(this.needsMothershipBoss()||this.needsUfoBoss()||this.needsStormBoss()||this.needsDevourerBoss()||this.needsVoidBoss())||this.bossEncounter?.phase==='won');
         if(!this.finished||level>this.campaignLevel+1||(level>this.campaignLevel&&!completed)||(this.bossEncounter?.phase==='failed'&&level!==1))return true;
         this.campaignLevel=level;
         if(this.restart()){
@@ -6544,7 +6689,7 @@ window.GALAXY_CONFIG = {
       this.noDeathTime=0;this.nextGiant=rand(hazard.giantFirstMin,hazard.giantFirstMax);this.nextUfo=this.ufoLimit()>0?rand(UFO_FIRST_MIN,UFO_FIRST_MAX):999999;
       this.huntTargetIndex=0;this.huntUntil=0;this.huntStartsAt=0;this.huntThresholdActive=false;
       this.resetAsteroids();
-      this.mothership=null;this.stormCore=null;this.devourer=null;this.bossEncounter=null;
+      this.mothership=null;this.stormCore=null;this.devourer=null;this.voidSphere=null;this.bossEncounter=null;
       for(const p of this.players){p.dead=true;p.pendingSpawn=null;}
       for(const p of this.players){
         p.bullets=5;p.cadence=30;p.speed=1;p.kills=0;p.deaths=0;p.reload=0;p.guided=false;p.guidedTarget=-1;p.guidedAmmo=0;p.joystickRocketHeld=false;p.flare=0;p.flareHold=0;p.flareGesture=false;p.specialReleaseLock=false;p.shockwave=false;p.shockReachAt=0;p.shockExplodeAt=0;p.shockOwner=-1;p.nextShockLearning=0;
@@ -6780,7 +6925,7 @@ window.GALAXY_CONFIG = {
       if(victim.cpu)victim.flarePending=null;
       if(!victim.cpu)this.humanMeteorDecision=null;
       // V22.46: toda muerte resta una baja, sin bajar de cero.
-      const stormLife=!!(['storm-core','devourer'].includes(this.bossEncounter?.type)&&!victim.cpu);
+      const stormLife=!!(['storm-core','devourer','void-sphere'].includes(this.bossEncounter?.type)&&!victim.cpu);
       if(!this.bossEncounter||stormLife)victim.kills=Math.max(0,victim.kills-1);
 
       // V21.33: la embestida con escudo conserva su efecto de colision/baja,
@@ -6791,6 +6936,7 @@ window.GALAXY_CONFIG = {
 
       victim.bullets=0;victim.cadence=30;victim.speed=1;victim.shield=0;victim.camo=0;victim.reload=0;victim.guided=false;victim.guidedTarget=-1;victim.guidedAmmo=0;victim.joystickRocketHeld=false;victim.flareHold=0;victim.flareGesture=false;victim.specialReleaseLock=false;victim.shockwave=false;victim.shockReachAt=0;victim.shockExplodeAt=0;victim.shockOwner=-1;
       this.noDeathTime=0;this.emitShipImpact(victim,null,true);this.emit({t:'sound',kind:'impact'});
+      if(this.voidSphere&&!victim.cpu){VOID.syncPresence(this.voidSphere,victim);if(this.voidSphere.stage==='escape'){victim.pendingSpawn=null;victim.respawn=0;this.finishCampaignBoss(false);return;}}
       if(stormLife&&victim.kills===0){victim.pendingSpawn=null;victim.respawn=0;this.finishCampaignBoss(false);return;}
       if(attacker&&attacker!==victim){
         attacker.kills++;
@@ -6804,6 +6950,7 @@ window.GALAXY_CONFIG = {
     }
     placeAtSpawn(p,reserve=false){
       let spawn=!reserve&&p.pendingSpawn;
+      if(this.voidSphere&&!p.cpu)spawn={x:180,y:540,rot:90};
       if(!spawn){
         // Reserved dead ships occupy their future sectors until they return.
         const roster=this.players.map(other=>other.pendingSpawn?{...other,x:other.pendingSpawn.x,y:other.pendingSpawn.y,dead:false}:other);
@@ -7809,10 +7956,11 @@ window.GALAXY_CONFIG = {
         // Al caducar el input tambien se descartan sus pulsos pendientes.
         if(!p.cpu&&stored!==IDLE_CONTROL){stored.rocketPulse=false;stored.flarePulse=false;stored.shockPulse=false;}
       }
-      this.updateMothership(dt);this.updateStormCore(dt);this.updateDevourer(dt);
-      if(!['storm-core','devourer'].includes(this.bossEncounter?.type))this.updateAsteroids(dt);
-      this.resolveMothershipContacts();this.resolveStormContacts();this.resolveDevourerContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.absorbDevourerFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);this.absorbDevourerShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
+      this.updateMothership(dt);this.updateStormCore(dt);this.updateDevourer(dt);this.updateVoidSphere(dt);if(this.finished)return;
+      if(!['storm-core','devourer','void-sphere'].includes(this.bossEncounter?.type))this.updateAsteroids(dt);
+      this.resolveMothershipContacts();this.resolveStormContacts();this.resolveDevourerContacts();this.resolveVoidContacts();this.updateFlares(dt);this.absorbMothershipFlares();this.absorbStormFlares();this.absorbDevourerFlares();this.absorbVoidFlares();this.guideBossMissiles(dt);this.absorbMothershipShots(dt);this.absorbStormShots(dt);this.absorbDevourerShots(dt);this.absorbVoidShots(dt);if(this.finished)return;this.updateBullets(dt);if(this.finished)return;this.updateExtraUfoProjectileHits();this.updatePickups(dt);this.updateShower(dt);this.updateMeteors(dt);this.updateGiant(dt);this.updateUfo(dt);this.shipCollisions();
     }
+    needsVoidBoss(){return !!(!this.trainingMode&&VOID&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='void-sphere');}
     needsMothershipBoss(){return !!(!this.trainingMode&&MOTHERSHIP&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='mothership');}
     needsUfoBoss(){return !!(!this.trainingMode&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='ufo-wave');}
     needsDevourerBoss(){return !!(!this.trainingMode&&DEVOURER&&CAMPAIGN?.getLevel(this.campaignLevel)?.boss?.type==='devourer');}
@@ -7823,6 +7971,11 @@ window.GALAXY_CONFIG = {
     }
     beginCampaignBoss(winner){
       if(winner.cpu||this.bossEncounter||this.trainingMode)return false;
+      if(this.needsVoidBoss()){
+        const config=CAMPAIGN.getLevel(this.campaignLevel).boss;
+        this.bossEncounter={type:'void-sphere',phase:'entering',hp:config.coreHp,maxHp:config.coreHp,nextAt:this.fxClock+1.5,cleared:false};
+        this.retireBossRivals();return true;
+      }
       if(this.needsDevourerBoss()){
         const config=CAMPAIGN.getLevel(this.campaignLevel).boss;
         this.bossEncounter={type:'devourer',phase:'entering',hp:config.headHp,maxHp:config.headHp,nextAt:this.fxClock+1.5,cleared:false};
@@ -7848,9 +8001,18 @@ window.GALAXY_CONFIG = {
       const boss=this.bossEncounter;if(!boss||this.finished)return;
       if(!boss.cleared){
         this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;this.giant=null;this.meteors.length=0;this.showerLeft=0;this.ufo=null;this.ufoExtras.length=0;this.ufoWaveRemaining=0;this.ufoWaveNext=0;this.nextUfo=999999;boss.cleared=true;
-        if(['storm-core','devourer'].includes(boss.type))this.asteroids.length=0;
+        if(['storm-core','devourer','void-sphere'].includes(boss.type))this.asteroids.length=0;
       }
       const human=this.players.find(p=>!p.cpu);
+      if(boss.type==='void-sphere'){
+        if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
+          this.voidSphere=VOID.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
+          this.asteroids.length=0;this.pickups.length=0;
+          Object.assign(human,{x:180,y:540,px:180,py:540,vx:0,vy:0,rot:90,pr:90,pendingSpawn:null,spawnAnchorX:180,spawnAnchorY:540});
+          human.protection=Math.max(human.protection,3);human.bullets=Math.max(human.bullets,24);
+        }
+        return;
+      }
       if(boss.type==='devourer'){
         if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
           this.devourer=DEVOURER.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
@@ -7882,12 +8044,16 @@ window.GALAXY_CONFIG = {
     }
     finishCampaignBoss(won){
       const boss=this.bossEncounter;if(!boss||this.finished)return;
-      boss.phase=won?'won':'failed';this.mothership=null;this.stormCore=null;this.devourer=null;
-      if(['storm-core','devourer'].includes(boss.type)){this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;}
+      boss.phase=won?'won':'failed';this.mothership=null;this.stormCore=null;this.devourer=null;this.voidSphere=null;
+      if(['storm-core','devourer','void-sphere'].includes(boss.type)){this.bullets.length=0;this.flares.length=0;this.activeShockwaves.length=0;}
       this.finished=true;this.winner=won?0:-1;
       this.flushLearning();this.emit({t:'victory',winner:this.winner});
     }
     bossCombatTargets(player){
+      if(!player.cpu&&this.voidSphere){
+        const b=this.voidSphere;if(b.stage==='escape')return [];
+        return b.inside?[{index:4,x:b.x,y:b.y,vx:0,vy:0,dead:false,camo:0}]:b.generators.filter(g=>g.hp>0).map(g=>({index:g.slot+5,x:g.x,y:g.y,vx:0,vy:0,dead:false,camo:0}));
+      }
       if(!player.cpu&&this.devourer&&this.bossEncounter?.phase==='fighting'){
         const body=this.devourer,slot=DEVOURER.weakSlot(body);
         if(slot<0&&!DEVOURER.vulnerable(body))return [];
@@ -7917,7 +8083,8 @@ window.GALAXY_CONFIG = {
       for(const b of this.bullets){
         if(!b.guided||b.decoyed||b.flareTarget>=0)continue;
         let target=null;
-        if(boss.type==='storm-core'&&this.stormCore){const part=b.target===4?this.stormCore:this.stormCore.satellites[b.target-5];if(part?.hp>0)target=part;}
+        if(boss.type==='void-sphere'&&this.voidSphere){const sphere=this.voidSphere,g=sphere.generators[b.target-5];if(b.target===4&&sphere.inside&&sphere.stage!=='escape')target=sphere;else if(g?.hp>0)target=g;}
+        else if(boss.type==='storm-core'&&this.stormCore){const part=b.target===4?this.stormCore:this.stormCore.satellites[b.target-5];if(part?.hp>0)target=part;}
         else if(boss.type==='devourer'&&this.devourer){
           const slot=DEVOURER.weakSlot(this.devourer);
           if(b.target===4&&slot<0&&DEVOURER.vulnerable(this.devourer))target=this.devourer;
@@ -7932,6 +8099,49 @@ window.GALAXY_CONFIG = {
         const dx=target.x-b.x,dy=target.y-b.y,distance=Math.hypot(dx,dy),speed=Math.hypot(b.vx,b.vy)||1;if(distance<=1)continue;
         const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
       }
+    }
+    updateVoidSphere(dt){
+      const b=this.voidSphere;if(!b)return;
+      const p=this.players.find(p=>!p.cpu),shots=VOID.step(b,dt,p,uid),active=this.bullets.reduce((n,s)=>n+(s.voidShot?1:0),0);
+      if(shots.length&&active<32){this.bullets.push(...shots.slice(0,32-active));this.emit({t:'sound',kind:'laser'});}
+      if(b.stage==='escape'){
+        if(b.escapeLeft<=0){this.emitExplosionAt(b.x,b.y,0);this.finishCampaignBoss(false);return;}
+        // Escape is checked after wall resolution, never from a predicted pose.
+        const beat=Math.floor(b.escapeLeft*3);
+        if(beat!==b.fxBeat){b.fxBeat=beat;const a=beat*2.4,r=120+(beat%5)*48;this.emitExplosionAt(b.x+Math.cos(a)*r,b.y+Math.sin(a)*r,0);}
+      }
+    }
+    resolveVoidContacts(){
+      const b=this.voidSphere;if(!b)return;
+      const p=this.players.find(p=>!p.cpu),r=Math.max(PHYSICS_CORE.SHIP_PROJECTILE_RADIUS,shipCollisionRadius(p));
+      if(p&&!p.dead&&!(p.spawnFx>0)){
+        const contact=VOID.resolveShip(b,p,r);
+        if(contact.coreHit&&p.protection<=0&&p.shield<=0)this.destroyShip(p,null);
+      }
+      if(!this.voidSphere)return;
+      VOID.syncPresence(b,p,r);
+      if(VOID.escaped(b,p,r))this.finishCampaignBoss(true);
+    }
+    damageVoidPart(b,hit,weapon,owner){
+      if(this.voidSphere!==b||this.finished)return;
+      const result=VOID.damage(b,hit,weapon);this.bossEncounter.hp=b.hp;
+      if(result.shielded){this.emitRocketDisintegrateAt(hit.x,hit.y,owner);return;}
+      this.emitExplosionAt(hit.x,hit.y,owner);this.emit({t:'sound',kind:'impact'});
+      if(result.escape){this.bullets=this.bullets.filter(s=>!s.voidShot);for(const dx of [-50,0,50])this.emitExplosionAt(b.x+dx,b.y,owner);}
+    }
+    absorbVoidShots(dt){
+      const b=this.voidSphere;if(!b)return;
+      for(let i=this.bullets.length-1;i>=0;i--){
+        const s=this.bullets[i];if(!s)continue;
+        const hit=VOID.firstHit(b,{px:s.x,py:s.y,x:s.x+s.vx*dt,y:s.y+s.vy*dt},s.guided?MISSILE_HIT_RADIUS:BULLET_RADIUS,{enemy:!!s.voidShot});
+        if(!hit)continue;this.bullets.splice(i,1);
+        if(s.voidShot)this.emitExplosionAt(hit.x,hit.y,0);else this.damageVoidPart(b,hit,s.guided?'missile':'bullet',s.owner);
+        if(!this.voidSphere)break;
+      }
+    }
+    absorbVoidFlares(){
+      const b=this.voidSphere;if(!b)return;
+      for(let i=this.flares.length-1;i>=0;i--){const f=this.flares[i],hit=VOID.firstHit(b,{px:f.px??f.x,py:f.py??f.y,x:f.x,y:f.y},FLARE_RADIUS);if(!hit)continue;this.flares.splice(i,1);this.damageVoidPart(b,hit,'flare',f.owner);}
     }
     updateDevourer(dt){
       const body=this.devourer;if(!body)return;
@@ -8392,6 +8602,15 @@ window.GALAXY_CONFIG = {
     }
     updatePickups(dt){
       this.nextPickup-=dt;
+      if(this.voidSphere&&this.nextPickup<=0){
+        const b=this.voidSphere,p=this.players.find(p=>!p.cpu),distance=Math.hypot(p.x-b.x,p.y-b.y);
+        if(b.stage!=='escape'){
+          const point=b.inside?{x:1120,y:540}:distance<395?{x:960,y:220}:{x:260,y:540};
+          this.pickups.push({id:uid(),type:p.bullets<6?'ammo3':'flare',...point,phase:0});
+          if(this.pickups.length>5)this.pickups.shift();
+        }
+        this.nextPickup=5;
+      }
       if(this.nextPickup<=0){
         let type;
         const flarePresent=this.pickups.some(pk=>pk.type==='flare');
@@ -9038,9 +9257,10 @@ window.GALAXY_CONFIG = {
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='void-sphere'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,stage:this.voidSphere?.stage||'generators',remaining:this.voidSphere?VOID.remaining(this.voidSphere):3,escapeLeft:this.voidSphere?.escapeLeft||0,innerOpen:!!(this.voidSphere?.innerGate>.98)}:this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
         devourer,
+        voidSphere:VOID?.snapshot(this.voidSphere)||null,
         mothership:this.mothership?{id:this.mothership.id,x:this.mothership.x,y:this.mothership.y,angle:this.mothership.angle,bank:this.mothership.bank,hp:this.mothership.hp,maxHp:this.mothership.maxHp,turrets:this.mothership.turrets.map(t=>({angle:t.angle}))}:null,
         ufo:serializedUfos[0]||null,
         ufos:serializedUfos,
@@ -16574,7 +16794,7 @@ window.GALAXY_CONFIG = {
       return;
     }
     stopLocalCpu();
-    localCampaignLevel=document.documentElement.dataset.practiceLevel==='4'?4:3;localCampaignAwaitingContinue=false;localCampaignComplete=false;localCampaignGameOver=false;
+    localCampaignLevel=Number(document.documentElement.dataset.practiceLevel)||3;localCampaignAwaitingContinue=false;localCampaignComplete=false;localCampaignGameOver=false;
     // Aislar el modo CPU de cualquier sesion/red anterior. Un snapshot o evento
     // WebSocket retrasado no debe poder sustituir el estado LOCAL ni provocar
     // un reload/retorno al menu durante la partida.
@@ -16600,7 +16820,7 @@ window.GALAXY_CONFIG = {
       localCampaignLevel
     );
     const pilot=localCpu.players.find(player=>!player.cpu);
-    pilot.kills=5;pilot.bullets=localCampaignLevel===4?40:25;pilot.guidedAmmo=3;pilot.guided=true;pilot.flare=3;
+    pilot.kills=5;pilot.bullets=localCampaignLevel>=4?40:25;pilot.guidedAmmo=3;pilot.guided=true;pilot.flare=3;
     if(!localCpu.beginCampaignBoss(pilot))throw new Error('No se pudo iniciar el jefe de prueba');
     localCpuActive=true;
     handle({t:'created',code:'LOCAL',index:0,cpu:true,playerToken:''},cpu);
@@ -16941,7 +17161,7 @@ window.GALAXY_CONFIG = {
         const oldBoss=state?.boss,boss=m.boss;
         if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
           playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
-          playNoticeText=boss.type==='devourer'?tr('devourerIncoming'):boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
+          playNoticeText=boss.type==='void-sphere'?tr('voidIncoming'):boss.type==='devourer'?tr('devourerIncoming'):boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
           huntFxUntil=0;leaderAnnouncement=null;
         }
       }
@@ -17680,7 +17900,7 @@ window.GALAXY_CONFIG = {
     localCampaignGameOver=false;
 
     if(localCampaign&&state?.boss?.phase==='failed'){
-      victoryText.textContent=tr(state.boss.type==='devourer'?'devourerDefeat':state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
+      victoryText.textContent=tr(state.boss.type==='void-sphere'?'voidDefeat':state.boss.type==='devourer'?'devourerDefeat':state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
       if(restartBtn){restartBtn.classList.remove('hidden');restartBtn.disabled=false;restartBtn.textContent=tr('restartCampaign');}
     }else if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
       victoryText.textContent=tr('campaignChampion');
@@ -19233,6 +19453,7 @@ window.GALAXY_CONFIG = {
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();
       if(roomCode==='LOCAL'&&localCpu?.needsStormBoss())await window.Galaxy3D.prepareStorm();
+      if(roomCode==='LOCAL'&&localCpu?.needsVoidBoss())await window.Galaxy3D.prepareVoid();
       if(roomCode==='LOCAL'&&localCpu?.needsDevourerBoss())await window.Galaxy3D.prepareDevourer();
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
@@ -19789,6 +20010,15 @@ window.GALAXY_CONFIG = {
     ctx.restore();
   }
 
+  function drawVoidProgress(boss){
+    if(boss?.type!=='void-sphere'||boss.phase!=='fighting')return;
+    const escape=boss.stage==='escape',key=escape?'voidEscape':boss.stage==='generators'?'voidGenerators':boss.stage==='core'?'voidCore':boss.innerOpen?'voidEnter':'voidWait';
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':'#c6f8ff';
+    ctx.font=isMobile?'30px Flashback,Arial':'25px Flashback,Arial';
+    const text=tr(key,{count:3-boss.remaining,total:3,seconds:Math.ceil(boss.escapeLeft)});ctx.strokeText(text,W/2,90);ctx.fillText(text,W/2,90);
+    ctx.font=isMobile?'25px Flashback,Arial':'22px Flashback,Arial';
+    const status=tr('voidStatus',{hp:boss.hp,total:boss.maxHp,lives:boss.lives});ctx.strokeText(status,W/2,128);ctx.fillText(status,W/2,128);ctx.restore();
+  }
   function drawDevourerProgress(boss){
     if(boss?.type!=='devourer'||boss.phase!=='fighting')return;
     const warning=boss.attack==='charge-warning'||boss.attack==='volley-warning';
@@ -20009,6 +20239,10 @@ window.GALAXY_CONFIG = {
 
     if(localCpuActive&&renderState.mothership)scene3D.mothership(renderState.mothership);
     if(localCpuActive&&renderState.stormCore)scene3D.storm(renderState.stormCore);
+    if(localCpuActive&&renderState.voidSphere){
+      const b=renderState.voidSphere,p=renderState.players.find(p=>p.i===myIndex&&!p.dead);
+      b.roofOpen=!!p&&Math.hypot(p.x-b.x,p.y-b.y)<520;scene3D.voidSphere(b);
+    }
     if(localCpuActive&&renderState.devourer)scene3D.devourer(renderState.devourer);
     for(const a of renderState.asteroids){
       const old=previousLookup.asteroids.get(a.id);
@@ -20115,7 +20349,7 @@ window.GALAXY_CONFIG = {
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
-    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);drawDevourerProgress(renderState.boss);}
+    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);drawDevourerProgress(renderState.boss);drawVoidProgress(renderState.boss);}
     drawLocalRespawnCountdown(now);
     drawLocalEntryCountdown(now);
     if(perfStats){
@@ -20152,6 +20386,4 @@ window.GALAXY_CONFIG = {
   });
   render();
 })();
-
-
 ;

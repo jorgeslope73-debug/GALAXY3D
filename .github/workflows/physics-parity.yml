@@ -14,6 +14,13 @@ on:
       - 'tools/build-storm-guns.mjs'
       - 'docs/storm-core.js'
       - 'docs/storm-model.js'
+      - 'docs/void-core.js'
+      - 'docs/void-model.js'
+      - 'tools/check-void-boss.js'
+      - 'tools/check-void-model.mjs'
+      - 'tools/sync-practice.cjs'
+      - 'docs/prueba-esfera.html'
+      - 'docs/prueba-nucleo.js'
       - 'docs/devourer-core.js'
       - 'docs/devourer-model.js'
       - 'docs/assets/models/devorador.glb'
@@ -130,6 +137,13 @@ on:
       - 'tools/build-storm-guns.mjs'
       - 'docs/storm-core.js'
       - 'docs/storm-model.js'
+      - 'docs/void-core.js'
+      - 'docs/void-model.js'
+      - 'tools/check-void-boss.js'
+      - 'tools/check-void-model.mjs'
+      - 'tools/sync-practice.cjs'
+      - 'docs/prueba-esfera.html'
+      - 'docs/prueba-nucleo.js'
       - 'docs/devourer-core.js'
       - 'docs/devourer-model.js'
       - 'docs/assets/models/devorador.glb'
@@ -330,6 +344,8 @@ jobs:
         run: node tools/check-storm-boss.js && node tools/check-storm-model.mjs && node tools/check-storm-fire.mjs
       - name: Check phase-four devourer combat and authored model
         run: node tools/check-devourer-boss.js && node tools/check-devourer-model.mjs && node tools/check-devourer-motion.js
+      - name: Void sphere infiltration and timed escape
+        run: node tools/check-void-boss.js && node tools/check-void-model.mjs
       - name: Check level-two UFO wave identity, counts and progression
         run: node tools/check-ufo-boss.js
       - name: Check decorative menu UFO timing and clearance

@@ -4083,7 +4083,7 @@
         const oldBoss=state?.boss,boss=m.boss;
         if(!oldBoss||(boss.phase==='fighting'&&(oldBoss.pass!==boss.pass||oldBoss.phase!=='fighting'))){
           playNoticeStart=now;playNoticeUntil=now+2400;playNoticeKind='boss';
-          playNoticeText=boss.type==='devourer'?tr('devourerIncoming'):boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
+          playNoticeText=boss.type==='void-sphere'?tr('voidIncoming'):boss.type==='devourer'?tr('devourerIncoming'):boss.type==='storm-core'?tr('stormBossIncoming'):boss.type==='ufo-wave'?tr('ufoBossIncoming',{total:boss.total}):(boss.phase==='fighting'?tr('bossPass',{pass:boss.pass,total:boss.maxPasses}):tr('bossIncoming'));
           huntFxUntil=0;leaderAnnouncement=null;
         }
       }
@@ -4822,7 +4822,7 @@
     localCampaignGameOver=false;
 
     if(localCampaign&&state?.boss?.phase==='failed'){
-      victoryText.textContent=tr(state.boss.type==='devourer'?'devourerDefeat':state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
+      victoryText.textContent=tr(state.boss.type==='void-sphere'?'voidDefeat':state.boss.type==='devourer'?'devourerDefeat':state.boss.type==='ufo-wave'?'ufoBossEscaped':'bossMissionFailed');localCampaignGameOver=true;
       if(restartBtn){restartBtn.classList.remove('hidden');restartBtn.disabled=false;restartBtn.textContent=tr('restartCampaign');}
     }else if(localCampaign&&humanWon&&localCampaignLevel>=LOCAL_CAMPAIGN_LEVELS){
       victoryText.textContent=tr('campaignChampion');
@@ -6375,6 +6375,7 @@
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       if(roomCode==='LOCAL'&&localCpu?.needsMothershipBoss())await window.Galaxy3D.prepareMothership();
       if(roomCode==='LOCAL'&&localCpu?.needsStormBoss())await window.Galaxy3D.prepareStorm();
+      if(roomCode==='LOCAL'&&localCpu?.needsVoidBoss())await window.Galaxy3D.prepareVoid();
       if(roomCode==='LOCAL'&&localCpu?.needsDevourerBoss())await window.Galaxy3D.prepareDevourer();
       if(generation!==onlineStartGeneration||roomCode!==startingRoom)return;
       await new Promise(resolve=>requestAnimationFrame(resolve));updateCanvasResolution();
@@ -6931,6 +6932,15 @@
     ctx.restore();
   }
 
+  function drawVoidProgress(boss){
+    if(boss?.type!=='void-sphere'||boss.phase!=='fighting')return;
+    const escape=boss.stage==='escape',key=escape?'voidEscape':boss.stage==='generators'?'voidGenerators':boss.stage==='core'?'voidCore':boss.innerOpen?'voidEnter':'voidWait';
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':'#c6f8ff';
+    ctx.font=isMobile?'30px Flashback,Arial':'25px Flashback,Arial';
+    const text=tr(key,{count:3-boss.remaining,total:3,seconds:Math.ceil(boss.escapeLeft)});ctx.strokeText(text,W/2,90);ctx.fillText(text,W/2,90);
+    ctx.font=isMobile?'25px Flashback,Arial':'22px Flashback,Arial';
+    const status=tr('voidStatus',{hp:boss.hp,total:boss.maxHp,lives:boss.lives});ctx.strokeText(status,W/2,128);ctx.fillText(status,W/2,128);ctx.restore();
+  }
   function drawDevourerProgress(boss){
     if(boss?.type!=='devourer'||boss.phase!=='fighting')return;
     const warning=boss.attack==='charge-warning'||boss.attack==='volley-warning';
@@ -7151,6 +7161,10 @@
 
     if(localCpuActive&&renderState.mothership)scene3D.mothership(renderState.mothership);
     if(localCpuActive&&renderState.stormCore)scene3D.storm(renderState.stormCore);
+    if(localCpuActive&&renderState.voidSphere){
+      const b=renderState.voidSphere,p=renderState.players.find(p=>p.i===myIndex&&!p.dead);
+      b.roofOpen=!!p&&Math.hypot(p.x-b.x,p.y-b.y)<520;scene3D.voidSphere(b);
+    }
     if(localCpuActive&&renderState.devourer)scene3D.devourer(renderState.devourer);
     for(const a of renderState.asteroids){
       const old=previousLookup.asteroids.get(a.id);
@@ -7257,7 +7271,7 @@
     }
     if(impactFX)impactFX.draw(ctx,now);
     drawHud(now);
-    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);drawDevourerProgress(renderState.boss);}
+    if(localCpuActive){drawUfoBossProgress(renderState.boss);drawStormBossProgress(renderState.boss);drawDevourerProgress(renderState.boss);drawVoidProgress(renderState.boss);}
     drawLocalRespawnCountdown(now);
     drawLocalEntryCountdown(now);
     if(perfStats){
