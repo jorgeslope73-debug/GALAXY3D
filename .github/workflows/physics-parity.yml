@@ -16,6 +16,9 @@ on:
       - 'docs/storm-model.js'
       - 'docs/void-core.js'
       - 'docs/void-model.js'
+      - 'docs/void-decor.js'
+      - 'tools/check-void-decor.mjs'
+      - 'tools/build-void-interior.py'
       - 'tools/check-void-entry.js'
       - 'tools/check-void-maze.js'
       - 'tools/check-void-boss.js'
@@ -141,6 +144,9 @@ on:
       - 'docs/storm-model.js'
       - 'docs/void-core.js'
       - 'docs/void-model.js'
+      - 'docs/void-decor.js'
+      - 'tools/check-void-decor.mjs'
+      - 'tools/build-void-interior.py'
       - 'tools/check-void-entry.js'
       - 'tools/check-void-maze.js'
       - 'tools/check-void-boss.js'
@@ -349,7 +355,7 @@ jobs:
       - name: Check phase-four devourer combat and authored model
         run: node tools/check-devourer-boss.js && node tools/check-devourer-model.mjs && node tools/check-devourer-motion.js
       - name: Void sphere infiltration and timed escape
-        run: node tools/check-void-boss.js && node tools/check-void-model.mjs && node tools/check-void-maze.js && node tools/check-void-entry.js
+        run: node tools/check-void-boss.js && node tools/check-void-model.mjs && node tools/check-void-maze.js && node tools/check-void-entry.js && node tools/check-void-decor.mjs
       - name: Check level-two UFO wave identity, counts and progression
         run: node tools/check-ufo-boss.js
       - name: Check decorative menu UFO timing and clearance

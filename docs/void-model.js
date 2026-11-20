@@ -2,14 +2,17 @@
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 export async function loadVoidTemplate(T){
   const url=new URL('./assets/models/esfera-vacio.glb',import.meta.url);url.search=new URL(import.meta.url).search;
-  const gltf=await new GLTFLoader().loadAsync(url.href);
+  const moduleURL=new URL('./void-decor.js',import.meta.url);moduleURL.search=new URL(import.meta.url).search;
+  const [gltf,decor]=await Promise.all([new GLTFLoader().loadAsync(url.href),import(moduleURL.href)]);
   if(!gltf.scene.getObjectByName('VOID_ROOT'))throw new Error('Falta VOID_ROOT');
-  return gltf.scene;
+  return {station:gltf.scene,detail:await decor.loadVoidDecor(T),createDecor:decor.createVoidDecorFactory};
 }
 export function createVoidFactory(T,{template,environment=null,reducedMotion=false,combat=globalThis.window?.GalaxyVoidCore}={}){
   if(!combat)throw new Error('Falta la autoridad del laberinto');
+  const stationTemplate=template.station||template;
+  const createDecor=template.createDecor?template.createDecor(T,{template:template.detail,combat,environment,reducedMotion}):null;
   const geometries=new Set(),materials=new Set();
-  template.traverse(o=>{if(!o.isMesh)return;geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material]){materials.add(m);if(environment&&m.metalness>0){m.envMap=environment;m.envMapIntensity=.65;}}});
+  stationTemplate.traverse(o=>{if(!o.isMesh)return;geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material]){materials.add(m);if(environment&&m.metalness>0){m.envMap=environment;m.envMapIntensity=.65;}}});
   const shieldGeometry=new T.SphereGeometry(combat.SHIELD,24,16);geometries.add(shieldGeometry);
   const shieldMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.FrontSide,toneMapped:false,
     uniforms:{opacity:{value:.8}},
@@ -17,7 +20,8 @@ export function createVoidFactory(T,{template,environment=null,reducedMotion=fal
     fragmentShader:'varying vec3 n;uniform float opacity;void main(){float edge=1.-abs(normalize(n).z);gl_FragColor=vec4(.55,.3,1.,opacity*(.08+.5*edge*edge));}'
   });materials.add(shieldMaterial);
   const create=()=>{
-    const root=new T.Group(),axis=new T.Group(),station=template.clone(true);axis.rotation.x=Math.PI/2;axis.add(station);root.add(axis);
+    const root=new T.Group(),axis=new T.Group(),station=stationTemplate.clone(true);axis.rotation.x=Math.PI/2;axis.add(station);root.add(axis);
+    const decor=createDecor?.()||null;if(decor)root.add(decor.root);
     const part=name=>{const o=station.getObjectByName('VOID_'+name);if(!o)throw new Error('Falta VOID_'+name);return o;};
     const roof=part('ROOF'),core=part('CORE'),outer=part('OUTER_GATE'),inner=part('INNER_GATE'),gens=[0,1,2].map(i=>part('GENERATOR_'+i)),turrets=[0,1].map(i=>part('TURRET_'+i));
     // The original GLB's shutter arcs no longer describe this moving maze.
@@ -46,12 +50,13 @@ export function createVoidFactory(T,{template,environment=null,reducedMotion=fal
       root.add(group);return group;
     }
     const outerRing=wall(combat.walls.outer),innerRing=wall(combat.walls.inner);
+    if(decor){outerRing.children[1].visible=false;innerRing.children[1].visible=false;}
     const barrierGeometry=new T.RingGeometry(combat.OUTER-10,combat.OUTER+10,24,1,Math.PI-combat.OPENING,combat.OPENING*2),barrierMaterial=new T.MeshBasicMaterial({color:0xa16eff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false,side:T.DoubleSide});
     geometries.add(barrierGeometry);materials.add(barrierMaterial);
     const barrier=new T.Mesh(barrierGeometry,barrierMaterial);barrier.position.z=23;root.add(barrier);
     const navigation=station.getObjectByName('VOID_NAVIGATION');if(navigation)navigation.visible=false;
     // Compact gun bases sit on the inner wall's solid arc, above the deck.
-    for(const turret of turrets)turret.scale.multiplyScalar(.6);
+    for(const turret of turrets){turret.scale.multiplyScalar(.6);if(decor)turret.visible=false;}
     core.scale.multiplyScalar(combat.CORE/65);
     const coreLights=new Map();
     core.traverse(o=>{if(!o.isMesh)return;const lamp=m=>{
@@ -67,6 +72,7 @@ export function createVoidFactory(T,{template,environment=null,reducedMotion=fal
     const arrowGeometry=new T.ShapeGeometry(arrowShape),openMaterial=new T.MeshBasicMaterial({color:0x5affd1,toneMapped:false}),closedMaterial=new T.MeshBasicMaterial({color:0xff6148,toneMapped:false});geometries.add(arrowGeometry);materials.add(openMaterial);materials.add(closedMaterial);
     const entryArrow=new T.Mesh(arrowGeometry,closedMaterial),innerArrow=new T.Mesh(arrowGeometry,closedMaterial);entryArrow.position.set(-438,0,45);innerArrow.position.set(268,0,45);innerArrow.rotation.z=Math.PI;root.add(entryArrow,innerArrow);
     const update=b=>{
+      decor?.update(b);
       const oa=b.outerAngle||0,ia=b.innerAngle||0;
       outerRing.rotation.z=-oa;innerRing.rotation.z=-ia;
       barrier.rotation.z=-oa;barrier.visible=b.outerGate<.98;
@@ -85,7 +91,7 @@ export function createVoidFactory(T,{template,environment=null,reducedMotion=fal
       for(let i=0;i<turrets.length;i++){const gun=combat.turretPosition(b,i);turrets[i].position.set(gun.x-b.x,28,gun.y-b.y);turrets[i].rotation.y=-(b.aims?.[i]||0)-Math.PI/2;}
       const ratio=Math.max(0,b.hp/b.maxHp);hpMaterial.color.setHex(b.inside?0x80ffbc:0x667185);health.scale.x=ratio;health.position.x=-(1-ratio)*65;back.visible=health.visible=open&&b.stage!=='escape';
     };
-    return {root,update,roof,core,outer,inner,gens,shield,outerRing,innerRing,turrets,entryArrow,innerArrow,health};
+    return {root,update,roof,core,outer,inner,gens,shield,outerRing,innerRing,turrets,entryArrow,innerArrow,health,decor};
   };
-  create.dispose=()=>{for(const g of geometries)g.dispose();for(const m of materials)m.dispose();};return create;
+  create.dispose=()=>{createDecor?.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();};return create;
 }

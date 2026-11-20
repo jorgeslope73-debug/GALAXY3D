@@ -402,3 +402,10 @@ Prueba directa aislada: docs/prueba-esfera.html
 V24.55: el GLB conserva casco, reactor, techo, generadores y canones. Sus arcos antiguos se ocultan. Los anillos abiertos de partida y sus postes se dibujan en docs/void-model.js desde el perfil de docs/void-core.js; giro y colisiones comparten ese perfil. Sin nuevas texturas ni objetos descargados.
 
 V24.56: camara interior ampliada; defensas colocadas en el anillo interior por GalaxyVoidCore.turretPosition. Se oculta VOID_NAVIGATION (circulo blanco). Nucleo y barra usan estado visual verde al entrar; no hay texturas nuevas ni cambios al GLB.
+
+V24.57 - INTERIOR DETALLADO
+Modelo modular: docs/assets/models/esfera-interior.glb
+Piezas: VOID_DETAIL_WALL, VOID_DETAIL_TURRET_BASE, VOID_DETAIL_TURRET_HEAD, VOID_DETAIL_GATE_PYLON.
+Texturas: ninguna externa; materiales PBR compartidos.
+Presentacion/instancias: docs/void-decor.js (cargado desde docs/void-model.js con version).
+Constructor Blender: tools/build-void-interior.py.
