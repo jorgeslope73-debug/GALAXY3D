@@ -1,3 +1,5 @@
+V24.56: amplia la camara interior (anillo R260, exterior R450) para apuntar desde mas lejos sin agrandar la bola central. Distingue el estado del nucleo de la esfera. Entre los anillos sigue protegido: el aviso pide cruzar el anillo pequeno y la barra se ve gris. Al entrar de verdad en la camara, nucleo y barra pasan a verde y las balas restan vida. Se activa al cruzar el borde interior con el centro de la nave, sin exigir que el escudo completo quede muy dentro. Las defensas van sobre el anillo interior y giran con el; desaparece el circulo blanco de guia. Se conserva el bloqueo exterior, el dano persistente y la huida.
+
 V24.55: LA ESFERA DEL VACIO funciona como laberinto movil. Los huecos de 100 grados estan siempre abiertos; el anillo exterior gira a 6 grados/s y el interior a -9. La barrera de energia exterior depende de los generadores. Pasillo de 200 unidades, nucleo mas compacto y dos canones pequenos rebajados junto al reactor (R125), fuera del pasillo. Un solo disparo alterno cada 6,5 s, 200 unidades/s y 8 s de margen inicial. Las paredes visibles se construyen desde el perfil fisico comun; se conservan los barridos de bala y se resuelve tambien la pared que alcanza a una nave quieta. Las flechas siguen los huecos, incluidos los 18 s de huida. Sin cambios de red.
 
 ## V24.54 - LA ESFERA DEL VACIO
@@ -170,7 +172,7 @@ La documentación original se conserva a continuación. Algunas referencias de v
 
 # Galaxy Combat Web
 
-**Version actual: V24.55
+**Version actual: V24.56
 
 Galaxy Combat es un juego de combate espacial para navegador, gratuito y sin instalación obligatoria. Permite jugar contra CPU o en partidas online de hasta 4 jugadores.
 

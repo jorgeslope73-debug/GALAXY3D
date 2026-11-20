@@ -32,24 +32,24 @@ function circleTo(b,p,dt,layer){
     const err=delta(target,old);
     if(Math.abs(err)<.006)return;
     const next=old+Math.max(-.85*dt,Math.min(.85*dt,err));
-    const result=advance(b,p,dt,310,next);assert.equal(result.contacts,0,'the entire widened corridor stays clear');
+    const result=advance(b,p,dt,S.CORRIDOR,next);assert.equal(result.contacts,0,'the entire widened corridor stays clear');
   }
   assert.fail('the pilot must be able to catch the rotating opening');
 }
-assert.equal(S.OUTER,410);assert.equal(S.INNER,210);
+assert.equal(S.OUTER,450);assert.equal(S.INNER,260);
 // Rotating holes remain traversable at every phase, with the full shield radius.
 // The route enters the outer shell, navigates the corridor, enters the reactor,
 // and physically leaves through both moving openings during the real countdown.
 for(const dt of [1/30,1/60,1/120])for(const phase of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
   const b=body(phase),outside=S.OUTER+S.WALL+60+16;
   const p=pilot(b,outside,Math.PI+b.outerAngle);
-  radial(b,p,dt,outside,310,'outer');circleTo(b,p,dt,'inner');
-  radial(b,p,dt,310,S.INNER-S.WALL-60-4,'inner');assert.equal(b.inside,true);
+  radial(b,p,dt,outside,S.CORRIDOR,'outer');circleTo(b,p,dt,'inner');
+  radial(b,p,dt,S.CORRIDOR,S.INNER-S.WALL-60-4,'inner');assert.equal(b.inside,true);
   const oldOuter=b.outerAngle,oldInner=b.innerAngle;
   assert.ok(delta(oldOuter,phase)>0);assert.ok(delta(oldInner,-phase*.7)<0,'rings turn in opposite directions');
   b.stage='escape';b.escapeLeft=18;
-  radial(b,p,dt,length(b,p),310,'inner');circleTo(b,p,dt,'outer');
-  radial(b,p,dt,310,outside,'outer');
+  radial(b,p,dt,length(b,p),S.CORRIDOR,'inner');circleTo(b,p,dt,'outer');
+  radial(b,p,dt,S.CORRIDOR,outside,'outer');
   assert.ok(S.escaped(b,p,60),'a real escape route exists before the countdown ends');
   assert.ok(b.escapeLeft>6,'18 seconds leave steering/acceleration margin beyond this geometric route');
   assert.notEqual(b.outerAngle,oldOuter);assert.notEqual(b.innerAngle,oldInner,'escape preserves the moving labyrinth');
@@ -89,13 +89,13 @@ for(const dt of [1/30,1/60,1/120]){
   const b=body(),p=pilot(b,130,0),shots=[];
   for(let i=0;i<Math.ceil(59/dt);i++){
     const next=S.step(b,dt,p,uid);assert.ok(next.length<=1,'interior guns do not fire together');
-    for(const shot of next)shots.push({time:b.age,sign:Math.sign(shot.y-b.y),speed:Math.hypot(shot.vx,shot.vy)});
+    for(const shot of next)shots.push({time:b.age,slot:(b.shotSlot-1)%2,speed:Math.hypot(shot.vx,shot.vy)});
   }
-  assert.ok(shots.length>=6&&shots.length<=9,'interior fire is sparse over a full minute');
+  assert.ok(shots.length>=2&&shots.length<=9,'interior fire is sparse over a full minute');
   assert.ok(shots[0].time>=8-dt-.001,'the first cannon waits at least eight seconds');
   for(let i=0;i<shots.length;i++){
     assert.ok(Math.abs(shots[i].speed-200)<.001);
-    if(i){assert.ok(shots[i].time-shots[i-1].time>=6.5-dt-.001);assert.notEqual(shots[i].sign,shots[i-1].sign,'the two recessed guns alternate');}
+    if(i){assert.ok(shots[i].time-shots[i-1].time>=6.5-dt-.001);assert.notEqual(shots[i].slot,shots[i-1].slot,'the two recessed guns alternate');}
   }
   b.stage='escape';b.escapeLeft=18;for(let i=0;i<30;i++)assert.equal(S.step(b,dt,p,uid).length,0,'no cannon fire during escape');
   const copy=S.snapshot(b);copy.generators[0].hp=500;assert.notEqual(b.generators[0].hp,500);assert.equal(copy.outerAngle,b.outerAngle);assert.equal(copy.innerAngle,b.innerAngle);

@@ -49,11 +49,15 @@ export function createVoidFactory(T,{template,environment=null,reducedMotion=fal
     const barrierGeometry=new T.RingGeometry(combat.OUTER-10,combat.OUTER+10,24,1,Math.PI-combat.OPENING,combat.OPENING*2),barrierMaterial=new T.MeshBasicMaterial({color:0xa16eff,transparent:true,opacity:.65,depthWrite:false,toneMapped:false,side:T.DoubleSide});
     geometries.add(barrierGeometry);materials.add(barrierMaterial);
     const barrier=new T.Mesh(barrierGeometry,barrierMaterial);barrier.position.z=23;root.add(barrier);
-    const navigation=station.getObjectByName('VOID_NAVIGATION');if(navigation)navigation.position.y+=.5;
-    // Guns sit low in the reactor room. Their bases and muzzles no longer
-    // occupy the corridor; these are the same two positions used for firing.
-    for(let i=0;i<turrets.length;i++){turrets[i].position.set(0,-18,(i?1:-1)*125);turrets[i].scale.multiplyScalar(.6);}
+    const navigation=station.getObjectByName('VOID_NAVIGATION');if(navigation)navigation.visible=false;
+    // Compact gun bases sit on the inner wall's solid arc, above the deck.
+    for(const turret of turrets)turret.scale.multiplyScalar(.6);
     core.scale.multiplyScalar(combat.CORE/65);
+    const coreLights=new Map();
+    core.traverse(o=>{if(!o.isMesh)return;const lamp=m=>{
+      if(m.name!=='VOID_VIOLET')return m;
+      if(!coreLights.has(m)){const copy=m.clone();coreLights.set(m,copy);materials.add(copy);}return coreLights.get(m);
+    };o.material=Array.isArray(o.material)?o.material.map(lamp):lamp(o.material);});
     const roofMaterials=[];
     roof.traverse(o=>{if(!o.isMesh)return;const clone=m=>{const c=m.clone();c.transparent=true;c.depthWrite=false;c.side=T.DoubleSide;materials.add(c);roofMaterials.push(c);return c;};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);});
     const shield=new T.Mesh(shieldGeometry,shieldMaterial);shield.position.z=12;root.add(shield);
@@ -66,21 +70,22 @@ export function createVoidFactory(T,{template,environment=null,reducedMotion=fal
       const oa=b.outerAngle||0,ia=b.innerAngle||0;
       outerRing.rotation.z=-oa;innerRing.rotation.z=-ia;
       barrier.rotation.z=-oa;barrier.visible=b.outerGate<.98;
-      entryArrow.position.set(-438*Math.cos(oa),438*Math.sin(oa),45);
+      entryArrow.position.set(-(combat.OUTER+28)*Math.cos(oa),(combat.OUTER+28)*Math.sin(oa),45);
       innerArrow.position.set((combat.INNER+30)*Math.cos(ia),-(combat.INNER+30)*Math.sin(ia),45);
       entryArrow.material=b.outerGate>.98?openMaterial:closedMaterial;innerArrow.material=openMaterial;
       entryArrow.rotation.z=-oa+(b.stage==='escape'?Math.PI:0);innerArrow.rotation.z=-ia+(b.stage==='escape'?0:Math.PI);
       // glTF Y is Blender Z. No scaled root: authored radii equal collision radii.
       const open=b.roofOpen||b.inside||b.stage==='escape';roof.visible=!open;
       for(const m of roofMaterials)m.opacity=open?0:1;
-      for(let i=0;i<gens.length;i++)gens[i].visible=b.generators[i].hp>0;
+      for(let i=0;i<gens.length;i++){const g=b.generators[i];gens[i].visible=g.hp>0;gens[i].position.x=g.x-b.x;gens[i].position.z=g.y-b.y;}
       core.visible=b.stage!=='escape';core.rotation.y=reducedMotion?0:b.age*.35;
+      for(const m of coreLights.values()){m.color.setHex(b.inside?0x18b858:0x8652b9);m.emissive.setHex(b.inside?0x18b858:0x8652b9);m.emissiveIntensity=b.inside?.65:1.25;}
       shield.visible=b.stage!=='escape'&&!b.inside;
       const pulse=reducedMotion?1:1+.025*Math.sin(b.age*4);shield.scale.setScalar(pulse);
-      for(let i=0;i<turrets.length;i++)turrets[i].rotation.y=-(b.aims?.[i]||0)-Math.PI/2;
-      const ratio=Math.max(0,b.hp/b.maxHp);health.scale.x=ratio;health.position.x=-(1-ratio)*65;back.visible=health.visible=open&&b.stage!=='escape';
+      for(let i=0;i<turrets.length;i++){const gun=combat.turretPosition(b,i);turrets[i].position.set(gun.x-b.x,28,gun.y-b.y);turrets[i].rotation.y=-(b.aims?.[i]||0)-Math.PI/2;}
+      const ratio=Math.max(0,b.hp/b.maxHp);hpMaterial.color.setHex(b.inside?0x80ffbc:0x667185);health.scale.x=ratio;health.position.x=-(1-ratio)*65;back.visible=health.visible=open&&b.stage!=='escape';
     };
-    return {root,update,roof,core,outer,inner,gens,shield,outerRing,innerRing,turrets,entryArrow,innerArrow};
+    return {root,update,roof,core,outer,inner,gens,shield,outerRing,innerRing,turrets,entryArrow,innerArrow,health};
   };
   create.dispose=()=>{for(const g of geometries)g.dispose();for(const m of materials)m.dispose();};return create;
 }

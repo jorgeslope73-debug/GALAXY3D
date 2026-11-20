@@ -24,8 +24,12 @@ for(const reducedMotion of [false,true]){
    const ray=at=>new T.Raycaster(new T.Vector3(Math.cos(at)*radius,-Math.sin(at)*radius,100),new T.Vector3(0,0,-1),0,200).intersectObject(group,true);
    assert.equal(ray(portal).length,0,'rotating opening has no invisible GLB shutter');assert.ok(ray(portal+Math.PI+.013).length>0,'the opposite solid wall is visible at '+frame+' radius '+radius);
   }
-  for(let i=0;i<2;i++){a.turrets[i].getWorldPosition(v);assert.ok(Math.abs(v.x)<1e-6);assert.ok(Math.abs(v.y+(i?1:-1)*125)<1e-6,'visible gun and firing source agree');assert.ok(Math.hypot(v.x,v.y)<S.INNER-60,'guns leave the corridor clear');}
+  for(let i=0;i<2;i++){a.turrets[i].getWorldPosition(v);const gun=S.turretPosition(b,i);assert.ok(Math.abs(v.x-(gun.x-b.x))<1e-6);assert.ok(Math.abs(v.y+(gun.y-b.y))<1e-6,'visible gun and firing source agree');assert.ok(Math.abs(Math.hypot(v.x,v.y)-S.INNER)<1e-6,'gun bases are on the inner wall');}
+  assert.equal(a.root.getObjectByName('VOID_NAVIGATION').visible,false,'white guide circle is removed');
  }
+ const lamp=()=>{let m;a.core.traverse(o=>{if(o.isMesh&&o.material.name==='VOID_VIOLET')m=o.material;});return m;};assert.ok(lamp(),'core lamp material found');const original=gltf.scene.getObjectByName('VOID_CORE').material;
+ b.inside=false;a.update(b);assert.equal(a.shield.visible,true);assert.equal(a.health.material.color.getHex(),0x667185);
+ b.inside=true;b.hp=11;a.update(b);assert.equal(a.shield.visible,false);assert.equal(lamp().color.getHex(),0x18b858);assert.equal(a.health.material.color.getHex(),0x80ffbc);assert.ok(Math.abs(a.health.scale.x-11/12)<1e-9,'real HP loss shortens the green bar');
  b.stage='escape';b.hp=0;a.update(b);a.root.updateMatrixWorld(true);assert.equal(a.core.visible,false);assert.equal(a.shield.visible,false);assert.equal(a.roof.visible,false);
  for(const arrow of [a.entryArrow,a.innerArrow]){const forward=new T.Vector3(1,0,0).transformDirection(arrow.matrixWorld),outward=new T.Vector3(arrow.position.x,arrow.position.y,0).normalize();assert.ok(forward.dot(outward)>.999,'both moving arrows point outward during escape');}
  let visibleDraws=0;a.root.traverseVisible(o=>{if(o.isMesh)visibleDraws++;});assert.ok(visibleDraws<45,'moving walls stay batched');

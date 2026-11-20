@@ -3178,7 +3178,7 @@
       if(this.voidSphere&&this.nextPickup<=0){
         const b=this.voidSphere,p=this.players.find(p=>!p.cpu),distance=Math.hypot(p.x-b.x,p.y-b.y);
         if(b.stage!=='escape'){
-          const point=b.inside?{x:1090,y:540}:distance<395?{x:960,y:230}:{x:260,y:540};
+          const point=b.inside?{x:b.x+VOID.INNER-60,y:b.y}:distance<VOID.OUTER-15?{x:b.x,y:b.y-VOID.CORRIDOR}:{x:260,y:540};
           this.pickups.push({id:uid(),type:p.bullets<6?'ammo3':'flare',...point,phase:0});
           if(this.pickups.length>5)this.pickups.shift();
         }

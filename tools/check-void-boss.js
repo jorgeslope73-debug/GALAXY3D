@@ -15,7 +15,7 @@ function shoot(f,target,weapon='bullet',from=null){
  e.bullets.push({id:99999,owner:0,x,y,vx:vx/l*24000,vy:vy/l*24000,guided:weapon==='missile',age:0,travel:0});e.absorbVoidShots(1/60);
 }
 function move(f,x,y){f.e.voidSphere.outerAngle=f.e.voidSphere.pOuterAngle=f.e.voidSphere.innerAngle=f.e.voidSphere.pInnerAngle=0;const {p,e}=f;p.px=p.x;p.py=p.y;p.x=x;p.y=y;p.vx=(x-p.px)*60;p.vy=(y-p.py)*60;e.resolveVoidContacts();}
-function corridor(f,from,to){for(let i=1;i<=100;i++){const a=from+(to-from)*i/100;move(f,960+320*Math.cos(a),540+320*Math.sin(a));}}
+function corridor(f,from,to){for(let i=1;i<=100;i++){const a=from+(to-from)*i/100;move(f,960+f.S.CORRIDOR*Math.cos(a),540+f.S.CORRIDOR*Math.sin(a));}}
 for(const dt of [1/30,1/60,1/120]){
  const f=fixture(),b=enter(f,dt),{e,S,p}=f;
  // Locked exterior portal and thin walls stop fast bullets and the hull.
@@ -26,17 +26,17 @@ for(const dt of [1/30,1/60,1/120]){
  assert.equal(S.remaining(b),0);for(let i=0;i<90;i++)S.step(b,dt,p,()=>1);assert.equal(b.outerGate,1);
  // No shield shortcut even through both open doors.
  b.outerAngle=b.pOuterAngle=b.innerAngle=b.pInnerAngle=0;b.innerGate=1;shoot(f,b,'missile',{x:1090,y:540});assert.equal(b.hp,hp);assert.equal(b.inside,false);
- move(f,640,540);assert.ok(Math.abs(p.x-640)<1);corridor(f,Math.PI,0);
- Object.assign(p,{x:960,y:220,px:960,py:220});move(f,960,400);assert.ok(p.y<300,'solid inner arc blocks entry');assert.equal(b.inside,false);Object.assign(p,{x:1280,y:540,px:1280,py:540});
+ move(f,605,540);assert.ok(Math.abs(p.x-605)<1);corridor(f,Math.PI,0);
+ Object.assign(p,{x:960,y:185,px:960,py:185});move(f,960,400);assert.ok(p.y<240,'solid inner arc blocks entry');assert.equal(b.inside,false);Object.assign(p,{x:1315,y:540,px:1315,py:540});
  b.innerGate=1;move(f,1090,540);assert.equal(b.inside,true);assert.equal(b.everEntered,true);
  shoot(f,b,'missile',{x:p.x,y:p.y});assert.equal(b.hp,9);
- move(f,1280,540);assert.equal(b.inside,false);shoot(f,b,'missile',{x:1090,y:540});assert.equal(b.hp,9,'shield restores on leaving chamber');
+ move(f,1315,540);assert.equal(b.inside,false);shoot(f,b,'missile',{x:1090,y:540});assert.equal(b.hp,9,'shield restores on leaving chamber');
  move(f,1090,540);p.protection=0;e.destroyShip(p);assert.equal(p.kills,4);assert.equal(b.hp,9);assert.equal(b.inside,false);assert.equal(p.pendingSpawn.x,180);
  e.respawnPlayer(p);assert.equal(p.x,180);assert.equal(p.y,540);
- p.spawnFx=0;p.protection=1e5;b.innerGate=1;move(f,640,540);corridor(f,Math.PI,0);move(f,1090,540);assert.equal(b.inside,true);
+ p.spawnFx=0;p.protection=1e5;b.innerGate=1;move(f,605,540);corridor(f,Math.PI,0);move(f,1090,540);assert.equal(b.inside,true);
  for(let i=0;i<3;i++)shoot(f,b,'missile',{x:p.x,y:p.y});
  assert.equal(b.stage,'escape');assert.equal(e.finished,false,'core destruction is not victory');assert.equal(b.escapeLeft,18);
- move(f,1280,540);corridor(f,0,Math.PI);move(f,450,540);
+ move(f,1315,540);corridor(f,0,Math.PI);move(f,380,540);
  assert.equal(e.finished,true);assert.equal(e.winner,0);assert.equal(e.bossEncounter.phase,'won');assert.equal(e.voidSphere,null);assert.equal(e.bullets.length,0);assert.equal(f.events.filter(m=>m.t==='victory').length,1);
  e.finishCampaignBoss(true);assert.equal(f.events.filter(m=>m.t==='victory').length,1);
 }
@@ -62,8 +62,8 @@ for(const dt of [1/30,1/60,1/120]){
 const sweepCore=fixture().S;
 for(const dt of [1/30,1/60,1/120])for(let i=0;i<360;i++){
  const S=sweepCore,b=S.create(1),a=i*Math.PI/180,nx=Math.cos(a),ny=Math.sin(a);
- const h=S.firstHit(b,{px:b.x+nx*455,py:b.y+ny*455,x:b.x+nx*300,y:b.y+ny*300},4);assert.ok(h,'outer shell closed at every angle');
- const p={x:b.x+nx*320,y:b.y+ny*320,px:b.x+nx*320,py:b.y+ny*320,vx:0,vy:0};assert.equal(S.firstHit(b,p,49,{hullOnly:true}),null);
+ const h=S.firstHit(b,{px:b.x+nx*(S.OUTER+45),py:b.y+ny*(S.OUTER+45),x:b.x+nx*S.CORRIDOR,y:b.y+ny*S.CORRIDOR},4);assert.ok(h,'outer shell closed at every angle');
+ const p={x:b.x+nx*S.CORRIDOR,y:b.y+ny*S.CORRIDOR,px:b.x+nx*S.CORRIDOR,py:b.y+ny*S.CORRIDOR,vx:0,vy:0};assert.equal(S.firstHit(b,p,49,{hullOnly:true}),null);
  b.generators.forEach(g=>g.hp=0);b.outerGate=b.innerGate=1;b.age=4;
  const pilot={x:1195,y:540,dead:false,spawnFx:0};S.step(b,dt,pilot,()=>1);assert.equal(b.innerGate,1,'gate cannot close onto a traversing pilot');
 }

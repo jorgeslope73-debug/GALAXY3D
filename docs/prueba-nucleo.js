@@ -1009,12 +1009,12 @@ window.GALAXY_CONFIG = {
   Object.assign(dictionaries.fr,{"devourerIncoming":"LE DEVOREUR","devourerJoint":"DETRUISEZ LE JOINT LUMINEUX","devourerSegments":"SEGMENTS DETRUITS : {count}/{total}","devourerCharge":"CHARGE IMMINENTE · ECARTEZ-VOUS","devourerVolley":"MACHOIRES OUVERTES · ESQUIVEZ","devourerOpen":"REACTEUR EXPOSE · ATTAQUEZ","devourerClosed":"TETE BLINDEE · ATTENDEZ","devourerHealth":"REACTEUR : {hp}/{total}"});
   Object.assign(dictionaries.de,{"devourerIncoming":"DER VERSCHLINGER","devourerJoint":"ZERSTORE DAS LEUCHTENDE GELENK","devourerSegments":"SEGMENTE ZERSTORT: {count}/{total}","devourerCharge":"ANGRIFF · AUSWEICHEN","devourerVolley":"KIEFER OFFEN · SALVE AUSWEICHEN","devourerOpen":"REAKTOR OFFEN · ANGREIFEN","devourerClosed":"KOPF GEPANZERT · WARTEN","devourerHealth":"REAKTOR: {hp}/{total}"});
   Object.assign(dictionaries.zh,{"devourerIncoming":"吞噬者","devourerJoint":"攻击发光的连接处","devourerSegments":"已摧毁节段：{count}/{total}","devourerCharge":"冲锋将至 · 躲开","devourerVolley":"巨口张开 · 躲避齐射","devourerOpen":"反应堆暴露 · 攻击","devourerClosed":"头部装甲保护 · 等待时机","devourerHealth":"反应堆：{hp}/{total}"});
-  Object.assign(dictionaries.es,{"voidIncoming":"LA ESFERA DEL VACIO","voidGenerators":"GENERADORES: {count}/{total} · DESTRUYE LOS NARANJAS","voidWait":"ANILLOS EN MOVIMIENTO · SIGUE LOS HUECOS","voidEnter":"ESPERA EL HUECO DEL ANILLO INTERIOR","voidCore":"NUCLEO VULNERABLE · DISPARA DESDE DENTRO","voidEscape":"BUSCA LA SALIDA GIRATORIA · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VIDAS: {lives}","voidDefeat":"MISION FALLIDA · LA ESFERA DEL VACIO"});
-  Object.assign(dictionaries.en,{"voidIncoming":"THE VOID SPHERE","voidGenerators":"GENERATORS: {count}/{total} · DESTROY THE ORANGE ONES","voidWait":"MOVING RINGS · FOLLOW THE OPENINGS","voidEnter":"WAIT FOR THE INNER RING OPENING","voidCore":"CORE EXPOSED · FIRE FROM INSIDE","voidEscape":"FIND THE ROTATING EXIT · {seconds} S","voidStatus":"CORE: {hp}/{total} · LIVES: {lives}","voidDefeat":"MISSION FAILED · THE VOID SPHERE"});
-  Object.assign(dictionaries.it,{"voidIncoming":"LA SFERA DEL VUOTO","voidGenerators":"GENERATORI: {count}/{total} · DISTRUGGI QUELLI ARANCIONI","voidWait":"ANELLI IN MOVIMENTO · SEGUI I VARCHI","voidEnter":"ATTENDI IL VARCO INTERNO","voidCore":"NUCLEO ESPOSTO · SPARA DA DENTRO","voidEscape":"TROVA L USCITA ROTANTE · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VITE: {lives}","voidDefeat":"MISSIONE FALLITA · LA SFERA DEL VUOTO"});
-  Object.assign(dictionaries.fr,{"voidIncoming":"LA SPHERE DU VIDE","voidGenerators":"GENERATEURS : {count}/{total} · DETRUISEZ LES ORANGES","voidWait":"ANNEAUX MOBILES · SUIVEZ LES OUVERTURES","voidEnter":"ATTENDEZ L OUVERTURE INTERIEURE","voidCore":"NOYAU EXPOSE · TIREZ DEPUIS LA CHAMBRE","voidEscape":"TROUVEZ LA SORTIE TOURNANTE · {seconds} S","voidStatus":"NOYAU : {hp}/{total} · VIES : {lives}","voidDefeat":"MISSION ECHOUEE · LA SPHERE DU VIDE"});
-  Object.assign(dictionaries.de,{"voidIncoming":"DIE LEERE SPHARE","voidGenerators":"GENERATOREN: {count}/{total} · ORANGE ZIELE ZERSTOREN","voidWait":"ROTIERENDE RINGE · DEN OFFNUNGEN FOLGEN","voidEnter":"AUF DIE INNERE OFFNUNG WARTEN","voidCore":"KERN OFFEN · VON INNEN SCHIESSEN","voidEscape":"ROTIERENDEN AUSGANG FINDEN · {seconds} S","voidStatus":"KERN: {hp}/{total} · LEBEN: {lives}","voidDefeat":"MISSION GESCHEITERT · DIE LEERE SPHARE"});
-  Object.assign(dictionaries.zh,{"voidIncoming":"虚空之球","voidGenerators":"发电机：{count}/{total} · 摧毁橙色目标","voidWait":"旋转圆环 · 跟随开口","voidEnter":"等待内环开口","voidCore":"核心暴露 · 在内部射击","voidEscape":"寻找旋转出口 · {seconds} 秒","voidStatus":"核心：{hp}/{total} · 生命：{lives}","voidDefeat":"任务失败 · 虚空之球"});
+  Object.assign(dictionaries.es,{"voidIncoming":"LA ESFERA DEL VACIO","voidGenerators":"GENERADORES: {count}/{total} · DESTRUYE LOS NARANJAS","voidWait":"NUCLEO PROTEGIDO · CRUZA EL ANILLO PEQUENO","voidEnter":"ESPERA EL HUECO DEL ANILLO INTERIOR","voidCore":"NUCLEO VULNERABLE · DISPARA AHORA","voidEscape":"BUSCA LA SALIDA GIRATORIA · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VIDAS: {lives}","voidDefeat":"MISION FALLIDA · LA ESFERA DEL VACIO"});
+  Object.assign(dictionaries.en,{"voidIncoming":"THE VOID SPHERE","voidGenerators":"GENERATORS: {count}/{total} · DESTROY THE ORANGE ONES","voidWait":"CORE SHIELDED · CROSS THE INNER RING","voidEnter":"WAIT FOR THE INNER RING OPENING","voidCore":"CORE VULNERABLE · FIRE NOW","voidEscape":"FIND THE ROTATING EXIT · {seconds} S","voidStatus":"CORE: {hp}/{total} · LIVES: {lives}","voidDefeat":"MISSION FAILED · THE VOID SPHERE"});
+  Object.assign(dictionaries.it,{"voidIncoming":"LA SFERA DEL VUOTO","voidGenerators":"GENERATORI: {count}/{total} · DISTRUGGI QUELLI ARANCIONI","voidWait":"NUCLEO PROTETTO · ATTRAVERSA L ANELLO INTERNO","voidEnter":"ATTENDI IL VARCO INTERNO","voidCore":"NUCLEO VULNERABILE · SPARA ORA","voidEscape":"TROVA L USCITA ROTANTE · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VITE: {lives}","voidDefeat":"MISSIONE FALLITA · LA SFERA DEL VUOTO"});
+  Object.assign(dictionaries.fr,{"voidIncoming":"LA SPHERE DU VIDE","voidGenerators":"GENERATEURS : {count}/{total} · DETRUISEZ LES ORANGES","voidWait":"NOYAU PROTEGE · FRANCHISSEZ LE PETIT ANNEAU","voidEnter":"ATTENDEZ L OUVERTURE INTERIEURE","voidCore":"NOYAU VULNERABLE · TIREZ MAINTENANT","voidEscape":"TROUVEZ LA SORTIE TOURNANTE · {seconds} S","voidStatus":"NOYAU : {hp}/{total} · VIES : {lives}","voidDefeat":"MISSION ECHOUEE · LA SPHERE DU VIDE"});
+  Object.assign(dictionaries.de,{"voidIncoming":"DIE LEERE SPHARE","voidGenerators":"GENERATOREN: {count}/{total} · ORANGE ZIELE ZERSTOREN","voidWait":"KERN GESCHUTZT · INNEREN RING DURCHQUEREN","voidEnter":"AUF DIE INNERE OFFNUNG WARTEN","voidCore":"KERN VERWUNDBAR · JETZT SCHIESSEN","voidEscape":"ROTIERENDEN AUSGANG FINDEN · {seconds} S","voidStatus":"KERN: {hp}/{total} · LEBEN: {lives}","voidDefeat":"MISSION GESCHEITERT · DIE LEERE SPHARE"});
+  Object.assign(dictionaries.zh,{"voidIncoming":"虚空之球","voidGenerators":"发电机：{count}/{total} · 摧毁橙色目标","voidWait":"核心受保护 · 穿过内环","voidEnter":"等待内环开口","voidCore":"核心可受伤害 · 立即射击","voidEscape":"寻找旋转出口 · {seconds} 秒","voidStatus":"核心：{hp}/{total} · 生命：{lives}","voidDefeat":"任务失败 · 虚空之球"});
   Object.assign(dictionaries.es,{"stormBossIncoming":"EL NUCLEO DE LA TORMENTA","stormBossSatellites":"SATELITES DESTRUIDOS: {count}/{total}","stormBossDodge":"CARGANDO · ESQUIVA LA RAFAGA","stormBossOpen":"NUCLEO EXPUESTO · ATACA","stormBossEnraged":"NUCLEO INESTABLE · ATACA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VIDAS: {lives}/{total}"});
   Object.assign(dictionaries.en,{"stormBossIncoming":"THE STORM CORE","stormBossSatellites":"SATELLITES DESTROYED: {count}/{total}","stormBossDodge":"CHARGING · DODGE THE VOLLEY","stormBossOpen":"CORE EXPOSED · ATTACK","stormBossEnraged":"UNSTABLE CORE · ATTACK","stormBossHealth":"CORE: {hp}/{total}","stormBossLives":"LIVES: {lives}/{total}"});
   Object.assign(dictionaries.it,{"stormBossIncoming":"IL NUCLEO DELLA TEMPESTA","stormBossSatellites":"SATELLITI DISTRUTTI: {count}/{total}","stormBossDodge":"CARICA · SCHIVA LA RAFFICA","stormBossOpen":"NUCLEO ESPOSTO · ATTACCA","stormBossEnraged":"NUCLEO INSTABILE · ATTACCA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VITE: {lives}/{total}"});
@@ -1757,7 +1757,7 @@ window.GALAXY_CONFIG = {
   };
 
 
-  const VOID_GUIDE={"es":"LABERINTO MOVIL: LOS HUECOS SON AMPLIOS Y SIEMPRE ESTAN ABIERTOS. EL ANILLO EXTERIOR GIRA A 6 GRADOS POR SEGUNDO Y EL INTERIOR A 9 EN SENTIDO CONTRARIO. SIGUE LAS FLECHAS Y ESPERA A QUE EL HUECO LLEGUE HASTA TI. LOS GENERADORES SOLO MANTIENEN LA BARRERA EXTERIOR DE ENERGIA. DOS CANONES PEQUENOS JUNTO AL NUCLEO DISPARAN POR TURNOS: UNA BALA CADA 6,5 SEGUNDOS. EL PASILLO QUEDA LIBRE Y MAS ANCHO. PARA ESCAPAR SIGUE LOS MISMOS HUECOS GIRATORIOS. EL NUCLEO SOLO RECIBE DANO DESDE DENTRO: 12 PUNTOS, MISIL=3, BENGALA=2, BALA=1. CINCO VIDAS, DANO PERSISTENTE Y 18 SEGUNDOS PARA ESCAPAR TRAS DESTRUIRLO.","en":"MOVING MAZE: WIDE OPENINGS STAY OPEN. THE OUTER RING TURNS AT 6 DEGREES PER SECOND; THE INNER RING AT 9 IN THE OPPOSITE DIRECTION. FOLLOW THE ARROWS AND WAIT FOR AN OPENING. GENERATORS POWER ONLY THE OUTER ENERGY BARRIER. TWO SMALL RECESSED REACTOR GUNS ALTERNATE ONE SHOT EVERY 6.5 SECONDS. THE CORRIDOR IS WIDER AND CLEAR. ESCAPE THROUGH THE SAME ROTATING OPENINGS. CORE: 12 HEALTH, MISSILE=3, FLARE=2, BULLET=1. FIVE LIVES, PERSISTENT DAMAGE AND AN 18 SECOND ESCAPE.","it":"SFERA DEL VUOTO: DISTRUGGI 3 GENERATORI (2 COLPI), ANELLI CONTROROTANTI CON VARCHI APERTI. IL NUCLEO SUBISCE DANNI SOLO CON LA NAVE DENTRO: 12 VITA, MISSILE=3, BENGALA=2. CINQUE VITE; I DANNI RESTANO. DOPO LA DISTRUZIONE FUGGI DAI VARCHI ROTANTI ENTRO 18 SECONDI. MORTE O TEMPO SCADUTO: MISSIONE FALLITA.","fr":"SPHERE DU VIDE : DETRUISEZ 3 GENERATEURS (2 TIRS), ANNEAUX CONTRAROTATIFS AVEC OUVERTURES. LE NOYAU SUBIT DES DEGATS SEULEMENT SI VOUS ETES DANS LA CHAMBRE : 12 VIE, MISSILE=3, LEURRE=2. CINQ VIES ; DEGATS CONSERVES. APRES DESTRUCTION, SORTEZ PAR LES OUVERTURES MOBILES EN 18 SECONDES. MORT OU DELAI DEPASSE : MISSION ECHOUEE.","de":"LEERE SPHARE: 3 GENERATOREN ZERSTOREN (2 SCHUSSE), GEGENLAUFIGE RINGE MIT OFFNUNGEN. KERN NUR VON INNEN VERWUNDBAR: 12 LEBEN, RAKETE=3, LEUCHTFACKEL=2. FUNF LEBEN; SCHADEN BLEIBT. NACH ZERSTORUNG IN 18 SEKUNDEN DURCH DIE ROTIERENDEN OFFNUNGEN FLIEHEN. TOD ODER ZEIT ABGELAUFEN: MISSION GESCHEITERT.","zh":"虚空之球：摧毁3座橙色发电机，每座2发子弹。穿过反向旋转圆环的开放通道。只有飞船进入核心室才能造成伤害。核心12点生命，导弹3点，诱饵弹2点。离开或死亡会恢复护盾，但伤害保留。共有5条命。摧毁后18秒内穿过旋转外环开口逃出，死亡或超时则任务失败。"};
+  const VOID_GUIDE={"es":"LABERINTO MOVIL: LOS HUECOS SON AMPLIOS Y SIEMPRE ESTAN ABIERTOS. EL ANILLO EXTERIOR GIRA A 6 GRADOS POR SEGUNDO Y EL INTERIOR A 9 EN SENTIDO CONTRARIO. SIGUE LAS FLECHAS Y ESPERA A QUE EL HUECO LLEGUE HASTA TI. LOS GENERADORES SOLO MANTIENEN LA BARRERA EXTERIOR DE ENERGIA. DOS CANONES PEQUENOS SOBRE EL ANILLO INTERIOR DISPARAN POR TURNOS: UNA BALA CADA 6,5 SEGUNDOS. EL PASILLO QUEDA LIBRE Y MAS ANCHO. PARA ESCAPAR SIGUE LOS MISMOS HUECOS GIRATORIOS. EL NUCLEO SOLO RECIBE DANO DESDE DENTRO: 12 PUNTOS, MISIL=3, BENGALA=2, BALA=1. CINCO VIDAS, DANO PERSISTENTE Y 18 SEGUNDOS PARA ESCAPAR TRAS DESTRUIRLO. ENTRE LOS DOS ANILLOS EL NUCLEO ES ROSA Y SIGUE PROTEGIDO. CRUZA TAMBIEN EL HUECO DEL ANILLO PEQUENO: AL ENTRAR, EL NUCLEO Y SU BARRA CAMBIAN A VERDE Y LOS DISPAROS LE QUITAN VIDA. AL SALIR RECUPERA EL ESCUDO Y CONSERVA EL DANO.","en":"MOVING MAZE: WIDE OPENINGS STAY OPEN. THE OUTER RING TURNS AT 6 DEGREES PER SECOND; THE INNER RING AT 9 IN THE OPPOSITE DIRECTION. FOLLOW THE ARROWS AND WAIT FOR AN OPENING. GENERATORS POWER ONLY THE OUTER ENERGY BARRIER. TWO SMALL GUNS MOUNTED ON THE INNER RING ALTERNATE ONE SHOT EVERY 6.5 SECONDS. THE CORRIDOR IS WIDER AND CLEAR. ESCAPE THROUGH THE SAME ROTATING OPENINGS. CORE: 12 HEALTH, MISSILE=3, FLARE=2, BULLET=1. FIVE LIVES, PERSISTENT DAMAGE AND AN 18 SECOND ESCAPE. BETWEEN THE RINGS THE CORE STAYS PINK AND SHIELDED. CROSS THE SMALL INNER RING: INSIDE, THE CORE AND HEALTH BAR TURN GREEN AND SHOTS DEAL DAMAGE. LEAVING RESTORES THE SHIELD WITHOUT HEALING IT.","it":"SFERA DEL VUOTO: DISTRUGGI 3 GENERATORI (2 COLPI), ANELLI CONTROROTANTI CON VARCHI APERTI. IL NUCLEO SUBISCE DANNI SOLO CON LA NAVE DENTRO: 12 VITA, MISSILE=3, BENGALA=2. CINQUE VITE; I DANNI RESTANO. DOPO LA DISTRUZIONE FUGGI DAI VARCHI ROTANTI ENTRO 18 SECONDI. MORTE O TEMPO SCADUTO: MISSIONE FALLITA. TRA GLI ANELLI IL NUCLEO ROSA RESTA PROTETTO. ENTRA NEL PICCOLO ANELLO: NUCLEO E BARRA VERDI INDICANO CHE PUOI DANNEGGIARLO.","fr":"SPHERE DU VIDE : DETRUISEZ 3 GENERATEURS (2 TIRS), ANNEAUX CONTRAROTATIFS AVEC OUVERTURES. LE NOYAU SUBIT DES DEGATS SEULEMENT SI VOUS ETES DANS LA CHAMBRE : 12 VIE, MISSILE=3, LEURRE=2. CINQ VIES ; DEGATS CONSERVES. APRES DESTRUCTION, SORTEZ PAR LES OUVERTURES MOBILES EN 18 SECONDES. MORT OU DELAI DEPASSE : MISSION ECHOUEE. ENTRE LES ANNEAUX LE NOYAU ROSE RESTE PROTEGE. ENTREZ DANS LE PETIT ANNEAU : NOYAU ET BARRE VERTS INDIQUENT QUE LES TIRS FONT DES DEGATS.","de":"LEERE SPHARE: 3 GENERATOREN ZERSTOREN (2 SCHUSSE), GEGENLAUFIGE RINGE MIT OFFNUNGEN. KERN NUR VON INNEN VERWUNDBAR: 12 LEBEN, RAKETE=3, LEUCHTFACKEL=2. FUNF LEBEN; SCHADEN BLEIBT. NACH ZERSTORUNG IN 18 SEKUNDEN DURCH DIE ROTIERENDEN OFFNUNGEN FLIEHEN. TOD ODER ZEIT ABGELAUFEN: MISSION GESCHEITERT. ZWISCHEN DEN RINGEN BLEIBT DER ROSA KERN GESCHUTZT. INNEREN RING DURCHQUEREN: GRUNER KERN UND GRUNE LEBENSLEISTE ZEIGEN SCHADEN AN.","zh":"虚空之球：摧毁3座橙色发电机，每座2发子弹。穿过反向旋转圆环的开放通道。只有飞船进入核心室才能造成伤害。核心12点生命，导弹3点，诱饵弹2点。离开或死亡会恢复护盾，但伤害保留。共有5条命。摧毁后18秒内穿过旋转外环开口逃出，死亡或超时则任务失败。在两环之间，粉色核心仍有护盾。穿过内环后，核心和生命条变为绿色，此时射击才会造成伤害。离开后护盾恢复，但不会恢复生命值。"};
   for(const [lang,text] of Object.entries(VOID_GUIDE))DATA[lang]?.sections.find(section=>section.id==='objective')?.body.push(text);
 
   const STORM_GUIDE={"es":"Al final de Tormenta Cósmica, destruye los tres satélites que protegen el núcleo. Cada uno resiste dos balas; el núcleo tiene seis puntos de vida. Las líneas ámbar anuncian los disparos: esquívalos y ataca el núcleo mientras está expuesto. Los misiles y las bengalas conservan su daño habitual. Las reapariciones conservan el daño que hayas causado al jefe. Las cinco bajas conseguidas antes del jefe son tus vidas: cada muerte resta una. Si llegas a cero, pierdes la campaña.","en":"At the end of Cosmic Storm, destroy the three satellites protecting the core. Each takes two bullets; the core has six health points. Amber lines warn of incoming fire: dodge, then attack while the core is exposed. Missiles and flares retain their usual damage. Damage dealt to the boss persists through respawns. The five kills earned before the boss are your lives: each death removes one. At zero, the campaign is lost.","it":"Alla fine di Tempesta Cosmica, distruggi i tre satelliti che proteggono il nucleo. Ognuno resiste a due proiettili; il nucleo ha sei punti vita. Le linee ambra anticipano gli spari: schivali e attacca quando il nucleo è esposto. Missili e bengala mantengono i danni abituali. I danni al boss restano dopo la ricomparsa. Le cinque eliminazioni prima del boss sono le tue vite: ogni morte ne toglie una. A zero perdi la campagna.","fr":"À la fin de Tempête cosmique, détruisez les trois satellites protégeant le noyau. Chacun résiste à deux balles ; le noyau a six points de vie. Les lignes ambrées annoncent les tirs : esquivez puis attaquez le noyau exposé. Missiles et leurres gardent leurs dégâts habituels. Les dégâts au boss persistent après une réapparition. Les cinq éliminations avant le boss sont vos vies : chaque mort en retire une. À zéro, la campagne est perdue.","de":"Zerstöre am Ende von Kosmischer Sturm die drei Satelliten um den Kern. Jeder hält zwei Kugeln aus; der Kern hat sechs Lebenspunkte. Bernsteinfarbene Linien kündigen Schüsse an: Weiche aus und greife den offenen Kern an. Raketen und Leuchtfackeln behalten ihren üblichen Schaden. Schaden am Boss bleibt nach dem Wiedereinstieg erhalten. Die fünf Abschüsse vor dem Boss sind deine Leben: Jeder Tod kostet eines. Bei null ist die Kampagne verloren.","zh":"在宇宙风暴的最后，摧毁保护核心的三颗卫星。每颗需要两发子弹，核心有六点生命值。琥珀色线条会预告射击方向：先躲避，再趁核心暴露时攻击。导弹和诱饵弹保持原有伤害。重生后，对首领造成的伤害会保留。 首领战前获得的五次击杀就是你的生命。每次死亡扣除一点，降到零时战役失败。"};
@@ -5316,18 +5316,19 @@ window.GALAXY_CONFIG = {
 'use strict';
 // Phase-five authority: geometry, gates and damage share one local simulation.
 (() => {
-  const OUTER=410,INNER=210,WALL=12,CORE=50,SHIELD=75,GENERATOR=24;
+  const OUTER=450,INNER=260,WALL=12,CORE=50,SHIELD=75,GENERATOR=24,CORRIDOR=(OUTER+INNER)/2;
   const OUTER_SPEED=6*Math.PI/180,INNER_SPEED=-9*Math.PI/180,OPENING=50*Math.PI/180;
   const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2}),TAU=Math.PI*2;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const angle=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
   const remaining=b=>b.generators.filter(g=>g.hp>0).length;
+  function turretPosition(body,slot){const a=(body.innerAngle||0)+(slot?1:-1)*Math.PI/2;return {x:body.x+INNER*Math.cos(a),y:body.y+INNER*Math.sin(a)};}
   function create(id,config={}){
     const hp=config.coreHp||12;
     return {id,x:960,y:540,age:0,hp,maxHp:hp,stage:'generators',inside:false,everEntered:false,
       outerGate:0,innerGate:1,outerAngle:0,innerAngle:0,pOuterAngle:0,pInnerAngle:0,stepDt:0,
       aims:[0,0],shotSlot:0,escapeLeft:0,escapeDuration:config.escapeSeconds||18,nextShot:8,
-      generators:[Math.PI,-Math.PI/3,Math.PI/3].map((a,slot)=>({slot,x:960+470*Math.cos(a),y:540+470*Math.sin(a),hp:config.generatorHp||2,maxHp:config.generatorHp||2}))};
+      generators:[Math.PI,-Math.PI/3,Math.PI/3].map((a,slot)=>({slot,x:960+510*Math.cos(a),y:540+510*Math.sin(a),hp:config.generatorHp||2,maxHp:config.generatorHp||2}))};
   }
   // Earliest swept circle versus a capsule. Tests the strip and both end caps,
   // including initial overlaps; fast missiles cannot skip a thin wall.
@@ -5397,7 +5398,10 @@ window.GALAXY_CONFIG = {
     p.x=end.x;p.y=end.y;return {contacts,coreHit};
   }
   function syncPresence(body,p,r=35){
-    body.inside=!!(p&&!p.dead&&!(p.spawnFx>0)&&Math.hypot(p.x-body.x,p.y-body.y)<INNER-WALL-r);
+    // Contacts already prevent crossing solid walls. Entering through the
+    // opening counts when the ship's centre crosses the chamber's inner edge;
+    // requiring its whole shield to fit made a visibly entered pilot stay locked.
+    body.inside=!!(remaining(body)===0&&p&&!p.dead&&!(p.spawnFx>0)&&Math.hypot(p.x-body.x,p.y-body.y)<INNER-WALL);
     if(body.inside)body.everEntered=true;
     if(body.stage!=='escape')body.stage=remaining(body)?'generators':body.inside?'core':'infiltrate';
   }
@@ -5407,16 +5411,18 @@ window.GALAXY_CONFIG = {
     body.outerAngle+=OUTER_SPEED*dt;body.innerAngle+=INNER_SPEED*dt;
     body.outerGate=remaining(body)===0?1:0;body.innerGate=1;
     if(body.stage==='escape'){body.escapeLeft=Math.max(0,body.escapeLeft-dt);return [];}
-    if(p&&!p.dead)for(let i=0;i<2;i++)body.aims[i]=Math.atan2(p.y-(body.y+(i?1:-1)*125),p.x-body.x);
+    if(p&&!p.dead)for(let i=0;i<2;i++){const gun=turretPosition(body,i);body.aims[i]=Math.atan2(p.y-gun.y,p.x-gun.x);}
     const shots=[];
     if(!p||p.dead||p.spawnFx>0||body.age<body.nextShot)return shots;
     body.nextShot=body.age+6.5;
-    // One recessed gun at a time; generators are objectives, never gun muzzles.
-    const sources=[{x:body.x,y:body.y+(body.shotSlot++%2?1:-1)*125}];
+    // The mounts rotate with solid sections of the inner wall, clear of its
+    // opening. Alternate actual shots, including when the reactor blocks aim.
+    const sources=[turretPosition(body,body.shotSlot%2)];
     for(const source of sources){
-      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*20,y:source.y+ny*20};
+      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*24,y:source.y+ny*24};
       if(firstHit(body,{px:muzzle.x,py:muzzle.y,x:p.x,y:p.y},4,{enemy:true,fromTime:1,toTime:1}))continue;
       shots.push({id:uid(),owner:-5,voidShot:true,x:muzzle.x,y:muzzle.y,px:muzzle.x,py:muzzle.y,vx:nx*200,vy:ny*200,age:0,travel:0,guided:false});
+      body.shotSlot++;
     }
     return shots;
   }
@@ -5426,14 +5432,14 @@ window.GALAXY_CONFIG = {
       const part=body.generators[hit.slot];if(!part||part.hp<=0)return {shielded:true};
       part.hp=Math.max(0,part.hp-amount);return {destroyed:part.hp===0};
     }
-    if(hit.kind!=='core'||!body.inside)return {shielded:true};
+    if(hit.kind!=='core'||!body.inside||remaining(body)!==0)return {shielded:true};
     body.hp=Math.max(0,body.hp-amount);
     if(body.hp===0){body.stage='escape';body.escapeLeft=body.escapeDuration;body.outerGate=body.innerGate=1;return {escape:true};}
     return {damaged:true};
   }
   const escaped=(body,p,r=35)=>body.stage==='escape'&&body.escapeLeft>0&&!!p&&!p.dead&&Math.hypot(p.x-body.x,p.y-body.y)>OUTER+WALL+r+8;
   function snapshot(body){return body?{...body,aims:body.aims.slice(),generators:body.generators.map(g=>({...g})),remaining:remaining(body)}:null;}
-  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,OUTER_SPEED,INNER_SPEED,OPENING,capsule});
+  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,turretPosition,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,CORRIDOR,OUTER_SPEED,INNER_SPEED,OPENING,capsule});
 })();
 
 ;
@@ -8618,7 +8624,7 @@ window.GALAXY_CONFIG = {
       if(this.voidSphere&&this.nextPickup<=0){
         const b=this.voidSphere,p=this.players.find(p=>!p.cpu),distance=Math.hypot(p.x-b.x,p.y-b.y);
         if(b.stage!=='escape'){
-          const point=b.inside?{x:1090,y:540}:distance<395?{x:960,y:230}:{x:260,y:540};
+          const point=b.inside?{x:b.x+VOID.INNER-60,y:b.y}:distance<VOID.OUTER-15?{x:b.x,y:b.y-VOID.CORRIDOR}:{x:260,y:540};
           this.pickups.push({id:uid(),type:p.bullets<6?'ammo3':'flare',...point,phase:0});
           if(this.pickups.length>5)this.pickups.shift();
         }
@@ -20026,7 +20032,7 @@ window.GALAXY_CONFIG = {
   function drawVoidProgress(boss){
     if(boss?.type!=='void-sphere'||boss.phase!=='fighting')return;
     const escape=boss.stage==='escape',key=escape?'voidEscape':boss.stage==='generators'?'voidGenerators':boss.stage==='core'?'voidCore':'voidWait';
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':'#c6f8ff';
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':boss.stage==='core'?'#80ffbc':'#c6f8ff';
     ctx.font=isMobile?'30px Flashback,Arial':'25px Flashback,Arial';
     const text=tr(key,{count:3-boss.remaining,total:3,seconds:Math.ceil(boss.escapeLeft)});ctx.strokeText(text,W/2,90);ctx.fillText(text,W/2,90);
     ctx.font=isMobile?'25px Flashback,Arial':'22px Flashback,Arial';

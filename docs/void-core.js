@@ -1,18 +1,19 @@
 'use strict';
 // Phase-five authority: geometry, gates and damage share one local simulation.
 (() => {
-  const OUTER=410,INNER=210,WALL=12,CORE=50,SHIELD=75,GENERATOR=24;
+  const OUTER=450,INNER=260,WALL=12,CORE=50,SHIELD=75,GENERATOR=24,CORRIDOR=(OUTER+INNER)/2;
   const OUTER_SPEED=6*Math.PI/180,INNER_SPEED=-9*Math.PI/180,OPENING=50*Math.PI/180;
   const DAMAGE=Object.freeze({bullet:1,missile:3,flare:2}),TAU=Math.PI*2;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const angle=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
   const remaining=b=>b.generators.filter(g=>g.hp>0).length;
+  function turretPosition(body,slot){const a=(body.innerAngle||0)+(slot?1:-1)*Math.PI/2;return {x:body.x+INNER*Math.cos(a),y:body.y+INNER*Math.sin(a)};}
   function create(id,config={}){
     const hp=config.coreHp||12;
     return {id,x:960,y:540,age:0,hp,maxHp:hp,stage:'generators',inside:false,everEntered:false,
       outerGate:0,innerGate:1,outerAngle:0,innerAngle:0,pOuterAngle:0,pInnerAngle:0,stepDt:0,
       aims:[0,0],shotSlot:0,escapeLeft:0,escapeDuration:config.escapeSeconds||18,nextShot:8,
-      generators:[Math.PI,-Math.PI/3,Math.PI/3].map((a,slot)=>({slot,x:960+470*Math.cos(a),y:540+470*Math.sin(a),hp:config.generatorHp||2,maxHp:config.generatorHp||2}))};
+      generators:[Math.PI,-Math.PI/3,Math.PI/3].map((a,slot)=>({slot,x:960+510*Math.cos(a),y:540+510*Math.sin(a),hp:config.generatorHp||2,maxHp:config.generatorHp||2}))};
   }
   // Earliest swept circle versus a capsule. Tests the strip and both end caps,
   // including initial overlaps; fast missiles cannot skip a thin wall.
@@ -82,7 +83,10 @@
     p.x=end.x;p.y=end.y;return {contacts,coreHit};
   }
   function syncPresence(body,p,r=35){
-    body.inside=!!(p&&!p.dead&&!(p.spawnFx>0)&&Math.hypot(p.x-body.x,p.y-body.y)<INNER-WALL-r);
+    // Contacts already prevent crossing solid walls. Entering through the
+    // opening counts when the ship's centre crosses the chamber's inner edge;
+    // requiring its whole shield to fit made a visibly entered pilot stay locked.
+    body.inside=!!(remaining(body)===0&&p&&!p.dead&&!(p.spawnFx>0)&&Math.hypot(p.x-body.x,p.y-body.y)<INNER-WALL);
     if(body.inside)body.everEntered=true;
     if(body.stage!=='escape')body.stage=remaining(body)?'generators':body.inside?'core':'infiltrate';
   }
@@ -92,16 +96,18 @@
     body.outerAngle+=OUTER_SPEED*dt;body.innerAngle+=INNER_SPEED*dt;
     body.outerGate=remaining(body)===0?1:0;body.innerGate=1;
     if(body.stage==='escape'){body.escapeLeft=Math.max(0,body.escapeLeft-dt);return [];}
-    if(p&&!p.dead)for(let i=0;i<2;i++)body.aims[i]=Math.atan2(p.y-(body.y+(i?1:-1)*125),p.x-body.x);
+    if(p&&!p.dead)for(let i=0;i<2;i++){const gun=turretPosition(body,i);body.aims[i]=Math.atan2(p.y-gun.y,p.x-gun.x);}
     const shots=[];
     if(!p||p.dead||p.spawnFx>0||body.age<body.nextShot)return shots;
     body.nextShot=body.age+6.5;
-    // One recessed gun at a time; generators are objectives, never gun muzzles.
-    const sources=[{x:body.x,y:body.y+(body.shotSlot++%2?1:-1)*125}];
+    // The mounts rotate with solid sections of the inner wall, clear of its
+    // opening. Alternate actual shots, including when the reactor blocks aim.
+    const sources=[turretPosition(body,body.shotSlot%2)];
     for(const source of sources){
-      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*20,y:source.y+ny*20};
+      const dx=p.x-source.x,dy=p.y-source.y,d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d,muzzle={x:source.x+nx*24,y:source.y+ny*24};
       if(firstHit(body,{px:muzzle.x,py:muzzle.y,x:p.x,y:p.y},4,{enemy:true,fromTime:1,toTime:1}))continue;
       shots.push({id:uid(),owner:-5,voidShot:true,x:muzzle.x,y:muzzle.y,px:muzzle.x,py:muzzle.y,vx:nx*200,vy:ny*200,age:0,travel:0,guided:false});
+      body.shotSlot++;
     }
     return shots;
   }
@@ -111,12 +117,12 @@
       const part=body.generators[hit.slot];if(!part||part.hp<=0)return {shielded:true};
       part.hp=Math.max(0,part.hp-amount);return {destroyed:part.hp===0};
     }
-    if(hit.kind!=='core'||!body.inside)return {shielded:true};
+    if(hit.kind!=='core'||!body.inside||remaining(body)!==0)return {shielded:true};
     body.hp=Math.max(0,body.hp-amount);
     if(body.hp===0){body.stage='escape';body.escapeLeft=body.escapeDuration;body.outerGate=body.innerGate=1;return {escape:true};}
     return {damaged:true};
   }
   const escaped=(body,p,r=35)=>body.stage==='escape'&&body.escapeLeft>0&&!!p&&!p.dead&&Math.hypot(p.x-body.x,p.y-body.y)>OUTER+WALL+r+8;
   function snapshot(body){return body?{...body,aims:body.aims.slice(),generators:body.generators.map(g=>({...g})),remaining:remaining(body)}:null;}
-  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,OUTER_SPEED,INNER_SPEED,OPENING,capsule});
+  window.GalaxyVoidCore=Object.freeze({create,step,damage,firstHit,resolveShip,syncPresence,escaped,snapshot,remaining,turretPosition,walls,DAMAGE,OUTER,INNER,WALL,CORE,SHIELD,GENERATOR,CORRIDOR,OUTER_SPEED,INNER_SPEED,OPENING,capsule});
 })();

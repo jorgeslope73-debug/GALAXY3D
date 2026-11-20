@@ -6935,7 +6935,7 @@
   function drawVoidProgress(boss){
     if(boss?.type!=='void-sphere'||boss.phase!=='fighting')return;
     const escape=boss.stage==='escape',key=escape?'voidEscape':boss.stage==='generators'?'voidGenerators':boss.stage==='core'?'voidCore':'voidWait';
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':'#c6f8ff';
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':boss.stage==='core'?'#80ffbc':'#c6f8ff';
     ctx.font=isMobile?'30px Flashback,Arial':'25px Flashback,Arial';
     const text=tr(key,{count:3-boss.remaining,total:3,seconds:Math.ceil(boss.escapeLeft)});ctx.strokeText(text,W/2,90);ctx.fillText(text,W/2,90);
     ctx.font=isMobile?'25px Flashback,Arial':'22px Flashback,Arial';
