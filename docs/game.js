@@ -6933,7 +6933,13 @@
   }
 
   function drawVoidProgress(boss){
-    if(boss?.type!=='void-sphere'||boss.phase!=='fighting')return;
+    if(boss?.type!=='void-sphere')return;
+    if(boss.phase==='presenting'){
+      const age=renderState.voidSphere?.introAge||0,key=age<3.6?'voidIncoming':age<6?'voidReveal':'voidShieldForming';
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=isMobile?'34px Flashback,Arial':'29px Flashback,Arial';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle='#c6f8ff';
+      const text=tr(key);ctx.strokeText(text,W/2,90);ctx.fillText(text,W/2,90);ctx.restore();return;
+    }
+    if(boss.phase!=='fighting')return;
     const escape=boss.stage==='escape',key=escape?'voidEscape':boss.stage==='generators'?'voidGenerators':boss.stage==='core'?'voidCore':'voidWait';
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':boss.stage==='core'?'#80ffbc':'#c6f8ff';
     ctx.font=isMobile?'30px Flashback,Arial':'25px Flashback,Arial';

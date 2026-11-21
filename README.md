@@ -1,3 +1,5 @@
+V24.58: presentacion local de LA ESFERA DEL VACIO. La esfera blindada aparece inclinada, gira suavemente hasta la vista superior, descubre el interior y forma los escudos. La secuencia dura 8 segundos; piloto protegido, controles y combate en pausa hasta terminar. La cubierta permanece abierta durante el combate; los anillos, colisiones y reglas de dano conservan su autoridad habitual. No anade trafico de red.
+
 V24.57: acabado 3D del interior de LA ESFERA DEL VACIO con el flujo Blender de Higgsfield. Muros con placas biseladas, juntas luminosas y conducciones; suelo metalico segmentado; torretas de doble canon con base y cabeza independientes; marcos de compuerta con pistones y hojas recogidas. Los detalles se instancian desde un GLB de unos 66 KB, solo durante PREPARADOS de fase 5. Comparten el perfil de los anillos y no cierran los huecos ni cambian fisica, dano, vidas, tiempos o red. Constructor: tools/build-void-interior.py. Editable .blend conservado en la entrega local.
 
 V24.56: amplia la camara interior (anillo R260, exterior R450) para apuntar desde mas lejos sin agrandar la bola central. Distingue el estado del nucleo de la esfera. Entre los anillos sigue protegido: el aviso pide cruzar el anillo pequeno y la barra se ve gris. Al entrar de verdad en la camara, nucleo y barra pasan a verde y las balas restan vida. Se activa al cruzar el borde interior con el centro de la nave, sin exigir que el escudo completo quede muy dentro. Las defensas van sobre el anillo interior y giran con el; desaparece el circulo blanco de guia. Se conserva el bloqueo exterior, el dano persistente y la huida.
@@ -174,7 +176,7 @@ La documentación original se conserva a continuación. Algunas referencias de v
 
 # Galaxy Combat Web
 
-**Version actual: V24.57
+**Version actual: V24.58
 
 Galaxy Combat es un juego de combate espacial para navegador, gratuito y sin instalación obligatoria. Permite jugar contra CPU o en partidas online de hasta 4 jugadores.
 

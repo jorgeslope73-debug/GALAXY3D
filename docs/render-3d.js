@@ -704,7 +704,7 @@
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*280,y:540+Math.sin(i*2.1)*280,hp:pass<2?2:0,maxHp:2}))});
         if(typeof createVoid==='function'){
-          const body=window.GalaxyVoidCore.create('warm-void');body.outerGate=body.innerGate=pass%2;body.inside=pass===2;body.roofOpen=pass===2;api.voidSphere(body);
+          const body=window.GalaxyVoidCore.create('warm-void');body.outerGate=body.innerGate=pass%2;body.inside=pass===2;body.roofOpen=pass===2;if(pass===0){body.introAge=0;body.introDuration=8;}api.voidSphere(body);
         }
         if(typeof createDevourer==='function'){
           const body=window.GalaxyDevourer.create('warm-devourer');body.x=960;body.y=540;

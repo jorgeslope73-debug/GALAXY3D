@@ -11,7 +11,8 @@ function fixture(){
  const e=new c.window.GalaxyLocalCpu({});e.start('P','medio',3,null,false,5);
  for(const p of e.players){p.spawnFx=0;p.protection=0;p.shield=0;}
  const p=e.players[0];p.kills=4;e.destroyShip(e.players[1],p);
- for(let i=0;i<180;i++)e.update(1/60);
+ for(let i=0;i<600&&e.bossEncounter.phase!=='fighting';i++)e.update(1/60);
+ assert.equal(e.bossEncounter.phase,'fighting','flight starts after the complete presentation');
  assert.ok(e.voidSphere);assert.equal(p.x,180,'the real boss entry provides the outside spawn');
  const b=e.voidSphere;for(const g of b.generators)g.hp=0;
  p.protection=1e5;e.nextPickup=1e9;

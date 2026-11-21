@@ -7,7 +7,7 @@ function fixture(){
  for(const p of e.players){p.spawnFx=0;p.protection=0;p.shield=0;}
  return {e,S:c.window.GalaxyVoidCore,p:e.players[0],events};
 }
-function enter(f,dt){const {e,p}=f;p.kills=4;e.destroyShip(e.players[1],p);assert.equal(e.bossEncounter.type,'void-sphere');assert.equal(e.finished,false);e.handleMessage({t:'restart',level:1});assert.equal(e.campaignLevel,5);p.protection=1e5;for(let t=0;t<1.7;t+=dt)e.update(dt);assert.ok(e.voidSphere);assert.equal(e.players.filter(p=>!p.dead).length,1);assert.equal(e.asteroids.length,0);assert.equal(p.x,180);return e.voidSphere;}
+function enter(f,dt){const {e,p}=f;p.kills=4;e.destroyShip(e.players[1],p);assert.equal(e.bossEncounter.type,'void-sphere');assert.equal(e.finished,false);e.handleMessage({t:'restart',level:1});assert.equal(e.campaignLevel,5);p.protection=1e5;for(let t=0;t<10&&e.bossEncounter.phase!=='fighting';t+=dt)e.update(dt);assert.equal(e.bossEncounter.phase,'fighting');assert.ok(e.voidSphere);assert.equal(e.players.filter(p=>!p.dead).length,1);assert.equal(e.asteroids.length,0);assert.equal(p.x,180);return e.voidSphere;}
 function shoot(f,target,weapon='bullet',from=null){
  const {e}=f,b=e.voidSphere,dx=target.x-b.x,dy=target.y-b.y,d=Math.hypot(dx,dy)||1;
  const x=from?.x??target.x+dx/d*65,y=from?.y??target.y+dy/d*65;

@@ -1485,6 +1485,7 @@
     }
     destroyShip(victim,attacker=null,weaponTheft=false,scorePenalty=false){
       if(victim.dead||this.finished)return;
+      if(!victim.cpu&&this.bossEncounter?.type==='void-sphere'&&this.bossEncounter.phase==='presenting')return;
       if(victim.protection>0||victim.shield>0){this.emitShipImpact(victim,attacker,false);return;}
       victim.dead=true;victim.respawn=3;victim.vx=victim.vy=0;victim.deaths++;
       this.noteCpuLoopDeath(victim,attacker);
@@ -2320,9 +2321,15 @@
     }
     update(dt){
       if(!this.started||this.finished)return;
-      this.noDeathTime+=dt;this.fxClock+=dt;
+      this.fxClock+=dt;
       this.updateCampaignBoss();
       if(this.finished)return;
+      // The opening shot is local presentation time. Physics, equipment and
+      // controls stay parked until the station and its shield are ready.
+      if(this.bossEncounter?.type==='void-sphere'&&this.bossEncounter.phase==='presenting'){
+        this.updateVoidPresentation(dt);return;
+      }
+      this.noDeathTime+=dt;
       if(Array.isArray(this.activeShockwaves)&&this.activeShockwaves.length){
         // V21.16: dos jugadores con ONDA activa se neutralizan entre si.
         // Sus frentes siguen existiendo y pueden afectar a terceros sin onda.
@@ -2579,7 +2586,8 @@
       const human=this.players.find(p=>!p.cpu);
       if(boss.type==='void-sphere'){
         if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
-          this.voidSphere=VOID.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
+          this.voidSphere=VOID.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);
+          Object.assign(this.voidSphere,{introAge:0,introDuration:8});boss.phase='presenting';
           this.asteroids.length=0;this.pickups.length=0;
           Object.assign(human,{x:180,y:540,px:180,py:540,vx:0,vy:0,rot:90,pr:90,pendingSpawn:null,spawnAnchorX:180,spawnAnchorY:540});
           human.protection=Math.max(human.protection,3);human.bullets=Math.max(human.bullets,24);
@@ -2673,8 +2681,23 @@
         const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
       }
     }
+    updateVoidPresentation(dt){
+      const b=this.voidSphere,boss=this.bossEncounter;if(!b||boss?.phase!=='presenting')return;
+      const p=this.players.find(p=>!p.cpu),control=p&&this.controls.get(p.index);
+      if(control){
+        control.turn=0;
+        for(const key of ['thrust','fire','directFire','rocket','flare','shock','rocketPulse','flarePulse','shockPulse'])control[key]=false;
+      }
+      if(p)Object.assign(p,{x:180,y:540,px:180,py:540,vx:0,vy:0,rot:90,pr:90,thrust:false,turn:0,flareHold:0,flareGesture:false,joystickRocketHeld:false});
+      b.introAge=Math.min(b.introDuration,b.introAge+Math.max(0,Number(dt)||0));
+      if(b.introDuration-b.introAge<1e-7){
+        b.introAge=b.introDuration;b.introComplete=true;boss.phase='fighting';
+        if(p)p.protection=Math.max(p.protection,3);
+      }
+    }
     updateVoidSphere(dt){
       const b=this.voidSphere;if(!b)return;
+      if(this.bossEncounter?.phase==='presenting')return;
       const p=this.players.find(p=>!p.cpu),shots=VOID.step(b,dt,p,uid),active=this.bullets.reduce((n,s)=>n+(s.voidShot?1:0),0);
       if(shots.length&&active<32){this.bullets.push(...shots.slice(0,32-active));this.emit({t:'sound',kind:'laser'});}
       if(b.stage==='escape'){
@@ -2685,7 +2708,7 @@
       }
     }
     resolveVoidContacts(){
-      const b=this.voidSphere;if(!b)return;
+      const b=this.voidSphere;if(!b||this.bossEncounter?.phase==='presenting')return;
       const p=this.players.find(p=>!p.cpu),r=Math.max(PHYSICS_CORE.SHIP_PROJECTILE_RADIUS,shipCollisionRadius(p));
       if(p&&!p.dead&&!(p.spawnFx>0)){
         const contact=VOID.resolveShip(b,p,r);
@@ -2696,7 +2719,7 @@
       if(VOID.escaped(b,p,r))this.finishCampaignBoss(true);
     }
     damageVoidPart(b,hit,weapon,owner){
-      if(this.voidSphere!==b||this.finished)return;
+      if(this.voidSphere!==b||this.finished||this.bossEncounter?.phase==='presenting')return;
       const result=VOID.damage(b,hit,weapon);this.bossEncounter.hp=b.hp;
       if(result.shielded){this.emitRocketDisintegrateAt(hit.x,hit.y,owner);return;}
       this.emitExplosionAt(hit.x,hit.y,owner);this.emit({t:'sound',kind:'impact'});
@@ -3830,7 +3853,7 @@
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='void-sphere'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,stage:this.voidSphere?.stage||'generators',remaining:this.voidSphere?VOID.remaining(this.voidSphere):3,escapeLeft:this.voidSphere?.escapeLeft||0,innerOpen:!!(this.voidSphere?.innerGate>.98)}:this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='void-sphere'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,introAge:this.voidSphere?.introAge||0,introDuration:this.voidSphere?.introDuration||8,introComplete:!!this.voidSphere?.introComplete,stage:this.voidSphere?.stage||'generators',remaining:this.voidSphere?VOID.remaining(this.voidSphere):3,escapeLeft:this.voidSphere?.escapeLeft||0,innerOpen:!!(this.voidSphere?.innerGate>.98)}:this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
         devourer,
         voidSphere:VOID?.snapshot(this.voidSphere)||null,

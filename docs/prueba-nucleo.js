@@ -712,7 +712,7 @@ window.GALAXY_CONFIG = {
         if(typeof createImportedMothership==='function')api.mothership({id:'warm-mothership',x:960,y:540,angle:Math.PI/2,hp:6,maxHp:6,turrets:Array.from({length:4},(_,i)=>({angle:pass+i}))});
         if(typeof createStorm==='function')api.storm({id:'warm-storm',x:960,y:540,age:2,hp:pass===2?2:6,maxHp:6,phase:pass<2?'satellites':'core',attack:pass%2?'charging':'cooldown',vulnerable:pass===2,enraged:pass===2,warning:pass%2?{slot:-1,angle:0,remaining:.6,duration:1.25}:null,satellites:Array.from({length:3},(_,i)=>({slot:i,x:960+Math.cos(i*2.1)*280,y:540+Math.sin(i*2.1)*280,hp:pass<2?2:0,maxHp:2}))});
         if(typeof createVoid==='function'){
-          const body=window.GalaxyVoidCore.create('warm-void');body.outerGate=body.innerGate=pass%2;body.inside=pass===2;body.roofOpen=pass===2;api.voidSphere(body);
+          const body=window.GalaxyVoidCore.create('warm-void');body.outerGate=body.innerGate=pass%2;body.inside=pass===2;body.roofOpen=pass===2;if(pass===0){body.introAge=0;body.introDuration=8;}api.voidSphere(body);
         }
         if(typeof createDevourer==='function'){
           const body=window.GalaxyDevourer.create('warm-devourer');body.x=960;body.y=540;
@@ -1009,11 +1009,17 @@ window.GALAXY_CONFIG = {
   Object.assign(dictionaries.fr,{"devourerIncoming":"LE DEVOREUR","devourerJoint":"DETRUISEZ LE JOINT LUMINEUX","devourerSegments":"SEGMENTS DETRUITS : {count}/{total}","devourerCharge":"CHARGE IMMINENTE · ECARTEZ-VOUS","devourerVolley":"MACHOIRES OUVERTES · ESQUIVEZ","devourerOpen":"REACTEUR EXPOSE · ATTAQUEZ","devourerClosed":"TETE BLINDEE · ATTENDEZ","devourerHealth":"REACTEUR : {hp}/{total}"});
   Object.assign(dictionaries.de,{"devourerIncoming":"DER VERSCHLINGER","devourerJoint":"ZERSTORE DAS LEUCHTENDE GELENK","devourerSegments":"SEGMENTE ZERSTORT: {count}/{total}","devourerCharge":"ANGRIFF · AUSWEICHEN","devourerVolley":"KIEFER OFFEN · SALVE AUSWEICHEN","devourerOpen":"REAKTOR OFFEN · ANGREIFEN","devourerClosed":"KOPF GEPANZERT · WARTEN","devourerHealth":"REAKTOR: {hp}/{total}"});
   Object.assign(dictionaries.zh,{"devourerIncoming":"吞噬者","devourerJoint":"攻击发光的连接处","devourerSegments":"已摧毁节段：{count}/{total}","devourerCharge":"冲锋将至 · 躲开","devourerVolley":"巨口张开 · 躲避齐射","devourerOpen":"反应堆暴露 · 攻击","devourerClosed":"头部装甲保护 · 等待时机","devourerHealth":"反应堆：{hp}/{total}"});
+  Object.assign(dictionaries.es,{"voidReveal":"INTERIOR DE LA ESFERA","voidShieldForming":"FORMANDO ESCUDO"});
   Object.assign(dictionaries.es,{"voidIncoming":"LA ESFERA DEL VACIO","voidGenerators":"GENERADORES: {count}/{total} · DESTRUYE LOS NARANJAS","voidWait":"NUCLEO PROTEGIDO · CRUZA EL ANILLO PEQUENO","voidEnter":"ESPERA EL HUECO DEL ANILLO INTERIOR","voidCore":"NUCLEO VULNERABLE · DISPARA AHORA","voidEscape":"BUSCA LA SALIDA GIRATORIA · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VIDAS: {lives}","voidDefeat":"MISION FALLIDA · LA ESFERA DEL VACIO"});
+  Object.assign(dictionaries.en,{"voidReveal":"SPHERE INTERIOR","voidShieldForming":"SHIELD FORMING"});
   Object.assign(dictionaries.en,{"voidIncoming":"THE VOID SPHERE","voidGenerators":"GENERATORS: {count}/{total} · DESTROY THE ORANGE ONES","voidWait":"CORE SHIELDED · CROSS THE INNER RING","voidEnter":"WAIT FOR THE INNER RING OPENING","voidCore":"CORE VULNERABLE · FIRE NOW","voidEscape":"FIND THE ROTATING EXIT · {seconds} S","voidStatus":"CORE: {hp}/{total} · LIVES: {lives}","voidDefeat":"MISSION FAILED · THE VOID SPHERE"});
+  Object.assign(dictionaries.it,{"voidReveal":"INTERNO DELLA SFERA","voidShieldForming":"FORMAZIONE DELLO SCUDO"});
   Object.assign(dictionaries.it,{"voidIncoming":"LA SFERA DEL VUOTO","voidGenerators":"GENERATORI: {count}/{total} · DISTRUGGI QUELLI ARANCIONI","voidWait":"NUCLEO PROTETTO · ATTRAVERSA L ANELLO INTERNO","voidEnter":"ATTENDI IL VARCO INTERNO","voidCore":"NUCLEO VULNERABILE · SPARA ORA","voidEscape":"TROVA L USCITA ROTANTE · {seconds} S","voidStatus":"NUCLEO: {hp}/{total} · VITE: {lives}","voidDefeat":"MISSIONE FALLITA · LA SFERA DEL VUOTO"});
+  Object.assign(dictionaries.fr,{"voidReveal":"INTERIEUR DE LA SPHERE","voidShieldForming":"FORMATION DU BOUCLIER"});
   Object.assign(dictionaries.fr,{"voidIncoming":"LA SPHERE DU VIDE","voidGenerators":"GENERATEURS : {count}/{total} · DETRUISEZ LES ORANGES","voidWait":"NOYAU PROTEGE · FRANCHISSEZ LE PETIT ANNEAU","voidEnter":"ATTENDEZ L OUVERTURE INTERIEURE","voidCore":"NOYAU VULNERABLE · TIREZ MAINTENANT","voidEscape":"TROUVEZ LA SORTIE TOURNANTE · {seconds} S","voidStatus":"NOYAU : {hp}/{total} · VIES : {lives}","voidDefeat":"MISSION ECHOUEE · LA SPHERE DU VIDE"});
+  Object.assign(dictionaries.de,{"voidReveal":"INNERES DER SPHARE","voidShieldForming":"SCHILD WIRD AUFGEBAUT"});
   Object.assign(dictionaries.de,{"voidIncoming":"DIE LEERE SPHARE","voidGenerators":"GENERATOREN: {count}/{total} · ORANGE ZIELE ZERSTOREN","voidWait":"KERN GESCHUTZT · INNEREN RING DURCHQUEREN","voidEnter":"AUF DIE INNERE OFFNUNG WARTEN","voidCore":"KERN VERWUNDBAR · JETZT SCHIESSEN","voidEscape":"ROTIERENDEN AUSGANG FINDEN · {seconds} S","voidStatus":"KERN: {hp}/{total} · LEBEN: {lives}","voidDefeat":"MISSION GESCHEITERT · DIE LEERE SPHARE"});
+  Object.assign(dictionaries.zh,{"voidReveal":"球体内部","voidShieldForming":"护盾正在形成"});
   Object.assign(dictionaries.zh,{"voidIncoming":"虚空之球","voidGenerators":"发电机：{count}/{total} · 摧毁橙色目标","voidWait":"核心受保护 · 穿过内环","voidEnter":"等待内环开口","voidCore":"核心可受伤害 · 立即射击","voidEscape":"寻找旋转出口 · {seconds} 秒","voidStatus":"核心：{hp}/{total} · 生命：{lives}","voidDefeat":"任务失败 · 虚空之球"});
   Object.assign(dictionaries.es,{"stormBossIncoming":"EL NUCLEO DE LA TORMENTA","stormBossSatellites":"SATELITES DESTRUIDOS: {count}/{total}","stormBossDodge":"CARGANDO · ESQUIVA LA RAFAGA","stormBossOpen":"NUCLEO EXPUESTO · ATACA","stormBossEnraged":"NUCLEO INESTABLE · ATACA","stormBossHealth":"NUCLEO: {hp}/{total}","stormBossLives":"VIDAS: {lives}/{total}"});
   Object.assign(dictionaries.en,{"stormBossIncoming":"THE STORM CORE","stormBossSatellites":"SATELLITES DESTROYED: {count}/{total}","stormBossDodge":"CHARGING · DODGE THE VOLLEY","stormBossOpen":"CORE EXPOSED · ATTACK","stormBossEnraged":"UNSTABLE CORE · ATTACK","stormBossHealth":"CORE: {hp}/{total}","stormBossLives":"LIVES: {lives}/{total}"});
@@ -6931,6 +6937,7 @@ window.GALAXY_CONFIG = {
     }
     destroyShip(victim,attacker=null,weaponTheft=false,scorePenalty=false){
       if(victim.dead||this.finished)return;
+      if(!victim.cpu&&this.bossEncounter?.type==='void-sphere'&&this.bossEncounter.phase==='presenting')return;
       if(victim.protection>0||victim.shield>0){this.emitShipImpact(victim,attacker,false);return;}
       victim.dead=true;victim.respawn=3;victim.vx=victim.vy=0;victim.deaths++;
       this.noteCpuLoopDeath(victim,attacker);
@@ -7766,9 +7773,15 @@ window.GALAXY_CONFIG = {
     }
     update(dt){
       if(!this.started||this.finished)return;
-      this.noDeathTime+=dt;this.fxClock+=dt;
+      this.fxClock+=dt;
       this.updateCampaignBoss();
       if(this.finished)return;
+      // The opening shot is local presentation time. Physics, equipment and
+      // controls stay parked until the station and its shield are ready.
+      if(this.bossEncounter?.type==='void-sphere'&&this.bossEncounter.phase==='presenting'){
+        this.updateVoidPresentation(dt);return;
+      }
+      this.noDeathTime+=dt;
       if(Array.isArray(this.activeShockwaves)&&this.activeShockwaves.length){
         // V21.16: dos jugadores con ONDA activa se neutralizan entre si.
         // Sus frentes siguen existiendo y pueden afectar a terceros sin onda.
@@ -8025,7 +8038,8 @@ window.GALAXY_CONFIG = {
       const human=this.players.find(p=>!p.cpu);
       if(boss.type==='void-sphere'){
         if(boss.phase==='entering'&&this.fxClock>=boss.nextAt&&human&&!human.dead&&!(human.spawnFx>0)){
-          this.voidSphere=VOID.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);boss.phase='fighting';
+          this.voidSphere=VOID.create(uid(),CAMPAIGN.getLevel(this.campaignLevel).boss);
+          Object.assign(this.voidSphere,{introAge:0,introDuration:8});boss.phase='presenting';
           this.asteroids.length=0;this.pickups.length=0;
           Object.assign(human,{x:180,y:540,px:180,py:540,vx:0,vy:0,rot:90,pr:90,pendingSpawn:null,spawnAnchorX:180,spawnAnchorY:540});
           human.protection=Math.max(human.protection,3);human.bullets=Math.max(human.bullets,24);
@@ -8119,8 +8133,23 @@ window.GALAXY_CONFIG = {
         const steer=Math.min(.09,3.2*dt),n=normalize(b.vx/speed+(dx/distance-b.vx/speed)*steer,b.vy/speed+(dy/distance-b.vy/speed)*steer);b.vx=n.x*speed;b.vy=n.y*speed;
       }
     }
+    updateVoidPresentation(dt){
+      const b=this.voidSphere,boss=this.bossEncounter;if(!b||boss?.phase!=='presenting')return;
+      const p=this.players.find(p=>!p.cpu),control=p&&this.controls.get(p.index);
+      if(control){
+        control.turn=0;
+        for(const key of ['thrust','fire','directFire','rocket','flare','shock','rocketPulse','flarePulse','shockPulse'])control[key]=false;
+      }
+      if(p)Object.assign(p,{x:180,y:540,px:180,py:540,vx:0,vy:0,rot:90,pr:90,thrust:false,turn:0,flareHold:0,flareGesture:false,joystickRocketHeld:false});
+      b.introAge=Math.min(b.introDuration,b.introAge+Math.max(0,Number(dt)||0));
+      if(b.introDuration-b.introAge<1e-7){
+        b.introAge=b.introDuration;b.introComplete=true;boss.phase='fighting';
+        if(p)p.protection=Math.max(p.protection,3);
+      }
+    }
     updateVoidSphere(dt){
       const b=this.voidSphere;if(!b)return;
+      if(this.bossEncounter?.phase==='presenting')return;
       const p=this.players.find(p=>!p.cpu),shots=VOID.step(b,dt,p,uid),active=this.bullets.reduce((n,s)=>n+(s.voidShot?1:0),0);
       if(shots.length&&active<32){this.bullets.push(...shots.slice(0,32-active));this.emit({t:'sound',kind:'laser'});}
       if(b.stage==='escape'){
@@ -8131,7 +8160,7 @@ window.GALAXY_CONFIG = {
       }
     }
     resolveVoidContacts(){
-      const b=this.voidSphere;if(!b)return;
+      const b=this.voidSphere;if(!b||this.bossEncounter?.phase==='presenting')return;
       const p=this.players.find(p=>!p.cpu),r=Math.max(PHYSICS_CORE.SHIP_PROJECTILE_RADIUS,shipCollisionRadius(p));
       if(p&&!p.dead&&!(p.spawnFx>0)){
         const contact=VOID.resolveShip(b,p,r);
@@ -8142,7 +8171,7 @@ window.GALAXY_CONFIG = {
       if(VOID.escaped(b,p,r))this.finishCampaignBoss(true);
     }
     damageVoidPart(b,hit,weapon,owner){
-      if(this.voidSphere!==b||this.finished)return;
+      if(this.voidSphere!==b||this.finished||this.bossEncounter?.phase==='presenting')return;
       const result=VOID.damage(b,hit,weapon);this.bossEncounter.hp=b.hp;
       if(result.shielded){this.emitRocketDisintegrateAt(hit.x,hit.y,owner);return;}
       this.emitExplosionAt(hit.x,hit.y,owner);this.emit({t:'sound',kind:'impact'});
@@ -9276,7 +9305,7 @@ window.GALAXY_CONFIG = {
         pickups:this.pickups.map((p,idx)=>({id:p.id,type:p.type,x:round1(p.x),y:round1(p.y+Math.cos(p.phase)*3),expiresIn:(idx===0&&this.pickups.length>=5)?round2(Math.max(0,this.nextPickup)):null})),
         meteors:this.meteors.map(m=>({id:m.id,type:m.type,x:round1(m.x),y:round1(m.y),a:round1(m.angle)})),
         giant:this.giant?{x:round1(this.giant.x),y:round1(this.giant.y)}:null,
-        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='void-sphere'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,stage:this.voidSphere?.stage||'generators',remaining:this.voidSphere?VOID.remaining(this.voidSphere):3,escapeLeft:this.voidSphere?.escapeLeft||0,innerOpen:!!(this.voidSphere?.innerGate>.98)}:this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
+        boss:this.bossEncounter?{type:this.bossEncounter.type,phase:this.bossEncounter.phase,...(this.bossEncounter.type==='void-sphere'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,introAge:this.voidSphere?.introAge||0,introDuration:this.voidSphere?.introDuration||8,introComplete:!!this.voidSphere?.introComplete,stage:this.voidSphere?.stage||'generators',remaining:this.voidSphere?VOID.remaining(this.voidSphere):3,escapeLeft:this.voidSphere?.escapeLeft||0,innerOpen:!!(this.voidSphere?.innerGate>.98)}:this.bossEncounter.type==='devourer'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,segments:this.devourer?DEVOURER.remaining(this.devourer):5,total:5,attack:this.devourer?.attack||'patrol',vulnerable:!!(this.devourer&&DEVOURER.vulnerable(this.devourer))}:this.bossEncounter.type==='storm-core'?{lives:Math.max(0,this.players.find(p=>!p.cpu)?.kills||0),maxLives:SCORE_TO_WIN,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp,satellites:this.stormCore?this.stormCore.satellites.filter(p=>p.hp>0).length:3,attack:this.stormCore?.attack||'cooldown',enraged:!!(this.stormCore&&this.stormCore.hp<=2),vulnerable:!!(this.stormCore&&STORM.vulnerable(this.stormCore))}:this.bossEncounter.type==='ufo-wave'?{total:this.bossEncounter.total,spawned:this.bossEncounter.spawned,defeated:this.bossEncounter.defeated,remaining:round3(Math.max(0,this.bossEncounter.deadline===null?this.bossEncounter.duration:this.bossEncounter.deadline-this.fxClock))}:{pass:this.bossEncounter.pass,maxPasses:this.bossEncounter.maxPasses,hp:this.bossEncounter.hp,maxHp:this.bossEncounter.maxHp})}:null,
         stormCore:STORM?.snapshot(this.stormCore)||null,
         devourer,
         voidSphere:VOID?.snapshot(this.voidSphere)||null,
@@ -20030,7 +20059,13 @@ window.GALAXY_CONFIG = {
   }
 
   function drawVoidProgress(boss){
-    if(boss?.type!=='void-sphere'||boss.phase!=='fighting')return;
+    if(boss?.type!=='void-sphere')return;
+    if(boss.phase==='presenting'){
+      const age=renderState.voidSphere?.introAge||0,key=age<3.6?'voidIncoming':age<6?'voidReveal':'voidShieldForming';
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=isMobile?'34px Flashback,Arial':'29px Flashback,Arial';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle='#c6f8ff';
+      const text=tr(key);ctx.strokeText(text,W/2,90);ctx.fillText(text,W/2,90);ctx.restore();return;
+    }
+    if(boss.phase!=='fighting')return;
     const escape=boss.stage==='escape',key=escape?'voidEscape':boss.stage==='generators'?'voidGenerators':boss.stage==='core'?'voidCore':'voidWait';
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='rgba(0,0,0,.95)';ctx.fillStyle=escape?'#ffad62':boss.stage==='core'?'#80ffbc':'#c6f8ff';
     ctx.font=isMobile?'30px Flashback,Arial':'25px Flashback,Arial';
