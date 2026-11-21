@@ -120,10 +120,29 @@ assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));
       vm.runInContext("var real=new Engine({}); if('"+mode+"'==='host')real.start([{i:0,n:'REAL'},{i:1,n:'CPU',cpu:true}]);else real.start('REAL','facil',1,null,false,1);",c);
     }
     const [test,control]=contexts,before=JSON.stringify(test.real),random=vm.runInContext('Math.random',test);
+    test.warmContacts={};test.warmHits={};test.warmSnapshots=0;
+    vm.runInContext(`{
+      const original=window.GalaxyPhysicsCore,wrapped={...original};
+      for(const name of ['shipPairContact','asteroidShipContact','projectileHitsShipHull','shipHitsCircle','asteroidHitsCircle']){
+        wrapped[name]=(...args)=>{
+          (warmContacts[name]??=[]).push({bank:args.find(p=>Number.isFinite(p?.bank))?.bank,spin:args.find(p=>Number.isFinite(p?.spin))?.spin});
+          const hit=original[name](...args);if(hit)warmHits[name]=(warmHits[name]||0)+1;return hit;
+        };
+      }
+      window.GalaxyPhysicsCore=wrapped;
+      const snapshot=Engine.prototype.publicState;
+      Engine.prototype.publicState=function(){warmSnapshots++;return snapshot.call(this);};
+    }`,test);
     let frames=0;
-    const task=test.GalaxyStartPreparation.warmSimulation(test.Engine,{mode,frame:async()=>{frames++;}});
+    const task=test.GalaxyStartPreparation.warmSimulation(test.Engine,{mode,frame:async()=>{frames++;assert.equal(vm.runInContext('Math.random',test),random,'RNG is restored before every cooperative frame');}});
     assert.equal(test.GalaxyStartPreparation.warmSimulation(test.Engine,{mode}),task,'reuse one warmup per engine and difficulty');
-    assert.equal(await task,true);assert.equal(frames,12);
+    assert.equal(await task,true);assert.ok(frames>=12&&frames<=168,'warm work yields between bounded simulation/contact units');
+    assert.equal(test.warmSnapshots,120,'the actual public snapshot path is warmed at interactive cadence');
+    for(const calls of Object.values(test.warmContacts))assert.equal(calls.length,12);
+    assert.equal(Object.keys(test.warmContacts).length,5,'real ship, rock, bullet and flare narrow phases are all exercised');
+    for(const name of Object.keys(test.warmContacts))assert.ok(test.warmHits[name]>0,name+' warm-up reaches contact, not only a broad-phase rejection');
+    assert.equal(new Set(test.warmContacts.shipPairContact.map(p=>p.bank)).size,12,'representative left/right banking profiles are prepared');
+    assert.equal(new Set(test.warmContacts.asteroidShipContact.map(p=>p.spin)).size,12,'the rock fixtures cover the full 3D tumble');
     assert.equal(JSON.stringify(test.real),before,'shadow warmup cannot advance the real match');
     assert.equal(vm.runInContext('Math.random',test),random,'restore RNG after each synchronous batch');
     for(const c of contexts)vm.runInContext('real.spawnAsteroidFromEdge(2,true);',c);
@@ -135,10 +154,21 @@ assert.ok(build.indexOf("'startup-preparation.js'")<build.indexOf("'game.js'"));
     static withPreparationIds(cursor,work){return {value:work(),cursor};}
     start(){this.players=[];}update(){ticks++;}stop(){stopped++;}
   }
-  assert.equal(await Gate.warmSimulation(Shadow,{valid:()=>frames===0,frame:async()=>{frames++;}}),false);
+  assert.equal(await Gate.warmSimulation(Shadow,{valid:()=>frames===0,now:()=>0,frame:async()=>{frames++;}}),false);
   assert.equal(ticks,10);assert.equal(stopped,1,'leaving cancels and stops the shadow motor');
   await assert.rejects(Gate.warmSimulation(Shadow,{frame:async()=>{throw Error('frame cancelled');}}));
   assert.equal(stopped,2,'errors also stop the motor and invalidate the cache');
   assert.equal(await Gate.warmSimulation(Shadow,{frame:async()=>{}}),true);
-  console.log('Start preparation OK: long loads, phase crossfades, stale-frame/exit cancellation, human readiness, confirmed authority, private initial countdown, runtime/cache ordering and isolated simulation warmup preserving state, IDs and RNG.');
+  let workClock=0,lastFrame=0,maxSlice=0,slowStopped=0,slowTicks=0;
+  const originalRandom=Math.random;
+  class SlowShadow{
+    static withPreparationIds(cursor,work){return {value:work(),cursor};}
+    start(){this.players=[];}update(){slowTicks++;workClock+=3;}stop(){slowStopped++;}
+    publicState(){return {};}
+  }
+  assert.equal(await Gate.warmSimulation(SlowShadow,{now:()=>workClock,budgetMs:4,frame:async()=>{
+    maxSlice=Math.max(maxSlice,workClock-lastFrame);lastFrame=workClock;assert.equal(Math.random,originalRandom);
+  }}),true);
+  assert.equal(slowTicks,120);assert.equal(slowStopped,1);assert.ok(maxSlice<=6,'the four-ms budget yields after a single indivisible three-ms tick, before a long ten-tick batch');
+  console.log('Start preparation OK: long loads, phase crossfades, cancellation, readiness, private initial countdown, isolated 120 snapshots and real banked ship/rotating rock/bullet/flare contacts with cooperative budgeting; real state, IDs and RNG preserved.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

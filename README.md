@@ -1,3 +1,5 @@
+V24.62: preparacion del arranque CPU con contactos reales de naves, meteoritos, balas y bengalas, perfiles de inclinacion/rotacion y construccion de snapshots antes de YA. El trabajo se reparte por fotogramas con un presupuesto cooperativo de 4 ms, sin avanzar la partida real ni consumir su aleatoriedad o identificadores. Al terminar la cuenta atras, el inicio CPU libera sus controles inmediatamente; las reapariciones conservan la materializacion habitual y el arranque online mantiene su autoridad.
+
 V24.61: las recargas de LA ESFERA DEL VACIO aparecen en posiciones aleatorias del exterior, pasillo o camara accesible. Se deja margen al nucleo, los generadores y ambos anillos para recogerlas incluso con escudo; se evita que las mejoras se amontonen o aparezcan directamente encima del piloto. Intentos limitados y descarte seguro si no queda sitio. Se mantienen los 5 segundos, municion/bengalas y limite de 5 mejoras.
 
 V24.60: iconos de mejoras y bengalas lanzadas visibles sobre el suelo de LA ESFERA DEL VACIO. Se conserva el aro 3D y se pinta su icono junto con las bengalas despues del mundo WebGL. La recarga periodica de armamento, trayectoria, duracion, interpolacion, colisiones y red permanecen iguales.
@@ -180,7 +182,7 @@ La documentación original se conserva a continuación. Algunas referencias de v
 
 # Galaxy Combat Web
 
-**Version actual: V24.61
+**Version actual: V24.62
 
 Galaxy Combat es un juego de combate espacial para navegador, gratuito y sin instalación obligatoria. Permite jugar contra CPU o en partidas online de hasta 4 jugadores.
 

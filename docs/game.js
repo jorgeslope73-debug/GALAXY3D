@@ -6312,6 +6312,7 @@
   function launchOnlineAfterReady(){
     onlineStartTimer=null;
     if(!inGame||!onlineGoAt)return;
+    if(roomCode==='LOCAL'&&localCpuActive&&typeof matchStartGate!=='undefined'&&matchStartGate?.phase==='go'&&typeof localCpu?.releasePreparedStart==='function'&&localCpu.releasePreparedStart(performance.now()))handle(localCpu.publicState(),localCpu);
     if(roomCode!=='LOCAL'&&isHost&&!hostPhysics){
       startHostPhysics(lobbyPlayers,onlineStartRankRound);
       if(typeof matchStartGate!=='undefined'&&matchStartGate)publishStartPreparation();

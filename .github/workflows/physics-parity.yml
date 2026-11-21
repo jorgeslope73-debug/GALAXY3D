@@ -23,6 +23,7 @@ on:
       - 'tools/check-void-intro.js'
       - 'tools/check-world-overlays.js'
       - 'tools/check-void-pickups.js'
+      - 'tools/check-cpu-ready-start.js'
       - 'tools/check-void-maze.js'
       - 'tools/check-void-boss.js'
       - 'tools/check-void-model.mjs'
@@ -154,6 +155,7 @@ on:
       - 'tools/check-void-intro.js'
       - 'tools/check-world-overlays.js'
       - 'tools/check-void-pickups.js'
+      - 'tools/check-cpu-ready-start.js'
       - 'tools/check-void-maze.js'
       - 'tools/check-void-boss.js'
       - 'tools/check-void-model.mjs'
@@ -383,7 +385,7 @@ jobs:
       - name: Check reserved respawn points, three-second delay and private countdown
         run: node tools/check-respawn-countdown.js
       - name: Check readiness phases and private first-spawn countdown
-        run: node tools/check-start-preparation.js
+        run: node tools/check-start-preparation.js && node tools/check-cpu-ready-start.js
       - name: Check shader and GPU prewarming before match readiness
         run: node tools/check-graphics-prewarm.js
       - name: Check resource loading, idle cache maintenance and visual fallbacks

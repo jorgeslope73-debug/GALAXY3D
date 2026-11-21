@@ -5641,6 +5641,7 @@ window.GALAXY_CONFIG = {
       this.lastNow=0;
       this.accumulator=0;
       this.tickCount=0;
+      this.preparedStartReleased=false;
       this.perfDebug=typeof location!=='undefined'&&new URLSearchParams(location.search).get('debug')==='1';
       this.perfTickMs=0;this.perfTickMax=0;this.perfTicks=0;this.perfCatchupDrops=0;
       this.brain=null;
@@ -6571,6 +6572,7 @@ window.GALAXY_CONFIG = {
       }
       this.started=true;this.finished=false;this.winner=null;
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
+      this.preparedStartReleased=false;
       return true;
     }
     startTraining(brain=null){
@@ -6616,6 +6618,17 @@ window.GALAXY_CONFIG = {
       }
       this.started=true;this.finished=false;this.winner=null;
       this.lastNow=0;this.accumulator=0;this.tickCount=0;
+      return true;
+    }
+    releasePreparedStart(now){
+      const human=this.players.find(p=>!p.cpu);
+      if(!Number.isFinite(now)||now<=0||!this.started||this.finished||this.trainingMode||this.preparedStartReleased||this.fxClock!==0||this.tickCount!==0||!human||human.dead||(Number(human.deaths)||0)>0||this.players.some(p=>!p.dead&&((Number(p.deaths)||0)>0||(Number(p.respawn)||0)>0)))return false;
+      // The initial materialization has already been covered by PREPARADOS and
+      // the shared 3..0 countdown. Only this first release skips its input lock;
+      // deaths still use the normal respawn/materialization path.
+      this.preparedStartReleased=true;
+      for(const p of this.players)if(!p.dead)p.spawnFx=0;
+      this.lastNow=now;this.accumulator=0;
       return true;
     }
     stop(){this.started=false;this.lastNow=0;this.accumulator=0;this.mothership=null;this.stormCore=null;this.devourer=null;this.voidSphere=null;this.bossEncounter=null;}
@@ -6736,6 +6749,7 @@ window.GALAXY_CONFIG = {
         this.placeAtSpawn(p);p.dead=false;
       }
       this.started=true;this.lastNow=0;this.accumulator=0;this.tickCount=0;
+      this.preparedStartReleased=false;
       return true;
     }
     emitShipImpact(player,source=null,destroyed=false){
@@ -19466,6 +19480,7 @@ window.GALAXY_CONFIG = {
   function launchOnlineAfterReady(){
     onlineStartTimer=null;
     if(!inGame||!onlineGoAt)return;
+    if(roomCode==='LOCAL'&&localCpuActive&&typeof matchStartGate!=='undefined'&&matchStartGate?.phase==='go'&&typeof localCpu?.releasePreparedStart==='function'&&localCpu.releasePreparedStart(performance.now()))handle(localCpu.publicState(),localCpu);
     if(roomCode!=='LOCAL'&&isHost&&!hostPhysics){
       startHostPhysics(lobbyPlayers,onlineStartRankRound);
       if(typeof matchStartGate!=='undefined'&&matchStartGate)publishStartPreparation();
