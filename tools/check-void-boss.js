@@ -76,7 +76,10 @@ for(const dt of [1/30,1/60,1/120])for(let i=0;i<360;i++){
 {
  const f=fixture(),b=enter(f,1/60),{e,p}=f;p.protection=0;p.spawnFx=0;p.x=p.px=300;p.y=p.py=540;
  e.bullets=[{id:1234,owner:-5,voidShot:true,x:200,y:540,px:200,py:540,vx:6000,vy:0,age:0,travel:0,guided:false}];e.updateBullets(1/60);assert.equal(p.dead,true,'real defense shots damage the pilot');
- e.respawnPlayer(p);p.bullets=0;p.x=p.px=260;p.y=p.py=540;e.nextPickup=0;e.updatePickups(1/60);assert.equal(p.bullets,6,'safe outside supply avoids an empty-ammo dead end');
+ e.respawnPlayer(p);p.bullets=0;p.x=p.px=260;p.y=p.py=540;e.pickups=[];e.nextPickup=0;e.updatePickups(1/60);
+ const supply=e.pickups.find(pk=>pk.type==='ammo3');assert.ok(supply,'safe outside ammunition is generated');
+ assert.ok(Math.hypot(supply.x-b.x,supply.y-b.y)>f.S.OUTER+f.S.WALL+60,'supply leaves clearance outside the wall');
+ p.x=p.px=supply.x;p.y=p.py=supply.y;e.updatePickups(1/60);assert.equal(p.bullets,6,'random outside supply remains collectible and avoids an empty-ammo dead end');
 }
 for(const hz of [30,60,120]){
  const dt=1/hz,f=fixture(),b=enter(f,dt),{e,S,p}=f;

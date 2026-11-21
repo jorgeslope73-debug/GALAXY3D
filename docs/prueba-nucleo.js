@@ -8648,14 +8648,42 @@ window.GALAXY_CONFIG = {
         if(remove)this.bullets.splice(i,1);
       }
     }
+    voidPickupPoint(b,p){
+      if(!p||p.dead||b.stage==='escape')return null;
+      // Safe for a shielded ship at every ring angle, including the 3px bob.
+      // Sampling the full annulus avoids the former three fixed supply spots.
+      const clearance=Math.max(PHYSICS_CORE.SHIELD_RADIUS||60,PHYSICS_CORE.SHIP_PROJECTILE_RADIUS||49)+8;
+      const distance=Math.hypot(p.x-b.x,p.y-b.y),inside=!!b.inside,corridor=!inside&&distance<VOID.OUTER-15;
+      const lo=inside?VOID.CORE+clearance:VOID.INNER+VOID.WALL+clearance;
+      const hi=(inside?VOID.INNER:VOID.OUTER)-VOID.WALL-clearance,margin=80;
+      const valid=point=>{
+        const r=Math.hypot(point.x-b.x,point.y-b.y);
+        if(point.x<margin||point.x>W-margin||point.y<margin||point.y>H-margin)return false;
+        if(inside||corridor){if(r<lo-1e-7||r>hi+1e-7)return false;}
+        else if(r<VOID.OUTER+VOID.WALL+clearance)return false;
+        if(Math.hypot(point.x-p.x,point.y-p.y)<SHIP_RADIUS+PICKUP_RADIUS+20)return false;
+        if(this.pickups.some(pk=>Math.hypot(point.x-pk.x,point.y-pk.y)<80))return false;
+        return !b.generators.some(g=>g.hp>0&&Math.hypot(point.x-g.x,point.y-g.y)<VOID.GENERATOR+clearance);
+      };
+      const polar=(angle,r)=>({x:b.x+Math.cos(angle)*r,y:b.y+Math.sin(angle)*r});
+      for(let i=0;i<24;i++){
+        const point=inside||corridor?polar(rand(0,Math.PI*2),Math.sqrt(rand(lo*lo,hi*hi))):{x:rand(margin,W-margin),y:rand(margin,H-margin)};
+        if(valid(point))return point;
+      }
+      // A bounded fallback still obeys every safety rule; skip a full area.
+      for(let i=0;i<(inside||corridor?24:40);i++){
+        const point=inside||corridor?polar(i*Math.PI/12,(lo+hi)/2):{x:margin+(W-2*margin)*(i%8)/7,y:margin+(H-2*margin)*Math.floor(i/8)/4};
+        if(valid(point))return point;
+      }
+      return null;
+    }
     updatePickups(dt){
       this.nextPickup-=dt;
       if(this.voidSphere&&this.nextPickup<=0){
-        const b=this.voidSphere,p=this.players.find(p=>!p.cpu),distance=Math.hypot(p.x-b.x,p.y-b.y);
+        const b=this.voidSphere,p=this.players.find(p=>!p.cpu);
         if(b.stage!=='escape'){
-          const point=b.inside?{x:b.x+VOID.INNER-60,y:b.y}:distance<VOID.OUTER-15?{x:b.x,y:b.y-VOID.CORRIDOR}:{x:260,y:540};
-          this.pickups.push({id:uid(),type:p.bullets<6?'ammo3':'flare',...point,phase:0});
-          if(this.pickups.length>5)this.pickups.shift();
+          const point=this.voidPickupPoint(b,p);
+          if(point){this.pickups.push({id:uid(),type:p.bullets<6?'ammo3':'flare',...point,phase:rand(0,Math.PI*2)});if(this.pickups.length>5)this.pickups.shift();}
         }
         this.nextPickup=5;
       }

@@ -1,3 +1,5 @@
+V24.61: las recargas de LA ESFERA DEL VACIO aparecen en posiciones aleatorias del exterior, pasillo o camara accesible. Se deja margen al nucleo, los generadores y ambos anillos para recogerlas incluso con escudo; se evita que las mejoras se amontonen o aparezcan directamente encima del piloto. Intentos limitados y descarte seguro si no queda sitio. Se mantienen los 5 segundos, municion/bengalas y limite de 5 mejoras.
+
 V24.60: iconos de mejoras y bengalas lanzadas visibles sobre el suelo de LA ESFERA DEL VACIO. Se conserva el aro 3D y se pinta su icono junto con las bengalas despues del mundo WebGL. La recarga periodica de armamento, trayectoria, duracion, interpolacion, colisiones y red permanecen iguales.
 
 V24.59: presentacion local de LA ESFERA DEL VACIO. La esfera blindada aparece inclinada, gira suavemente hasta la vista superior, descubre el interior y forma los escudos. La secuencia dura 8 segundos; piloto protegido, controles y combate en pausa hasta terminar. La cubierta permanece abierta durante el combate; los anillos, colisiones y reglas de dano conservan su autoridad habitual. No anade trafico de red.
@@ -178,7 +180,7 @@ La documentación original se conserva a continuación. Algunas referencias de v
 
 # Galaxy Combat Web
 
-**Version actual: V24.60
+**Version actual: V24.61
 
 Galaxy Combat es un juego de combate espacial para navegador, gratuito y sin instalación obligatoria. Permite jugar contra CPU o en partidas online de hasta 4 jugadores.
 
