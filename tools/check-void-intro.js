@@ -43,4 +43,13 @@ for(const dt of [1/30,1/60,1/120]){
  e.stop();assert.equal(e.voidSphere,null);
  e.start('P','medio',3,null,false,5);assert.equal(e.voidSphere,null,'restarting clears presentation state');
 }
-console.log('Void introduction OK: eight-second local sequence, frozen controls/weapons/physics/timers, no damage or stale input, clean resume/snapshot/reset at 30/60/120Hz.');
+// Run the real HUD in its own scope: render() locals are not available here.
+const game=fs.readFileSync('docs/game.js','utf8'),hud=game.slice(game.indexOf('  function drawVoidProgress('),game.indexOf('  function drawDevourerProgress('));
+assert.ok(hud.includes('function drawVoidProgress'));
+for(const isMobile of [false,true])for(const [introAge,key] of [[0,'voidIncoming'],[4.5,'voidReveal'],[6.75,'voidShieldForming']]){
+ const labels=[],ctx={save(){},restore(){},strokeText(text){labels.push(text);},fillText(){}};
+ const scope={ctx,isMobile,W:1920,tr:key=>key,boss:{type:'void-sphere',phase:'presenting',introAge}};
+ vm.runInNewContext(hud+'\ndrawVoidProgress(boss);',scope);
+ assert.deepEqual(labels,[key],'presentation HUD reads its supplied boss snapshot');
+}
+console.log('Void introduction OK: eight-second local sequence, frozen controls/weapons/physics/timers, no damage or stale input, clean resume/snapshot/reset at 30/60/120Hz; desktop/mobile HUD phases.');
