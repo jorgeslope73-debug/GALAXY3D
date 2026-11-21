@@ -78,5 +78,28 @@ for(const dt of [1/30,1/60,1/120])for(let i=0;i<360;i++){
  e.bullets=[{id:1234,owner:-5,voidShot:true,x:200,y:540,px:200,py:540,vx:6000,vy:0,age:0,travel:0,guided:false}];e.updateBullets(1/60);assert.equal(p.dead,true,'real defense shots damage the pilot');
  e.respawnPlayer(p);p.bullets=0;p.x=p.px=260;p.y=p.py=540;e.nextPickup=0;e.updatePickups(1/60);assert.equal(p.bullets,6,'safe outside supply avoids an empty-ammo dead end');
 }
+for(const hz of [30,60,120]){
+ const dt=1/hz,f=fixture(),b=enter(f,dt),{e,S,p}=f;
+ b.generators.forEach(g=>g.hp=0);b.outerGate=1;b.nextShot=1e9;
+ Object.assign(p,{x:b.x,y:b.y-S.CORRIDOR,px:b.x,py:b.y-S.CORRIDOR,vx:0,vy:0,rot:90,pr:90,flare:3});
+ e.controls.clear();e.bullets.length=0;e.pickups.length=0;
+ assert.equal(e.deployFlares(p),true);assert.equal(p.flare,2,'one launch consumes one charge');
+ assert.equal(e.flares.length,3,'one charge deploys three real flares');
+ const ids=e.flares.map(s=>s.id),initial=new Map(e.flares.map(s=>[s.id,{x:s.x,y:s.y}]));
+ for(let n=0;n<Math.round(.3*hz);n++)e.update(dt);
+ assert.equal(e.flares.length,3,'a safe corridor launch survives rather than colliding invisibly at '+hz+' Hz');
+ const snapshot=e.publicState().flares;assert.equal(snapshot.length,3,'deployed flares reach the renderer snapshot');
+ assert.deepEqual(snapshot.map(s=>s.id),ids);
+ for(const flare of snapshot){
+  assert.ok(Number.isFinite(flare.x)&&Number.isFinite(flare.y)&&Number.isFinite(flare.a));
+  assert.equal(flare.o,p.index);assert.ok(Math.abs(flare.life-2.7)<.02,'remaining lifetime is serialized');
+  const start=initial.get(flare.id);assert.ok(Math.hypot(flare.x-start.x,flare.y-start.y)>25,'the flare moves through the corridor');
+ }
+ // Visibility must not grant passage through a real wall: sweep an existing
+ // deployed flare across the solid lower exterior arc, clear of generators.
+ const impact=e.flares[0];Object.assign(impact,{px:b.x,py:b.y+S.OUTER-40,x:b.x,y:b.y+S.OUTER+40});
+ e.absorbVoidFlares();assert.equal(e.flares.length,2,'real exterior-wall contacts still consume deployed flares');
+ assert.ok(!e.publicState().flares.some(s=>s.id===impact.id));
+}
 for(const name of ['void-core','local-cpu','campaign-config','i18n','render-3d'])assert.ok(fs.readFileSync('docs/prueba-nucleo.js','utf8').includes(fs.readFileSync('docs/'+name+'.js','utf8').trim()),'practice synchronized: '+name);
-console.log('Void boss OK: generators, two physical gates, swept walls, internal-only damage, persistent lives/damage, timed escape, timeout/death loss, 30/60/120Hz and bounded FX.');
+console.log('Void boss OK: generators, two physical gates, swept walls, internal-only damage, persistent lives/damage, timed escape, timeout/death loss, real flare launch/snapshot/wall consumption at 30/60/120Hz and bounded FX.');

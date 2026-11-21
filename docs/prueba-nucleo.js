@@ -18393,6 +18393,18 @@ window.GALAXY_CONFIG = {
     return drawImageCentered(im,x,y,78,0,alpha);
   }
   const pickupSpriteMap={ammo1:'ammo1',ammo3:'ammo3',cadence:'cadence',speed:'speed',mira:'mira1',flare:'bengalahud',camo:'ojo',shield:'shield'};
+  function drawCollectibleOverlays(view,blend,nowSec){
+    // These sprites share the 2D canvas. Paint after the WebGL world so an
+    // opaque station deck cannot hide pickup icons or deployed flares.
+    for(const pk of view.pickups){
+      const old=previousLookup.pickups.get(pk.id);
+      drawPickup(pk,old?lerp(old.x,pk.x,blend):pk.x,old?lerp(old.y,pk.y,blend):pk.y,nowSec);
+    }
+    for(const f of view.flares||[]){
+      const old=previousLookup.flares.get(f.id);
+      drawDeployedFlare(f,old?lerp(old.x,f.x,blend):f.x,old?lerp(old.y,f.y,blend):f.y,nowSec);
+    }
+  }
   function drawDeployedFlare(f,x,y,nowSec=0){
     const life=Math.max(0,Number(f&&f.life)||0);
     // V19.67: la bengala nace a tamaño completo y se encoge de forma continua
@@ -20309,13 +20321,6 @@ window.GALAXY_CONFIG = {
     for(const pk of renderState.pickups){
       const old=previousLookup.pickups.get(pk.id);
       scene3D.pickup(pk.id,old?lerp(old.x,pk.x,blend):pk.x,old?lerp(old.y,pk.y,blend):pk.y,pk.type);
-      drawPickup(pk,old?lerp(old.x,pk.x,blend):pk.x,old?lerp(old.y,pk.y,blend):pk.y,nowSec);
-    }
-    for(const f of renderState.flares||[]){
-      const old=previousLookup.flares.get(f.id);
-      const x=old?lerp(old.x,f.x,blend):f.x;
-      const y=old?lerp(old.y,f.y,blend):f.y;
-      drawDeployedFlare(f,x,y,nowSec);
     }
     for(const m of renderState.meteors){
       const old=previousLookup.meteors.get(m.id);
@@ -20375,6 +20380,7 @@ window.GALAXY_CONFIG = {
       drawShip(p,old,blend,now,playback?{interpolated:!local,simTime:local?state.simTime:playback.simTime}:null);
     }
     window.Galaxy3D.flush(ctx);
+    drawCollectibleOverlays(renderState,blend,nowSec);
     if(shockwaveFx.length){
       let write=0;
       ctx.save();

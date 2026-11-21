@@ -21,6 +21,7 @@ on:
       - 'tools/build-void-interior.py'
       - 'tools/check-void-entry.js'
       - 'tools/check-void-intro.js'
+      - 'tools/check-world-overlays.js'
       - 'tools/check-void-maze.js'
       - 'tools/check-void-boss.js'
       - 'tools/check-void-model.mjs'
@@ -150,6 +151,7 @@ on:
       - 'tools/build-void-interior.py'
       - 'tools/check-void-entry.js'
       - 'tools/check-void-intro.js'
+      - 'tools/check-world-overlays.js'
       - 'tools/check-void-maze.js'
       - 'tools/check-void-boss.js'
       - 'tools/check-void-model.mjs'
@@ -357,7 +359,7 @@ jobs:
       - name: Check phase-four devourer combat and authored model
         run: node tools/check-devourer-boss.js && node tools/check-devourer-model.mjs && node tools/check-devourer-motion.js
       - name: Void sphere infiltration and timed escape
-        run: node tools/check-void-boss.js && node tools/check-void-model.mjs && node tools/check-void-maze.js && node tools/check-void-entry.js && node tools/check-void-decor.mjs && node tools/check-void-intro.js
+        run: node tools/check-void-boss.js && node tools/check-void-model.mjs && node tools/check-void-maze.js && node tools/check-void-entry.js && node tools/check-void-decor.mjs && node tools/check-void-intro.js && node tools/check-world-overlays.js
       - name: Check level-two UFO wave identity, counts and progression
         run: node tools/check-ufo-boss.js
       - name: Check decorative menu UFO timing and clearance
