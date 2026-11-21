@@ -107,7 +107,8 @@ for(const field of ['asteroids','meteors','flares','pickups','giant','ufo']){
 {
  const e=fixture(),p=e.players[0];p.motionStream.active=true;p.motionStream.ack=33;
  for(const viewTime of [.4,-2,.6,NaN,0]){const b=projectile();delete b.lagOffset;e.shotHistory.stamp(b,p,{viewTime},.5);assert.equal(Number.isFinite(b.lagOffset),viewTime===.4);}
- p.motionStream.missing=2;const b=projectile();delete b.lagOffset;e.shotHistory.stamp(b,p,{viewTime:.4},.5);assert.equal(b.lagOffset,undefined,'missing input never reuses an old viewing time');
+ p.motionStream.missing=2;const b=projectile();delete b.lagOffset;e.shotHistory.stamp(b,p,{viewTime:.4},.5);assert.ok(Math.abs(b.lagOffset-(.1-2/60))<1e-9,'a short held gap advances the old viewing clock instead of reusing its timestamp');
+ p.motionStream.missing=3;const stale=projectile();delete stale.lagOffset;e.shotHistory.stamp(stale,p,{viewTime:.4},.5);assert.equal(stale.lagOffset,undefined,'a longer input gap cannot infer a viewing time');
  e.shotHistory.reset();assert.equal(e.shotHistory.frames.length,0);
  for(let i=0;i<600;i++){e.fxClock=i/60;e.shotHistory.capture(e);}assert.ok(e.shotHistory.frames.length<=32);
 }

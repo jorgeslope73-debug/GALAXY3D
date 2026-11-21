@@ -52,8 +52,14 @@
     stamp(projectile,player,control,now){
       if(projectile.guided||player.cpu||!player.motionStream?.active)return;
       projectile.se=player.motionStream.epoch;projectile.st=player.motionStream.ack;
-      const view=control.viewTime,offset=now-view;
-      if(player.motionStream.missing===0&&Number.isFinite(view)&&view>=0&&offset>=DT&&offset<=MAX_REWIND&&this.sample(view))projectile.lagOffset=offset;
+      const missing=player.motionStream.missing;
+      // The authority already holds the last command across a brief gap. Keep
+      // its viewing clock moving by those same fixed ticks (at most 33ms), so
+      // an otherwise valid held shot does not suddenly lose lag compensation.
+      // Long gaps and invalid/future viewing times retain the ordinary query.
+      if(!Number.isSafeInteger(missing)||missing<0||missing>2)return;
+      const view=control.viewTime+missing*DT,offset=now-view;
+      if(Number.isFinite(control.viewTime)&&control.viewTime>=0&&Number.isFinite(view)&&offset>=DT&&offset<=MAX_REWIND&&this.sample(view))projectile.lagOffset=offset;
     }
     query(projectile,engine,sweptCircles){
       const ordinary=()=>core.projectileShipHit(projectile,engine.players,sweptCircles,4,24,850,260);

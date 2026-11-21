@@ -1,3 +1,5 @@
+V24.63: suavizado de red ante perdida ocasional y paquetes tardios: un hueco breve puede recuperar el reloj visual progresivamente, con 60 ms de margen temporal adicional, sin saltar al llegar cada paquete. Los cortes grandes conservan la resincronizacion limitada. Los disparos mantenidos conservan la compensacion historica durante hasta 2 ticks sin control nuevo, avanzando su reloj visible esos mismos ticks y conservando el limite de 300 ms; huecos largos usan la validacion normal. No cambian danos, municion, cadencia, frecuencia de envio ni formatos de red. Se comprueban los cuatro indices de jugador, anfitrion como cliente, transporte directo/relay y 30/60/120 Hz. Bundle de practica sincronizado tambien con preparacion, historial y playback.
+
 V24.62: preparacion del arranque CPU con contactos reales de naves, meteoritos, balas y bengalas, perfiles de inclinacion/rotacion y construccion de snapshots antes de YA. El trabajo se reparte por fotogramas con un presupuesto cooperativo de 4 ms, sin avanzar la partida real ni consumir su aleatoriedad o identificadores. Al terminar la cuenta atras, el inicio CPU libera sus controles inmediatamente; las reapariciones conservan la materializacion habitual y el arranque online mantiene su autoridad.
 
 V24.61: las recargas de LA ESFERA DEL VACIO aparecen en posiciones aleatorias del exterior, pasillo o camara accesible. Se deja margen al nucleo, los generadores y ambos anillos para recogerlas incluso con escudo; se evita que las mejoras se amontonen o aparezcan directamente encima del piloto. Intentos limitados y descarte seguro si no queda sitio. Se mantienen los 5 segundos, municion/bengalas y limite de 5 mejoras.
@@ -182,7 +184,7 @@ La documentación original se conserva a continuación. Algunas referencias de v
 
 # Galaxy Combat Web
 
-**Version actual: V24.62
+**Version actual: V24.63
 
 Galaxy Combat es un juego de combate espacial para navegador, gratuito y sin instalación obligatoria. Permite jugar contra CPU o en partidas online de hasta 4 jugadores.
 

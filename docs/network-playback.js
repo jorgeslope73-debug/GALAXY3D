@@ -31,10 +31,11 @@
       else this.snapshots.push({state,time});
       this.lastArrival=arrivalNow;
       if(this.cursor===null){this.cursor=time-this.delayMs;this.lastNow=arrivalNow;}
-      // Large loss bursts require a bounded resynchronization rather than
-      // replaying seconds of obsolete action. Callers can clear cosmetic trails
-      // when resynced is returned. Normal jitter stays inside the 180 ms window.
-      if(time-this.cursor>this.maxDelayMs){this.cursor=time-this.maxDelayMs;this.rate=1;this.resynced=true;}
+      // One lost 20Hz state can exceed the usual buffer by a single interval.
+      // Give that short gap 60ms of headroom and catch up in sample(), rather
+      // than teleporting every time a delayed packet finally arrives. Genuine
+      // loss bursts still resynchronize to the bounded normal window.
+      if(time-this.cursor>this.maxDelayMs+60){this.cursor=time-this.maxDelayMs;this.rate=1;this.resynced=true;}
       if(this.snapshots.length>this.maxSnapshots){
         this.snapshots.splice(0,this.snapshots.length-this.maxSnapshots);
         if(this.cursor<this.snapshots[0].time){this.cursor=this.snapshots[0].time;this.resynced=true;}
@@ -68,7 +69,7 @@
       const error=latest.time-this.delayMs-this.cursor;
       // Recover buffer depth by a small speed adjustment, never an arrival-time
       // alpha reset. A stalled connection stops at the last known pose.
-      const wanted=1+clamp(error/1000,-.06,error>this.maxDelayMs?.15:.08);
+      const wanted=1+clamp(error/1000,-.06,latest.time-this.cursor>this.maxDelayMs?.15:.08);
       this.rate+=(wanted-this.rate)*(1-Math.exp(-dt/200));
       this.cursor=Math.min(latest.time,this.cursor+dt*this.rate);
       while(this.snapshots.length>2&&this.snapshots[1].time<=this.cursor)this.snapshots.shift();

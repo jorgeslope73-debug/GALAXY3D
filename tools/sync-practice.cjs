@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),root=path.resolve(__dirnam
 const read=name=>fs.readFileSync(path.join(root,'docs',name+'.js'),'utf8').replaceAll('\r\n','\n').trim();
 let bundle=read('prueba-nucleo');
 if(!bundle.includes('// void-core.js\n'))bundle=bundle.replace('// local-cpu.js\n','// void-core.js\n'+read('void-core')+'\n;\n// local-cpu.js\n');
-for(const name of ['render-3d','campaign-config','i18n','manual','devourer-core','void-core','local-cpu']){
+for(const name of ['render-3d','campaign-config','i18n','manual','devourer-core','void-core','local-cpu','shot-history','network-playback','startup-preparation']){
  const marker='// '+name+'.js\n',start=bundle.indexOf(marker)+marker.length,end=bundle.indexOf('\n;\n// ',start);
  if(start<marker.length||end<start)throw Error('Bundle boundary '+name);
  bundle=bundle.slice(0,start)+read(name)+'\n'+bundle.slice(end);
